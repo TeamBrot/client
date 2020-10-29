@@ -2,7 +2,7 @@ import asyncio
 import websockets
 import json
 
-#JSON to send for corresponding operations
+#JSON to send for corresponding action
 LEFT = '{"action":"turn_left"}'
 RIGHT = '{"action":"turn_right"}'
 SLOWER = '{"action":"slow_down"}'
@@ -22,7 +22,7 @@ async def connect():
             # send next move back to server
             await websocket.send(msg)
 
-
+# useData uses the received game data to return the next actions
 def useData(data):
     # load json data
     d = json.loads(data)
