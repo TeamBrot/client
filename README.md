@@ -1,1 +1,1 @@
-.&ëj¸ž²˜©Š{-jYpy»(rG­
+`pip install websockets`
