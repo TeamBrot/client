@@ -1,34 +1,5 @@
 package main
 
-import (
-	"fmt"
-
-	"github.com/gorilla/websocket"
-)
-
-type Player struct {
-	X         int    `json:"x"`
-	Y         int    `json:"y"`
-	Direction string `json:"direction"`
-	Speed     int    `json:"speed"`
-	Active    bool   `json:"active"`
-	Name      string `json:"name"`
-}
-
-type Status struct {
-	Width    int             `json:"width"`
-	Height   int             `json:"height"`
-	Cells    [][]int         `json:"cells"`
-	Players  map[int]*Player `json:"players"`
-	You      int             `json:"you"`
-	Running  bool            `json:"running"`
-	Deadline string          `json:"deadline"`
-}
-
-type Input struct {
-	Action string `json:"action"`
-}
-
 func checkCell(status *Status, current bool, y int, x int) bool {
 	if x >= status.Width || y >= status.Height || x < 0 || y < 0 {
 		return false
@@ -36,8 +7,8 @@ func checkCell(status *Status, current bool, y int, x int) bool {
 	return status.Cells[y][x] == 0 && current
 }
 
-/* add jumping */
-func moves(status *Status, player *Player) []string {
+/* TODO add jumping */
+func moves(status *Status, player *Player) []Action {
 	changeNothing := true
 	turnRight := true
 	turnLeft := true
@@ -75,38 +46,36 @@ func moves(status *Status, player *Player) []string {
 		speedUp = checkCell(status, speedUp, player.Y+player.Speed+1, player.X)
 	}
 
-	possibleMoves := make([]string, 0)
+	possibleMoves := make([]Action, 0)
 
 	if speedDown && player.Speed != 1 {
-		possibleMoves = append(possibleMoves, "slow_down")
+		possibleMoves = append(possibleMoves, SlowDown)
 	}
 	if changeNothing {
-		possibleMoves = append(possibleMoves, "change_nothing")
+		possibleMoves = append(possibleMoves, ChangeNothing)
 	}
 	if speedUp && player.Speed != 10 {
-		possibleMoves = append(possibleMoves, "speed_up")
+		possibleMoves = append(possibleMoves, SpeedUp)
 	}
 	if turnLeft {
-		possibleMoves = append(possibleMoves, "turn_left")
+		possibleMoves = append(possibleMoves, TurnLeft)
 	}
 	if turnRight {
-		possibleMoves = append(possibleMoves, "turn_right")
+		possibleMoves = append(possibleMoves, TurnRight)
 	}
 	return possibleMoves
 }
 
-var ACTIONS = []string{"change_nothing", "speed_up", "slow_down", "turn_left", "turn_right"}
-
-func simulate(player Player, status *Status, action string) int {
-	if action == "speed_up" {
+func simulate(player Player, status *Status, action Action) int {
+	if action == SpeedUp {
 		if player.Speed != 10 {
 			player.Speed++
 		}
-	} else if action == "slow_down" {
+	} else if action == SlowDown {
 		if player.Speed != 1 {
 			player.Speed--
 		}
-	} else if action == "turn_left" {
+	} else if action == TurnLeft {
 		switch player.Direction {
 		case "left":
 			player.Direction = "down"
@@ -121,7 +90,7 @@ func simulate(player Player, status *Status, action string) int {
 			player.Direction = "left"
 			break
 		}
-	} else if action == "turn_right" {
+	} else if action == TurnRight {
 		switch player.Direction {
 		case "left":
 			player.Direction = "up"
@@ -176,41 +145,19 @@ func simulate(player Player, status *Status, action string) int {
 	return score
 }
 
-func main() {
-	fmt.Println("test")
-	c, _, err := websocket.DefaultDialer.Dial("ws://localhost:8080/spe_ed", nil)
-	if err != nil {
-		fmt.Println("could not establish connection", err)
-		return
-	}
-	defer c.Close()
+// MinimaxClient is a client implementation that uses Minimax to decide what to do next
+type MinimaxClient struct{}
 
-	var status Status
-	var input Input
-	err = c.ReadJSON(&status)
-	if err != nil {
-		return
-	}
-
-	for status.Players[status.You].Active {
-		bestAction := ""
-		bestScore := -1
-		for _, action := range moves(&status, status.Players[status.You]) {
-			score := simulate(*status.Players[status.You], &status, action)
-			if score > bestScore {
-				bestAction = action
-				bestScore = score
-			}
-		}
-
-		input = Input{bestAction}
-		err = c.WriteJSON(&input)
-		if err != nil {
-			break
-		}
-		err = c.ReadJSON(&status)
-		if err != nil {
-			break
+// GetAction implements the Client interface
+func (c MinimaxClient) GetAction(player Player, status *Status) Action {
+	var bestAction Action
+	bestScore := -1
+	for _, action := range moves(status, status.Players[status.You]) {
+		score := simulate(*status.Players[status.You], status, action)
+		if score > bestScore {
+			bestAction = action
+			bestScore = score
 		}
 	}
+	return bestAction
 }
