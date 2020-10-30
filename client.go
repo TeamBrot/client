@@ -83,6 +83,9 @@ func main() {
 	case "right":
 		client = RightClient{}
 		break
+	case "smart":
+		client = SmartClient{}
+		break
 	}
 
 	for status.Players[status.You].Active {
