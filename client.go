@@ -9,12 +9,12 @@ import (
 
 // Player contains information on a specific player. It is provided by the server,
 type Player struct {
-	X         int    `json:"x"`
-	Y         int    `json:"y"`
-	Direction string `json:"direction"`
-	Speed     int    `json:"speed"`
-	Active    bool   `json:"active"`
-	Name      string `json:"name"`
+	X         int       `json:"x"`
+	Y         int       `json:"y"`
+	Direction Direction `json:"direction"`
+	Speed     int       `json:"speed"`
+	Active    bool      `json:"active"`
+	Name      string    `json:"name"`
 }
 
 // Status contains all information on the current game status
@@ -51,6 +51,23 @@ const (
 
 // Actions contains all actions that could be taken
 var Actions = []Action{ChangeNothing, SpeedUp, SlowDown, TurnLeft, TurnRight}
+
+// Direction contains the direction the player is facing
+type Direction string
+
+const (
+	// Up makes the player face up
+	Up Direction = "up"
+	// Left makes the player face left
+	Left = "left"
+	// Down makes the player face down
+	Down = "down"
+	// Right makes the player face right
+	Right = "right"
+)
+
+// Directions contains all possible directions
+var Directions = []Direction{Up, Left, Down, Right}
 
 // Client represents a handler that decides what the specific player should do next
 type Client interface {
