@@ -77,6 +77,12 @@ func main() {
 	case "minimax":
 		client = MinimaxClient{}
 		break
+	case "left":
+		client = LeftClient{}
+		break
+	case "right":
+		client = RightClient{}
+		break
 	}
 
 	for status.Players[status.You].Active {
