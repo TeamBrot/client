@@ -4,7 +4,7 @@ Für client.py:
 Für go clients:
 `go build .` ausführen
 anschließend können drei bots ausgeführt werden
-- minmax
+- minimax
 - left
 - right
 
