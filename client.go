@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/gorilla/websocket"
@@ -75,18 +76,9 @@ type Client interface {
 }
 
 func main() {
-	c, _, err := websocket.DefaultDialer.Dial("ws://localhost:8080/spe_ed", nil)
-	if err != nil {
-		fmt.Println("could not establish connection", err)
-		return
-	}
-	defer c.Close()
 
-	var status Status
-	var input Input
-	err = c.ReadJSON(&status)
-	if err != nil {
-		return
+	if len(os.Args) <= 1 {
+		log.Fatal("Usage: ", os.Args[0], " <client>")
 	}
 
 	var client Client
@@ -100,6 +92,25 @@ func main() {
 	case "right":
 		client = RightClient{}
 		break
+	default:
+		log.Fatal("Usage:", os.Args[0], "<client>")
+	}
+
+	log.Println("using client", os.Args[1])
+	log.Println("connecting to server")
+	c, _, err := websocket.DefaultDialer.Dial("ws://localhost:8080/spe_ed", nil)
+	if err != nil {
+		fmt.Println("could not establish connection", err)
+		return
+	}
+	defer c.Close()
+	log.Println("connected to server")
+
+	var status Status
+	var input Input
+	err = c.ReadJSON(&status)
+	if err != nil {
+		return
 	}
 
 	for status.Players[status.You].Active {
@@ -115,4 +126,5 @@ func main() {
 			break
 		}
 	}
+	log.Println("player not active anymore, disconnecting")
 }
