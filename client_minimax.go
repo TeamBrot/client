@@ -14,35 +14,35 @@ func moves(status *Status, player *Player) []Action {
 	turnLeft := true
 	speedDown := true
 	for i := 1; i <= player.Speed; i++ {
-		if player.Direction == "right" {
+		if player.Direction == Right {
 			turnRight = checkCell(status, turnRight, player.Y+i, player.X)
 			changeNothing = checkCell(status, changeNothing, player.Y, player.X+i)
 			if i != player.Speed {
 				speedDown = changeNothing
 			}
 			turnLeft = checkCell(status, turnLeft, player.Y-i, player.X)
-		} else if player.Direction == "up" {
+		} else if player.Direction == Up {
 			turnRight = checkCell(status, turnRight, player.Y, player.X+i)
 			changeNothing = checkCell(status, changeNothing, player.Y-i, player.X)
 			turnLeft = checkCell(status, turnLeft, player.Y, player.X-i)
-		} else if player.Direction == "left" {
+		} else if player.Direction == Left {
 			turnRight = checkCell(status, turnRight, player.Y-i, player.X)
 			changeNothing = checkCell(status, changeNothing, player.Y, player.X-i)
 			turnLeft = checkCell(status, turnLeft, player.Y+i, player.X)
-		} else if player.Direction == "down" {
+		} else if player.Direction == Down {
 			turnRight = checkCell(status, turnRight, player.Y, player.X-i)
 			changeNothing = checkCell(status, changeNothing, player.Y+i, player.X)
 			turnLeft = checkCell(status, turnLeft, player.Y, player.X+i)
 		}
 	}
 	speedUp := changeNothing
-	if player.Direction == "right" {
+	if player.Direction == Right {
 		speedUp = checkCell(status, speedUp, player.Y, player.X+player.Speed+1)
-	} else if player.Direction == "up" {
+	} else if player.Direction == Up {
 		speedUp = checkCell(status, speedUp, player.Y-player.Speed-1, player.X)
-	} else if player.Direction == "left" {
+	} else if player.Direction == Left {
 		speedUp = checkCell(status, speedUp, player.Y, player.X-player.Speed-1)
-	} else if player.Direction == "down" {
+	} else if player.Direction == Down {
 		speedUp = checkCell(status, speedUp, player.Y+player.Speed+1, player.X)
 	}
 
@@ -77,44 +77,44 @@ func simulate(player Player, status *Status, action Action) int {
 		}
 	} else if action == TurnLeft {
 		switch player.Direction {
-		case "left":
-			player.Direction = "down"
+		case Left:
+			player.Direction = Down
 			break
-		case "down":
-			player.Direction = "right"
+		case Down:
+			player.Direction = Right
 			break
-		case "right":
-			player.Direction = "up"
+		case Right:
+			player.Direction = Right
 			break
-		case "up":
-			player.Direction = "left"
+		case Up:
+			player.Direction = Left
 			break
 		}
 	} else if action == TurnRight {
 		switch player.Direction {
-		case "left":
-			player.Direction = "up"
+		case Left:
+			player.Direction = Up
 			break
-		case "down":
-			player.Direction = "left"
+		case Down:
+			player.Direction = Left
 			break
-		case "right":
-			player.Direction = "down"
+		case Right:
+			player.Direction = Down
 			break
-		case "up":
-			player.Direction = "right"
+		case Up:
+			player.Direction = Right
 			break
 		}
 	}
 
 	for i := 1; i <= player.Speed; i++ {
-		if player.Direction == "up" {
+		if player.Direction == Up {
 			player.Y--
-		} else if player.Direction == "down" {
+		} else if player.Direction == Down {
 			player.Y++
-		} else if player.Direction == "right" {
+		} else if player.Direction == Right {
 			player.X++
-		} else if player.Direction == "left" {
+		} else if player.Direction == Left {
 			player.X--
 		}
 
@@ -131,13 +131,13 @@ func simulate(player Player, status *Status, action Action) int {
 	score := len(moves(status, &player))
 	for i := 1; i <= player.Speed; i++ {
 		status.Cells[player.Y][player.X] = 0
-		if player.Direction == "up" {
+		if player.Direction == Up {
 			player.Y++
-		} else if player.Direction == "down" {
+		} else if player.Direction == Down {
 			player.Y--
-		} else if player.Direction == "right" {
+		} else if player.Direction == Right {
 			player.X--
-		} else if player.Direction == "left" {
+		} else if player.Direction == Left {
 			player.X++
 		}
 	}

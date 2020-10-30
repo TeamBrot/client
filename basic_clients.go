@@ -2,61 +2,64 @@ package main
 
 import "log"
 
-func left_right(me Player, board [][]int, go_direction Action) Action {
+func leftRight(me Player, board [][]int, goDirection Action) Action {
 	var action Action
-	change_nothing := ChangeNothing
 	switch me.Direction {
-	case "up":
+	case Up:
 		if me.Y == 0 {
-			action = go_direction
+			action = goDirection
 			break
 		} else if board[me.Y-1][me.X] != 0 {
-			action = go_direction
+			action = goDirection
 		} else {
-			action = change_nothing
+			action = ChangeNothing
 		}
-	case "down":
+	case Down:
 		if me.Y+1 >= len(board) {
-			action = go_direction
+			action = goDirection
 			break
 		} else if board[me.Y+1][me.X] != 0 {
-			action = go_direction
+			action = goDirection
 		} else {
-			action = change_nothing
+			action = ChangeNothing
 		}
-	case "right":
+	case Right:
 		if me.X+1 >= len(board[0]) {
-			action = go_direction
+			action = goDirection
 			break
 		} else if board[me.Y][me.X+1] != 0 {
-			action = go_direction
+			action = goDirection
 		} else {
-			action = change_nothing
+			action = ChangeNothing
 		}
-	case "left":
+	case Left:
 		if me.X == 0 {
-			action = go_direction
+			action = goDirection
 			break
 		} else if board[me.Y][me.X-1] != 0 {
-			action = go_direction
+			action = goDirection
 		} else {
-			action = change_nothing
+			action = ChangeNothing
 		}
 	}
 	log.Println(action)
 	return action
 }
 
+// LeftClient always goes left when there is an obstacle
 type LeftClient struct{}
 
+// GetAction implementation for LeftClient
 func (c LeftClient) GetAction(player Player, status *Status) Action {
 	var bestAction Action
-	bestAction = left_right(player, status.Cells, TurnLeft)
+	bestAction = leftRight(player, status.Cells, TurnLeft)
 	return bestAction
 }
 
+// RightClient always goes right when there is an obstacle
 type RightClient struct{}
 
+// GetAction implementation for RightClient
 func (c RightClient) GetAction(player Player, status *Status) Action {
 	var bestAction Action
 	bestAction = left_right(player, status.Cells, TurnRight)
