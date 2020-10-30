@@ -62,7 +62,7 @@ type RightClient struct{}
 // GetAction implementation for RightClient
 func (c RightClient) GetAction(player Player, status *Status) Action {
 	var bestAction Action
-	bestAction = left_right(player, status.Cells, TurnRight)
+	bestAction = leftRight(player, status.Cells, TurnRight)
 	return bestAction
 }
 
