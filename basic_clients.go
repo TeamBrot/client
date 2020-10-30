@@ -66,8 +66,10 @@ func (c RightClient) GetAction(player Player, status *Status) Action {
 	return bestAction
 }
 
+// SmartClient always moves at speed one and chooses right or left if there is an obstacle
 type SmartClient struct{}
 
+// GetAction Implementation for SmartClient
 func (c SmartClient) GetAction(player Player, status *Status) Action {
 	var bestAction Action
 	board := status.Cells

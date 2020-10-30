@@ -92,7 +92,9 @@ func main() {
 	case "right":
 		client = RightClient{}
 		break
-
+	case "smart":
+		client = SmartClient{}
+		break
 	default:
 		log.Fatal("Usage:", os.Args[0], "<client>")
 	}
