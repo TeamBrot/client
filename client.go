@@ -27,6 +27,7 @@ type Status struct {
 	You      int             `json:"you"`
 	Running  bool            `json:"running"`
 	Deadline string          `json:"deadline"`
+	Turn     int
 }
 
 // Input contains the action taken by the player and is sent as JSON to the server
@@ -111,13 +112,16 @@ func main() {
 
 	var status Status
 	var input Input
+	status.Turn = 1
 	err = c.ReadJSON(&status)
 	if err != nil {
 		return
 	}
 
 	for status.Players[status.You].Active {
+		log.Println("Turn: ", status.Turn)
 		action := client.GetAction(*status.Players[status.You], &status)
+		status.Turn++
 
 		input = Input{action}
 		err = c.WriteJSON(&input)
