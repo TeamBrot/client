@@ -212,16 +212,17 @@ func undoMove(status *Status, player *Player, action Action) {
 	log.Println("undoMove end: ", player.X, player.Y, player.Direction, player.Speed)
 }
 
-func simulate(you int, remainingPlayers []int, status *Status, action Action, depth int) int {
-	log.Println("Simulate: ", you, remainingPlayers, action, depth)
-	if len(remainingPlayers) == 0 {
-		panic("There should always be remaining players")
-	}
+func simulate(you int, minimizer int, isMaximizer bool, status *Status, action Action, depth int, alpha int, beta int) int {
+	log.Println("Simulate: ", you, minimizer, action, depth)
 
-	playerID := remainingPlayers[0]
+	var playerID int
+	if isMaximizer {
+		playerID = you
+	} else {
+		playerID = minimizer
+	}
 	player := status.Players[playerID]
-	log.Println("Player: ", player)
-	remainingPlayers = remainingPlayers[1:]
+	//log.Println("Player: ", player)
 	doMove(status, player, action)
 	var bestScore int
 	if playerID == you {
@@ -229,25 +230,40 @@ func simulate(you int, remainingPlayers []int, status *Status, action Action, de
 	} else {
 		bestScore = 100
 	}
-	if len(remainingPlayers) == 0 && depth == 0 {
-		bestScore = score(status, status.Players[you])
-
+	if depth == 0 && isMaximizer {
+		bestScore = score(status, status.Players[playerID])
 	} else {
 		turn := status.Turn
-		if len(remainingPlayers) == 0 {
-			for id, player := range status.Players {
-				if player.Active {
-					remainingPlayers = append(remainingPlayers, id)
+		if isMaximizer {
+			for _, action := range moves(status, status.Players[minimizer]) {
+				score := simulate(you, minimizer, false, status, action, depth, alpha, beta)
+
+				if score > bestScore {
+					bestScore = score
+				}
+				if bestScore > alpha {
+					alpha = bestScore
+				}
+
+				if beta <= alpha {
+					break
 				}
 			}
-			depth--
+		} else {
 			status.Turn++
-		}
-		for _, action := range moves(status, status.Players[remainingPlayers[0]]) {
-			score := simulate(you, remainingPlayers, status, action, depth)
+			for _, action := range moves(status, status.Players[you]) {
+				score := simulate(you, minimizer, true, status, action, depth-1, alpha, beta)
 
-			if score > bestScore && playerID == you || score < bestScore && playerID != you {
-				bestScore = score
+				if score < bestScore {
+					bestScore = score
+				}
+				if bestScore < beta {
+					beta = bestScore
+				}
+
+				if beta <= alpha {
+					break
+				}
 			}
 		}
 		status.Turn = turn
@@ -262,6 +278,7 @@ type MinimaxClient struct{}
 // GetAction implements the Client interface
 //TODO: use player information
 func (c MinimaxClient) GetAction(player Player, status *Status) Action {
+	//change remainingPlayers to minimizer and choose minimizer from active remaining players
 	remainingPlayers := make([]int, 1)
 	remainingPlayers[0] = status.You
 	for id, player := range status.Players {
@@ -272,7 +289,7 @@ func (c MinimaxClient) GetAction(player Player, status *Status) Action {
 	bestScore := -1
 	var bestAction Action
 	for _, action := range moves(status, status.Players[status.You]) {
-		score := simulate(status.You, remainingPlayers, status, action, 2)
+		score := simulate(status.You, remainingPlayers[1], true, status, action, 3, -100, 100)
 		if score > bestScore {
 			bestAction = action
 			bestScore = score
