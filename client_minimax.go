@@ -222,10 +222,10 @@ func simulate(you int, minimizer int, isMaximizer bool, status *Status, action A
 	var bestScore int
 	if isMaximizer {
 		playerID = you
-		bestScore = 100
+		bestScore = 100 + depth
 	} else {
 		playerID = minimizer
-		bestScore = -100
+		bestScore = -100 - depth
 	}
 	player := status.Players[playerID]
 	//log.Println("Player: ", player)
@@ -286,9 +286,10 @@ func (c MinimaxClient) GetAction(player Player, status *Status) Action {
 			otherPlayer = id
 		}
 	}
-	bestScore := -1
+	bestScore := -100
 	bestActions := make([]Action, 0)
-	for _, action := range moves(status, status.Players[status.You]) {
+	possibleMoves := moves(status, status.Players[status.You])
+	for _, action := range possibleMoves {
 		score := simulate(status.You, otherPlayer, true, status, action, 7, -100, 100)
 		if score >= bestScore {
 			bestActions = append(bestActions, action)
@@ -297,7 +298,10 @@ func (c MinimaxClient) GetAction(player Player, status *Status) Action {
 	}
 	log.Println("bestActions: ", bestActions, bestScore)
 	if len(bestActions) == 0 {
-		return "change_nothing"
+		if len(possibleMoves) == 0 {
+			return "change_nothing"
+		}
+		bestActions = possibleMoves
 	}
 	return bestActions[rand.Intn(len(bestActions))]
 }
