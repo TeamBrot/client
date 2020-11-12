@@ -118,7 +118,7 @@ func main() {
 		return
 	}
 
-	for status.Players[status.You].Active {
+	for status.Running && status.Players[status.You].Active {
 		log.Println("Turn: ", status.Turn)
 		action := client.GetAction(*status.Players[status.You], &status)
 		status.Turn++

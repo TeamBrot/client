@@ -1,6 +1,9 @@
 package main
 
-import "log"
+import (
+	"log"
+	"math/rand"
+)
 
 func checkCell(status *Status, current bool, y int, x int, jump bool) bool {
 	if x >= status.Width || y >= status.Height || x < 0 || y < 0 {
@@ -89,7 +92,7 @@ func score(status *Status, player *Player) int {
 }
 
 func doMove(status *Status, player *Player, action Action) {
-	log.Println("doMove start: ", player.X, player.Y, player.Direction, player.Speed)
+	// log.Println("doMove start: ", player.X, player.Y, player.Direction, player.Speed)
 	if action == SpeedUp {
 		if player.Speed != 10 {
 			player.Speed++
@@ -150,12 +153,12 @@ func doMove(status *Status, player *Player, action Action) {
 			}
 		}
 	}
-	log.Println("doMove end: ", player.X, player.Y, player.Direction, player.Speed)
+	// log.Println("doMove end: ", player.X, player.Y, player.Direction, player.Speed)
 
 }
 
 func undoMove(status *Status, player *Player, action Action) {
-	log.Println("undoMove start: ", player.X, player.Y, player.Direction, player.Speed)
+	// log.Println("undoMove start: ", player.X, player.Y, player.Direction, player.Speed)
 	jump := status.Turn%6 == 0
 	for i := 1; i <= player.Speed; i++ {
 		if !jump || i == 1 || i == player.Speed {
@@ -209,11 +212,11 @@ func undoMove(status *Status, player *Player, action Action) {
 			break
 		}
 	}
-	log.Println("undoMove end: ", player.X, player.Y, player.Direction, player.Speed)
+	// log.Println("undoMove end: ", player.X, player.Y, player.Direction, player.Speed)
 }
 
 func simulate(you int, minimizer int, isMaximizer bool, status *Status, action Action, depth int, alpha int, beta int) int {
-	log.Println("Simulate: ", you, minimizer, action, depth)
+	// log.Println("Simulate: ", you, minimizer, action, depth)
 
 	var playerID int
 	if isMaximizer {
@@ -279,22 +282,25 @@ type MinimaxClient struct{}
 //TODO: use player information
 func (c MinimaxClient) GetAction(player Player, status *Status) Action {
 	//change remainingPlayers to minimizer and choose minimizer from active remaining players
-	remainingPlayers := make([]int, 1)
-	remainingPlayers[0] = status.You
+	// TODO: use closest player
+	var otherPlayer int
 	for id, player := range status.Players {
 		if player.Active && status.You != id {
-			remainingPlayers = append(remainingPlayers, id)
+			otherPlayer = id
 		}
 	}
 	bestScore := -1
-	var bestAction Action
+	bestActions := make([]Action, 0)
 	for _, action := range moves(status, status.Players[status.You]) {
-		score := simulate(status.You, remainingPlayers[1], true, status, action, 3, -100, 100)
-		if score > bestScore {
-			bestAction = action
+		score := simulate(status.You, otherPlayer, true, status, action, 6, -100, 100)
+		if score >= bestScore {
+			bestActions = append(bestActions, action)
 			bestScore = score
 		}
 	}
-	log.Println("bestAction: ", bestAction, bestScore)
-	return bestAction
+	log.Println("bestActions: ", bestActions, bestScore)
+	if len(bestActions) == 0 {
+		return "change_nothing"
+	}
+	return bestActions[rand.Intn(len(bestActions))]
 }
