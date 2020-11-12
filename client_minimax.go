@@ -215,7 +215,7 @@ func undoMove(status *Status, player *Player, action Action) {
 	// log.Println("undoMove end: ", player.X, player.Y, player.Direction, player.Speed)
 }
 
-func simulate(you int, minimizer int, isMaximizer bool, status *Status, action Action, depth int, alpha int, beta int) int {
+func simulate(you int, minimizer int, isMaximizer bool, status *Status, action Action, depth int, alpha int, beta int, ch chan int) int {
 	// log.Println("Simulate: ", you, minimizer, action, depth)
 
 	var playerID int
@@ -236,7 +236,7 @@ func simulate(you int, minimizer int, isMaximizer bool, status *Status, action A
 		turn := status.Turn
 		if isMaximizer {
 			for _, action := range moves(status, status.Players[minimizer]) {
-				score := simulate(you, minimizer, false, status, action, depth, alpha, beta)
+				score := simulate(you, minimizer, false, status, action, depth, alpha, beta, nil)
 
 				if score < bestScore {
 					bestScore = score
@@ -252,7 +252,7 @@ func simulate(you int, minimizer int, isMaximizer bool, status *Status, action A
 		} else {
 			status.Turn++
 			for _, action := range moves(status, status.Players[you]) {
-				score := simulate(you, minimizer, true, status, action, depth-1, alpha, beta)
+				score := simulate(you, minimizer, true, status, action, depth-1, alpha, beta, nil)
 
 				if score > bestScore {
 					bestScore = score
@@ -269,7 +269,30 @@ func simulate(you int, minimizer int, isMaximizer bool, status *Status, action A
 		status.Turn = turn
 	}
 	undoMove(status, player, action)
+	if ch != nil {
+		ch <- bestScore
+	}
 	return bestScore
+}
+
+func copyStatus(status *Status) *Status {
+	var s Status
+	s.Width = status.Width
+	s.Height = status.Height
+	s.Deadline = status.Deadline
+	s.Running = status.Running
+	s.Turn = status.Turn
+	s.You = status.You
+	s.Cells = make([][]int, s.Height)
+	for i := range s.Cells {
+		s.Cells[i] = make([]int, status.Height)
+		copy(s.Cells[i], status.Cells[i])
+	}
+	s.Players = make(map[int]*Player)
+	for id, player := range status.Players {
+		s.Players[id] = &Player{X: player.X, Y: player.Y, Active: player.Active, Name: player.Name, Direction: player.Direction, Speed: player.Speed}
+	}
+	return &s
 }
 
 // MinimaxClient is a client implementation that uses Minimax to decide what to do next
@@ -289,8 +312,15 @@ func (c MinimaxClient) GetAction(player Player, status *Status) Action {
 	bestScore := -100
 	bestActions := make([]Action, 0)
 	possibleMoves := moves(status, status.Players[status.You])
+	channels := make(map[Action]chan int, 0)
 	for _, action := range possibleMoves {
-		score := simulate(status.You, otherPlayer, true, status, action, 7, -100, 100)
+		channels[action] = make(chan int)
+		sCopy := copyStatus(status)
+		go simulate(status.You, otherPlayer, true, sCopy, action, 7, -100, 100, channels[action])
+	}
+
+	for action, ch := range channels {
+		score := <-ch
 		if score >= bestScore {
 			bestActions = append(bestActions, action)
 			bestScore = score
