@@ -219,33 +219,30 @@ func simulate(you int, minimizer int, isMaximizer bool, status *Status, action A
 	// log.Println("Simulate: ", you, minimizer, action, depth)
 
 	var playerID int
+	var bestScore int
 	if isMaximizer {
 		playerID = you
+		bestScore = 100
 	} else {
 		playerID = minimizer
+		bestScore = -100
 	}
 	player := status.Players[playerID]
 	//log.Println("Player: ", player)
 	doMove(status, player, action)
-	var bestScore int
-	if playerID == you {
-		bestScore = -100
-	} else {
-		bestScore = 100
-	}
-	if depth == 0 && isMaximizer {
-		bestScore = score(status, status.Players[playerID])
+	if depth == 0 && !isMaximizer {
+		bestScore = score(status, status.Players[you])
 	} else {
 		turn := status.Turn
 		if isMaximizer {
 			for _, action := range moves(status, status.Players[minimizer]) {
 				score := simulate(you, minimizer, false, status, action, depth, alpha, beta)
 
-				if score > bestScore {
+				if score < bestScore {
 					bestScore = score
 				}
-				if bestScore > alpha {
-					alpha = bestScore
+				if bestScore < beta {
+					beta = bestScore
 				}
 
 				if beta <= alpha {
@@ -257,11 +254,11 @@ func simulate(you int, minimizer int, isMaximizer bool, status *Status, action A
 			for _, action := range moves(status, status.Players[you]) {
 				score := simulate(you, minimizer, true, status, action, depth-1, alpha, beta)
 
-				if score < bestScore {
+				if score > bestScore {
 					bestScore = score
 				}
-				if bestScore < beta {
-					beta = bestScore
+				if bestScore > alpha {
+					alpha = bestScore
 				}
 
 				if beta <= alpha {
@@ -292,7 +289,7 @@ func (c MinimaxClient) GetAction(player Player, status *Status) Action {
 	bestScore := -1
 	bestActions := make([]Action, 0)
 	for _, action := range moves(status, status.Players[status.You]) {
-		score := simulate(status.You, otherPlayer, true, status, action, 6, -100, 100)
+		score := simulate(status.You, otherPlayer, true, status, action, 7, -100, 100)
 		if score >= bestScore {
 			bestActions = append(bestActions, action)
 			bestScore = score
