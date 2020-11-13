@@ -316,7 +316,7 @@ func (c MinimaxClient) GetAction(player Player, status *Status) Action {
 	for _, action := range possibleMoves {
 		channels[action] = make(chan int)
 		sCopy := copyStatus(status)
-		go simulate(status.You, otherPlayer, true, sCopy, action, 7, -100, 100, channels[action])
+		go simulate(status.You, otherPlayer, true, sCopy, action, 7, -200, 200, channels[action])
 	}
 
 	for action, ch := range channels {
