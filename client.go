@@ -96,6 +96,8 @@ func main() {
 	case "smart":
 		client = SmartClient{}
 		break
+	case "mcts":
+		client = MctsClient{}
 	default:
 		log.Fatal("Usage:", os.Args[0], "<client>")
 	}
