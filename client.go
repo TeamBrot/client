@@ -57,10 +57,10 @@ var Actions = []Action{ChangeNothing, SpeedUp, SlowDown, TurnLeft, TurnRight}
 
 // Directions maps string direction representation to int representation
 var Directions = map[string]Direction{
-    "up": Up,
-    "down": Down,
-    "right": Right,
-    "left": Left,
+	"up":    Up,
+	"down":  Down,
+	"right": Right,
+	"left":  Left,
 }
 
 // Direction contains the direction the player is facing
@@ -129,9 +129,9 @@ func main() {
 
 	for status.Running && status.Players[status.You].Active {
 		log.Println("Turn: ", status.Turn)
-        for _,p := range status.Players {
-            p.Direction = Directions[p.StringDirection]
-        }
+		for _, p := range status.Players {
+			p.Direction = Directions[p.StringDirection]
+		}
 		action := client.GetAction(*status.Players[status.You], &status)
 		status.Turn++
 
