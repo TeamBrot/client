@@ -338,6 +338,7 @@ type MinimaxClient struct{}
 func (c MinimaxClient) GetAction(player Player, status *Status) Action {
 	//change remainingPlayers to minimizer and choose minimizer from active remaining players
 	// TODO: use closest player
+    // TODO: make player move at the same time
 	// findClosestPlayer(status.You, status)
 	var otherPlayerID int
 	for id, player := range status.Players {
@@ -346,8 +347,5 @@ func (c MinimaxClient) GetAction(player Player, status *Status) Action {
 		}
 	}
 	actions := bestActionsMinimax(status.You, otherPlayerID, status, 7, true)
-	if len(actions) == 0 {
-		return "change_nothing"
-	}
 	return actions[rand.Intn(len(actions))]
 }
