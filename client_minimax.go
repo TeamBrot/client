@@ -295,28 +295,20 @@ func copyStatus(status *Status) *Status {
 	return &s
 }
 
-// MinimaxClient is a client implementation that uses Minimax to decide what to do next
-type MinimaxClient struct{}
+func findClosestPlayer(playerID int, status *Status) int {
+	//TODO: write function
+	return 0
+}
 
-// GetAction implements the Client interface
-//TODO: use player information
-func (c MinimaxClient) GetAction(player Player, status *Status) Action {
-	//change remainingPlayers to minimizer and choose minimizer from active remaining players
-	// TODO: use closest player
-	var otherPlayer int
-	for id, player := range status.Players {
-		if player.Active && status.You != id {
-			otherPlayer = id
-		}
-	}
+func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth int, print bool) []Action {
 	bestScore := -100
 	bestActions := make([]Action, 0)
-	possibleMoves := moves(status, status.Players[status.You])
+	possibleMoves := moves(status, status.Players[maximizerID])
 	channels := make(map[Action]chan int, 0)
 	for _, action := range possibleMoves {
 		channels[action] = make(chan int)
 		sCopy := copyStatus(status)
-		go simulate(status.You, otherPlayer, true, sCopy, action, 7, -200, 200, channels[action])
+		go simulate(maximizerID, minimizerID, true, sCopy, action, depth, -200, 200, channels[action])
 	}
 
 	for action, ch := range channels {
@@ -326,12 +318,34 @@ func (c MinimaxClient) GetAction(player Player, status *Status) Action {
 			bestScore = score
 		}
 	}
-	log.Println("bestActions: ", bestActions, bestScore)
 	if len(bestActions) == 0 {
-		if len(possibleMoves) == 0 {
-			return "change_nothing"
+		if print {
+			log.Println("No best action, possibleMoves: ", possibleMoves)
 		}
-		bestActions = possibleMoves
+		return possibleMoves
 	}
-	return bestActions[rand.Intn(len(bestActions))]
+	if print {
+		log.Println("bestActions: ", bestActions, bestScore)
+	}
+	return bestActions
+}
+
+// MinimaxClient is a client implementation that uses Minimax to decide what to do next
+type MinimaxClient struct{}
+
+// GetAction implements the Client interface
+//TODO: use player information
+func (c MinimaxClient) GetAction(player Player, status *Status) Action {
+	//change remainingPlayers to minimizer and choose minimizer from active remaining players
+	// TODO: use closest player
+	// TODO: make player move at the same time
+	// findClosestPlayer(status.You, status)
+	var otherPlayerID int
+	for id, player := range status.Players {
+		if player.Active && status.You != id {
+			otherPlayerID = id
+		}
+	}
+	actions := bestActionsMinimax(status.You, otherPlayerID, status, 7, true)
+	return actions[rand.Intn(len(actions))]
 }
