@@ -5,77 +5,52 @@ import (
 	"math/rand"
 )
 
-func checkCell(status *Status, current bool, y int, x int, jump bool) bool {
+func checkCell(status *Status, direction Direction, y int, x int, fields int) bool {
+	if direction == Up {
+		y -= fields
+	} else if direction == Down {
+		y += fields
+	} else if direction == Left {
+		x -= fields
+	} else {
+		x += fields
+	}
 	if x >= status.Width || y >= status.Height || x < 0 || y < 0 {
 		return false
 	}
-	return (status.Cells[y][x] == 0 || jump) && current
+	return status.Cells[y][x] == 0
 }
 
 func moves(status *Status, player *Player) []Action {
 	changeNothing := true
 	turnRight := true
 	turnLeft := true
-	speedDown := true
-	speedUp := true
+	slowDown := player.Speed != 1
+	speedUp := player.Speed != 10
 	for i := 1; i <= player.Speed; i++ {
 		checkJump := status.Turn%6 == 0 && i > 1 && i < player.Speed
-		checkJumpSpeedDown := status.Turn%6 == 0 && i > 1 && i < player.Speed-1
+		checkJumpSlowDown := status.Turn%6 == 0 && i > 1 && i < player.Speed-1
 		checkJumpSpeedUp := status.Turn%6 == 0 && i > 1 && i <= player.Speed
-		if player.Direction == Right {
-			turnRight = checkCell(status, turnRight, player.Y+i, player.X, checkJump)
-			changeNothing = checkCell(status, changeNothing, player.Y, player.X+i, checkJump)
-			if i != player.Speed {
-				speedDown = checkCell(status, speedDown, player.Y, player.X+i, checkJumpSpeedDown)
-			}
-			speedUp = checkCell(status, speedUp, player.Y, player.X+i, checkJumpSpeedUp)
-			turnLeft = checkCell(status, turnLeft, player.Y-i, player.X, checkJump)
-		} else if player.Direction == Up {
-			turnRight = checkCell(status, turnRight, player.Y, player.X+i, checkJump)
-			changeNothing = checkCell(status, changeNothing, player.Y-i, player.X, checkJump)
-			if i != player.Speed {
-				speedDown = checkCell(status, speedDown, player.Y-i, player.X, checkJumpSpeedDown)
-			}
-			speedUp = checkCell(status, speedUp, player.Y-i, player.X, checkJumpSpeedUp)
-			turnLeft = checkCell(status, turnLeft, player.Y, player.X-i, checkJump)
-		} else if player.Direction == Left {
-			turnRight = checkCell(status, turnRight, player.Y-i, player.X, checkJump)
-			changeNothing = checkCell(status, changeNothing, player.Y, player.X-i, checkJump)
-			if i != player.Speed {
-				speedDown = checkCell(status, speedDown, player.Y, player.X-i, checkJumpSpeedDown)
-			}
-			speedUp = checkCell(status, speedUp, player.Y, player.X-i, checkJumpSpeedUp)
-			turnLeft = checkCell(status, turnLeft, player.Y+i, player.X, checkJump)
-		} else if player.Direction == Down {
-			turnRight = checkCell(status, turnRight, player.Y, player.X-i, checkJump)
-			changeNothing = checkCell(status, changeNothing, player.Y+i, player.X, checkJump)
-			if i != player.Speed {
-				speedDown = checkCell(status, speedDown, player.Y+i, player.X, checkJumpSpeedDown)
-			}
-			speedUp = checkCell(status, speedUp, player.Y+i, player.X, checkJumpSpeedUp)
-			turnLeft = checkCell(status, turnLeft, player.Y, player.X+i, checkJump)
-		}
-	}
 
-	if player.Direction == Right {
-		speedUp = checkCell(status, speedUp, player.Y, player.X+player.Speed+1, false)
-	} else if player.Direction == Up {
-		speedUp = checkCell(status, speedUp, player.Y-player.Speed-1, player.X, false)
-	} else if player.Direction == Left {
-		speedUp = checkCell(status, speedUp, player.Y, player.X-player.Speed-1, false)
-	} else if player.Direction == Down {
-		speedUp = checkCell(status, speedUp, player.Y+player.Speed+1, player.X, false)
+		turnLeft = turnLeft && (checkJump || checkCell(status, (player.Direction+1)%4, player.Y, player.X, i))
+		changeNothing = changeNothing && (checkJump || checkCell(status, player.Direction, player.Y, player.X, i))
+		turnRight = turnRight && (checkJump || checkCell(status, (player.Direction+3)%4, player.Y, player.X, i))
+		if i != player.Speed {
+			slowDown = slowDown && (checkJumpSlowDown || checkCell(status, player.Direction, player.Y, player.X, i))
+		}
+		speedUp = speedUp && (checkJumpSpeedUp || checkCell(status, player.Direction, player.Y, player.X, i))
 	}
+	speedUp = speedUp && checkCell(status, player.Direction, player.Y, player.X, player.Speed+1)
 
 	possibleMoves := make([]Action, 0)
 
-	if speedDown && player.Speed != 1 {
+	if slowDown {
 		possibleMoves = append(possibleMoves, SlowDown)
 	}
 	if changeNothing {
 		possibleMoves = append(possibleMoves, ChangeNothing)
 	}
-	if speedUp && player.Speed != 10 {
+	if speedUp {
 		possibleMoves = append(possibleMoves, SpeedUp)
 	}
 	if turnLeft {
@@ -347,5 +322,8 @@ func (c MinimaxClient) GetAction(player Player, status *Status) Action {
 		}
 	}
 	actions := bestActionsMinimax(status.You, otherPlayerID, status, 7, true)
+	if len(actions) == 0 {
+		return ChangeNothing
+	}
 	return actions[rand.Intn(len(actions))]
 }

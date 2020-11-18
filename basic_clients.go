@@ -75,7 +75,7 @@ func (c SmartClient) GetAction(player Player, status *Status) Action {
 	board := status.Cells
 	log.Println(player.Direction)
 	switch player.Direction {
-	case "up":
+	case Up:
 		if player.Y == 0 {
 			if player.X+1 >= len(board[0]) {
 				bestAction = TurnLeft
@@ -99,7 +99,7 @@ func (c SmartClient) GetAction(player Player, status *Status) Action {
 		} else {
 			bestAction = ChangeNothing
 		}
-	case "down":
+	case Down:
 		if player.Y+1 >= len(board) {
 			if player.X == 0 {
 				bestAction = TurnLeft
@@ -123,7 +123,7 @@ func (c SmartClient) GetAction(player Player, status *Status) Action {
 		} else {
 			bestAction = ChangeNothing
 		}
-	case "left":
+	case Left:
 		if player.X == 0 {
 			if player.Y == 0 {
 				bestAction = TurnLeft
@@ -147,7 +147,7 @@ func (c SmartClient) GetAction(player Player, status *Status) Action {
 		} else {
 			bestAction = ChangeNothing
 		}
-	case "right":
+	case Right:
 		if player.X+1 >= len(board) {
 			if player.Y == 0 {
 				bestAction = TurnRight

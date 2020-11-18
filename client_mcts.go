@@ -179,44 +179,44 @@ func doMoves(status *Status, moves map[int]Action) {
 			}
 		} else if action == "turn_left" {
 			switch p.Direction {
-			case "left":
-				p.Direction = "down"
+			case Left:
+				p.Direction = Down
 				break
-			case "down":
-				p.Direction = "right"
+			case Down:
+				p.Direction = Right
 				break
-			case "right":
-				p.Direction = "up"
+			case Right:
+				p.Direction = Up
 				break
-			case "up":
-				p.Direction = "left"
+			case Up:
+				p.Direction = Left
 				break
 			}
 		} else if action == "turn_right" {
 			switch p.Direction {
-			case "left":
-				p.Direction = "up"
+			case Left:
+				p.Direction = Up
 				break
-			case "down":
-				p.Direction = "left"
+			case Down:
+				p.Direction = Left
 				break
-			case "right":
-				p.Direction = "down"
+			case Right:
+				p.Direction = Down
 				break
-			case "up":
-				p.Direction = "right"
+			case Up:
+				p.Direction = Right
 				break
 			}
 		}
 
 		for i := 1; i <= p.Speed; i++ {
-			if p.Direction == "up" {
+			if p.Direction == Up {
 				p.Y--
-			} else if p.Direction == "down" {
+			} else if p.Direction == Down {
 				p.Y++
-			} else if p.Direction == "right" {
+			} else if p.Direction == Right {
 				p.X++
-			} else if p.Direction == "left" {
+			} else if p.Direction == Left {
 				p.X--
 			}
 
