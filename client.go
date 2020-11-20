@@ -105,6 +105,8 @@ func main() {
 		break
 	case "mcts":
 		client = MctsClient{}
+	case "speku":
+		client = SpekuClient{}
 	default:
 		log.Fatal("Usage:", os.Args[0], "<client>")
 	}
