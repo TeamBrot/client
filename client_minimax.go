@@ -260,7 +260,7 @@ func copyStatus(status *Status) *Status {
 	s.You = status.You
 	s.Cells = make([][]int, s.Height)
 	for i := range s.Cells {
-		s.Cells[i] = make([]int, status.Height)
+		s.Cells[i] = make([]int, status.Width)
 		copy(s.Cells[i], status.Cells[i])
 	}
 	s.Players = make(map[int]*Player)
