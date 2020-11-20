@@ -1,4 +1,5 @@
 import json
+
 class player(object):
     """Creates a player object from the given json"""
     def __init__(self, data):
