@@ -10,12 +10,13 @@ import (
 
 // Player contains information on a specific player. It is provided by the server,
 type Player struct {
-	X         int       `json:"x"`
-	Y         int       `json:"y"`
-	Direction Direction `json:"direction"`
-	Speed     int       `json:"speed"`
-	Active    bool      `json:"active"`
-	Name      string    `json:"name"`
+	X               int `json:"x"`
+	Y               int `json:"y"`
+	Direction       Direction
+	StringDirection string `json:"direction"`
+	Speed           int    `json:"speed"`
+	Active          bool   `json:"active"`
+	Name            string `json:"name"`
 }
 
 // Status contains all information on the current game status
@@ -54,22 +55,28 @@ const (
 // Actions contains all actions that could be taken
 var Actions = []Action{ChangeNothing, SpeedUp, SlowDown, TurnLeft, TurnRight}
 
-// Direction contains the direction the player is facing
-type Direction string
+// Directions maps string direction representation to int representation
+var Directions = map[string]Direction{
+	"up":    Up,
+	"down":  Down,
+	"right": Right,
+	"left":  Left,
+}
 
+// Direction contains the direction the player is facing
+type Direction int
+
+// turning left is equivalent to +1(mod 4) and turning right to (+3)(mod 4)
 const (
 	// Up makes the player face up
-	Up Direction = "up"
+	Up Direction = 0
 	// Left makes the player face left
-	Left = "left"
+	Left = 1
 	// Down makes the player face down
-	Down = "down"
+	Down = 2
 	// Right makes the player face right
-	Right = "right"
+	Right = 3
 )
-
-// Directions contains all possible directions
-var Directions = []Direction{Up, Left, Down, Right}
 
 // Client represents a handler that decides what the specific player should do next
 type Client interface {
@@ -96,6 +103,10 @@ func main() {
 	case "smart":
 		client = SmartClient{}
 		break
+	case "mcts":
+		client = MctsClient{}
+	case "speku":
+		client = SpekuClient{}
 	default:
 		log.Fatal("Usage:", os.Args[0], "<client>")
 	}
@@ -118,8 +129,11 @@ func main() {
 		return
 	}
 
-	for status.Players[status.You].Active {
+	for status.Running && status.Players[status.You].Active {
 		log.Println("Turn: ", status.Turn)
+		for _, p := range status.Players {
+			p.Direction = Directions[p.StringDirection]
+		}
 		action := client.GetAction(*status.Players[status.You], &status)
 		status.Turn++
 
