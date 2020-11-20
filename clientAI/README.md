@@ -1,4 +1,4 @@
-Um gegen die KI zu spielen:
+Um gegen die KI zu spielen: \n
     - `pip install websocket-client`
     - `pip install tesorflow`
     - evtl. noch andere Sachen...
