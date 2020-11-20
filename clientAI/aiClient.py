@@ -49,7 +49,7 @@ def on_error(ws, error):
 
 # called when the websocket recieves a message
 def on_message(ws, message):
-    print(message)
+    #print(message)
     ws.send(ai(message))
 
 # called when the websocket is opened
