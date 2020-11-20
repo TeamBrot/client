@@ -41,17 +41,6 @@ func expansion(node *MCTSNode) {
 	}
 }
 
-func copyPlayer(player *Player) *Player {
-	var p Player
-	p.Active = player.Active
-	p.Direction = player.Direction
-	p.Name = player.Name
-	p.Speed = player.Speed
-	p.X = player.X
-	p.Y = player.Y
-	return &p
-}
-
 func simulateMCTS(node *MCTSNode, depth int) float64 {
 	status := copyStatus(node.status)
 	activeOtherPlayers := 0
