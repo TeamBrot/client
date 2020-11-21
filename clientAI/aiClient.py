@@ -1,11 +1,14 @@
 import websocket
-from information import game
-from information import start_state, transform
+
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 
+
+from information import game
+from information import start_state, transform
+import config as cfg
 
 # Variables for connection
 connected = False
@@ -17,20 +20,28 @@ actions = {
     3 : '{"action":"speed_up"}',
     4 : '{"action":"change_nothing"}'
     }
+action_names = {
+    0 : "turn_left",
+    1 : "turn_right",
+    2 : "slow_down",
+    3 : "speed_up",
+    4 : "change_nothing"
+    }
 
 # Variables for Keras
 # Configuration paramaters for the whole setup
-seed = 42
-gamma = 0.99                    # Discount factor for past rewards
-epsilon = 1.0                   # Epsilon greedy parameter
-epsilon_min = 0.1               # Minimum epsilon greedy parameter
-epsilon_max = 1.0               # Maximum epsilon greedy parameter
+seed = cfg.seed
+gamma = cfg.gamma                    # Discount factor for past rewards
+epsilon = cfg.epsilon                 # Epsilon greedy parameter
+epsilon_min = cfg.epsilon_min               # Minimum epsilon greedy parameter
+epsilon_max = cfg.epsilon_max              # Maximum epsilon greedy parameter
 epsilon_interval = (
     epsilon_max - epsilon_min
 )                               # Rate at which to reduce chance of random action being taken
-batch_size = 32                 # Size of batch taken from replay buffer
-max_steps_per_episode = 10000
+batch_size = cfg.batch_size                 # Size of batch taken from replay buffer
+max_steps_per_episode = cfg.max_steps_per_episode
 
+# Variables for ai
 state = None
 episode_reward = 0
 first_msg = True
@@ -92,10 +103,11 @@ def ai(data):
     global epsilon_interval
     global epsilon_greedy_frames
 
-    # Apply the sampled action in our environment
+    # Get next state, reward and done-flag from incoming message
     state_next = transform(gamestate)
     reward = 1
-    done = False
+
+    done = (lambda x: True if x else False)(gamestate.player_you.active)
 
     state_next = np.array(state_next)
 
@@ -174,6 +186,7 @@ def ai(data):
     if frame_count < epsilon_random_frames or epsilon > np.random.rand(1)[0]:
         # Take random action
         action = np.random.choice(num_actions)
+        print("random Action:", action_names[action])
     else:
         # Predict action Q-values
         # From environment state
@@ -182,6 +195,14 @@ def ai(data):
         action_probs = model(state_tensor, training=False)
         # Take best action
         action = tf.argmax(action_probs[0]).numpy()
+
+        print("{}: {}, {}: {}, {}: {}, {}: {}, {}: {}".format(
+            action_names[0],action_probs[0],
+            action_names[1],action_probs[1],
+            action_names[2],action_probs[2],
+            action_names[3],action_probs[3],
+            action_names[4],action_probs[4]))
+        print("Best action: {} with probability of {}".format(action_names[action], action_probs[action]))
 
     # Decay probability of taking random action
     epsilon -= epsilon_interval / epsilon_greedy_frames
@@ -214,14 +235,19 @@ def create_q_model():
 # The first model makes the predictions for Q-values which are used to
 # make a action.
 model = create_q_model()
+# to load existing model:
+# model = keras.models.load_model('model')
+
 # Build a target model for the prediction of future rewards.
 # The weights of a target model get updated every 10000 steps thus when the
 # loss between the Q-values is calculated the target Q-value is stable.
 model_target = create_q_model()
+# to load existing model:
+# model_target = keras.models.load_model('model_target')
 
 # In the Deepmind paper they use RMSProp however then Adam optimizer
 # improves training time
-optimizer = keras.optimizers.Adam(learning_rate=0.00025, clipnorm=1.0)
+optimizer = keras.optimizers.Adam(learning_rate=cfg.learn_rate, clipnorm=cfg.clipnorm)
 
 # Experience replay buffers
 action_history = []
@@ -231,26 +257,31 @@ rewards_history = []
 done_history = []
 episode_reward_history = []
 running_reward = 0
-episode_count = 0
 frame_count = 0
+
+max_episodes = cfg.max_episodes
+
 # Number of frames to take random action and observe output
-epsilon_random_frames = 50000
+epsilon_random_frames = cfg.epsilon_random_frames
 # Number of frames for exploration
-epsilon_greedy_frames = 1000000.0
+epsilon_greedy_frames = cfg.epsilon_greedy_frames
 # Maximum replay length
 # Note: The Deepmind paper suggests 1000000 however this causes memory issues
-max_memory_length = 100000
+max_memory_length = cfg.max_memory_length
 # Train the model after 4 actions
-update_after_actions = 4
+update_after_actions = cfg.update_after_actions
 # How often to update the target network
-update_target_network = 10000
+update_target_network = cfg.update_target_network
 # Using huber loss for stability
 loss_function = keras.losses.Huber()
 
 if __name__ == "__main__":
-    while(True):
+    for episode_count in range(max_episodes):
         connect()
         while(connected):
             ...
+        print("Episode {} finished, Reward: {}".format(episode_count,episode_reward))
+        model_target.save('model')
+        model_target.save('model_target')
 
 
