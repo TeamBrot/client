@@ -237,17 +237,14 @@ func simulatePlayer(field *Field, limit int, elapsedTurns int, ch chan *Field) *
 	turns := 1
 	lenTurn := 1
 	move := 0
-	start := time.Now()
 	var movemade int
-	for i := 1; i <= len(field.Players); i++ {
+	for i := 1; i < len(field.Players); i++ {
 		if i >= lenTurn {
 			turns++
-			fmt.Println(move)
-			counter := 0
+			counter := 1
 			for j := lenTurn; j < lenTurn+move; j++ {
 				player1 := field.Players[j]
 				if player1 != nil {
-					counter++
 					for z := j + 1; z < lenTurn+move; z++ {
 						player2 := field.Players[z]
 						if player2 != nil {
@@ -268,7 +265,6 @@ func simulatePlayer(field *Field, limit int, elapsedTurns int, ch chan *Field) *
 				}
 
 			}
-			fmt.Println(counter)
 			counter = 0
 			lenTurn = lenTurn + move
 			move = 0
@@ -290,10 +286,7 @@ func simulatePlayer(field *Field, limit int, elapsedTurns int, ch chan *Field) *
 	}
 	//	fmt.Println(field.Cells)
 	fmt.Println(turns)
-	t := time.Now()
 
-	elapsed := t.Sub(start)
-	fmt.Println(elapsed)
 	if ch != nil {
 		ch <- field
 	}
@@ -316,6 +309,8 @@ type SpekuClient struct{}
 // GetAction implements the Client interface
 //TODO: use player information
 func (c SpekuClient) GetAction(player Player, status *Status) Action {
+
+	start := time.Now()
 	fieldArray := convertCellsToField(status)
 	channels := make(map[int]chan *Field, 0)
 	for i, field := range fieldArray {
@@ -336,5 +331,9 @@ func (c SpekuClient) GetAction(player Player, status *Status) Action {
 		}
 
 	}
+	t := time.Now()
+
+	elapsed := t.Sub(start)
+	fmt.Println(elapsed)
 	return ChangeNothing
 }
