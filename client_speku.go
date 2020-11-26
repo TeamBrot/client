@@ -269,6 +269,10 @@ func simulatePlayer(field *Field, limit int, elapsedTurns int, ch chan *Field) *
 			lenTurn = lenTurn + move
 			move = 0
 		}
+		if i > limit {
+			fmt.Println("Ich habe abgebrochen")
+			break
+		}
 		if field.Players[i] != nil {
 			probability := 1.0 / math.Pow(5.0, float64(turns))
 			for _, action := range Actions {
@@ -279,10 +283,7 @@ func simulatePlayer(field *Field, limit int, elapsedTurns int, ch chan *Field) *
 		} else {
 			continue
 		}
-		if i > limit {
-			fmt.Println("Ich habe abgebrochen")
-			break
-		}
+
 	}
 	//	fmt.Println(field.Cells)
 	fmt.Println(turns)
