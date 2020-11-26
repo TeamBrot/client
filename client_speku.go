@@ -2,14 +2,17 @@ package main
 
 import (
 	"fmt"
+	"math"
+	"time"
 )
 
 //Field to store probabilities
 type Field struct {
 	Cells   [][]float64
-	Players map[int]*SimPlayer
+	Players []*SimPlayer
 }
 
+//Coords store the coordinates of a player
 type Coords struct {
 	Y, X int
 }
@@ -20,6 +23,7 @@ type SimPlayer struct {
 	Y            int `json:"y"`
 	Direction    Direction
 	Speed        int `json:"speed"`
+	probability  float64
 	visitedCells map[Coords]struct{}
 }
 
@@ -27,38 +31,43 @@ func combineFields(field1 Field, field2 Field) {
 
 }
 
-func convertCellsToField(status *Status) *Field {
+func convertCellsToField(status *Status) []*Field {
 	cells := status.Cells
 	height := status.Height
 	width := status.Width
-
-	fieldCells := make([][]float64, height)
-	for i := range fieldCells {
-		fieldCells[i] = make([]float64, width)
-	}
-	for i := range cells {
-		for j := range cells[i] {
-			if cells[i][j] != 0 {
-				fieldCells[i][j] = -1.0
-			} else {
-				fieldCells[i][j] = 0.0
-			}
-		}
-	}
-	simPlayerMap := make(map[int]*SimPlayer)
-	count := 1
+	fieldArray := make([]*Field, 0)
 	for i, player := range status.Players {
+
 		if i != status.You {
+			fieldCells := make([][]float64, height)
+			for i := range fieldCells {
+				fieldCells[i] = make([]float64, width)
+			}
+			for i := range cells {
+				for j := range cells[i] {
+					if cells[i][j] != 0 {
+						fieldCells[i][j] = -1.0
+					} else {
+						fieldCells[i][j] = 0.0
+					}
+				}
+			}
+			simPlayerMap := make([]*SimPlayer, 0)
+			simPlayerMap = append(simPlayerMap, nil)
 			newSimPlayer := SimPlayer{X: player.X, Y: player.Y, Direction: player.Direction, Speed: player.Speed, visitedCells: make(map[Coords]struct{})}
-			simPlayerMap[count] = &newSimPlayer
-			count++
+			simPlayerMap = append(simPlayerMap, &newSimPlayer)
+
+			field := Field{Cells: fieldCells, Players: simPlayerMap}
+			fieldArray = append(fieldArray, &field)
 		}
 	}
-	field := Field{Cells: fieldCells, Players: simPlayerMap}
-	return &field
+	return fieldArray
 }
 
 func simulateMove(field *Field, playerID int, probability float64, action Action, turn int, limit int) (*Field, int) {
+	if field.Players[playerID] == nil {
+		return field, 0
+	}
 	player := copyPlayer(field.Players[playerID])
 	if action == SpeedUp {
 		if player.Speed != 10 {
@@ -186,9 +195,9 @@ func simulateMove(field *Field, playerID int, probability float64, action Action
 		}
 	}
 	if len(field.Players)+1 > limit+10 {
-		field.Players[len(field.Players)+1] = nil
+		field.Players = append(field.Players, nil)
 	} else {
-		field.Players[len(field.Players)+1] = player
+		field.Players = append(field.Players, player)
 	}
 	return field, 1
 }
@@ -199,10 +208,106 @@ func copyPlayer(player *SimPlayer) *SimPlayer {
 	p.X = player.X
 	p.Y = player.Y
 	p.visitedCells = make(map[Coords]struct{})
-	for k, v := range player.visitedCells {
-		p.visitedCells[k] = v
+	for k := range player.visitedCells {
+		p.visitedCells[k] = struct{}{}
 	}
 	return &p
+}
+
+func playerEqual(player1 *SimPlayer, player2 *SimPlayer) bool {
+	if player1.Y != player2.Y || player1.X != player2.X {
+		return false
+	} else if player1.Speed != player2.Speed {
+		return false
+	} else if player1.Direction != player2.Direction {
+		return false
+	} else if len(player1.visitedCells) != len(player2.visitedCells) {
+		return false
+	}
+	for k := range player1.visitedCells {
+		_, w := player2.visitedCells[k]
+		if !w {
+			return false
+		}
+	}
+	return true
+}
+
+func simulatePlayer(field *Field, limit int, elapsedTurns int, ch chan *Field) *Field {
+	turns := 1
+	lenTurn := 1
+	move := 0
+	start := time.Now()
+	var movemade int
+	for i := 1; i <= len(field.Players); i++ {
+		if i >= lenTurn {
+			turns++
+			fmt.Println(move)
+			counter := 0
+			for j := lenTurn; j < lenTurn+move; j++ {
+				player1 := field.Players[j]
+				if player1 != nil {
+					counter++
+					for z := j + 1; z < lenTurn+move; z++ {
+						player2 := field.Players[z]
+						if player2 != nil {
+							if playerEqual(player1, player2) {
+								for field.Players[lenTurn+move-counter] == nil {
+									counter++
+								}
+								field.Players[z] = field.Players[lenTurn+move-counter]
+								field.Players[lenTurn+move-counter] = nil
+								counter++
+							}
+						} else {
+							break
+						}
+					}
+				} else {
+					break
+				}
+
+			}
+			fmt.Println(counter)
+			counter = 0
+			lenTurn = lenTurn + move
+			move = 0
+		}
+		if field.Players[i] != nil {
+			probability := 1.0 / math.Pow(5.0, float64(turns))
+			for _, action := range Actions {
+				field, movemade = simulateMove(field, i, probability, action, elapsedTurns+turns-1, limit)
+				move = move + movemade
+			}
+			field.Players[i] = nil
+		} else {
+			continue
+		}
+		if i > limit {
+			fmt.Println("Ich habe abgebrochen")
+			break
+		}
+	}
+	//	fmt.Println(field.Cells)
+	fmt.Println(turns)
+	t := time.Now()
+
+	elapsed := t.Sub(start)
+	fmt.Println(elapsed)
+	if ch != nil {
+		ch <- field
+	}
+	return field
+}
+
+func addFields(field1 *Field, field2 *Field) *Field {
+	for i := 0; i < len(field1.Cells); i++ {
+		for j := 0; j < len(field1.Cells[i]); j++ {
+			field2.Cells[i][j] = field2.Cells[i][j] + field1.Cells[i][j]
+		}
+
+	}
+	return field2
 }
 
 // SpekuClient is a client implementation that uses Minimax to decide what to do next
@@ -211,30 +316,25 @@ type SpekuClient struct{}
 // GetAction implements the Client interface
 //TODO: use player information
 func (c SpekuClient) GetAction(player Player, status *Status) Action {
-	turns := 0
-	field := convertCellsToField(status)
-	limit := 2500000
-	lenTurn := 1
-	move := 0
-	var movemade int
-	for i := 1; i <= len(field.Players); i++ {
-		if i > lenTurn {
-			turns++
-			lenTurn = lenTurn + move
-			move = 0
-		}
-		probability := 1.0 / (5.0 * float64(i))
-		for _, action := range Actions {
-			field, movemade = simulateMove(field, i, probability, action, turns, limit)
-			move = move + movemade
-		}
-		field.Players[i] = nil
-		if i > limit {
-			fmt.Println("Ich habe abgebrochen")
-			break
+	fieldArray := convertCellsToField(status)
+	channels := make(map[int]chan *Field, 0)
+	for i, field := range fieldArray {
+		if field != nil {
+			channels[i] = make(chan *Field)
+			go simulatePlayer(field, 100000, status.Turn, channels[i])
 		}
 	}
-	fmt.Println(field.Cells)
-	fmt.Println(turns)
+	counter := 0
+	var targetField *Field
+	for _, ch := range channels {
+		newField := <-ch
+		if counter == 0 {
+			targetField = newField
+			counter++
+		} else {
+			targetField = addFields(targetField, newField)
+		}
+
+	}
 	return ChangeNothing
 }
