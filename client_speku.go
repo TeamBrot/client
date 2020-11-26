@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"runtime"
 	"time"
 )
 
@@ -242,29 +243,31 @@ func simulatePlayer(field *Field, limit int, elapsedTurns int, ch chan *Field) *
 		if i >= lenTurn {
 			turns++
 			counter := 1
-			for j := lenTurn; j < lenTurn+move; j++ {
-				player1 := field.Players[j]
-				if player1 != nil {
-					for z := j + 1; z < lenTurn+move; z++ {
-						player2 := field.Players[z]
-						if player2 != nil {
-							if playerEqual(player1, player2) {
-								for field.Players[lenTurn+move-counter] == nil {
+			go func() {
+				for j := lenTurn; j < lenTurn+move; j++ {
+					player1 := field.Players[j]
+					if player1 != nil {
+						for z := j + 1; z < lenTurn+move; z++ {
+							player2 := field.Players[z]
+							if player2 != nil {
+								if playerEqual(player1, player2) {
+									for field.Players[lenTurn+move-counter] == nil {
+										counter++
+									}
+									field.Players[z] = field.Players[lenTurn+move-counter]
+									field.Players[lenTurn+move-counter] = nil
 									counter++
 								}
-								field.Players[z] = field.Players[lenTurn+move-counter]
-								field.Players[lenTurn+move-counter] = nil
-								counter++
+							} else {
+								break
 							}
-						} else {
-							break
 						}
+					} else {
+						break
 					}
-				} else {
-					break
-				}
 
-			}
+				}
+			}()
 			counter = 0
 			lenTurn = lenTurn + move
 			move = 0
@@ -310,14 +313,14 @@ type SpekuClient struct{}
 // GetAction implements the Client interface
 //TODO: use player information
 func (c SpekuClient) GetAction(player Player, status *Status) Action {
-
+	runtime.GOMAXPROCS(4)
 	start := time.Now()
 	fieldArray := convertCellsToField(status)
 	channels := make(map[int]chan *Field, 0)
 	for i, field := range fieldArray {
 		if field != nil {
 			channels[i] = make(chan *Field)
-			go simulatePlayer(field, 100000, status.Turn, channels[i])
+			go simulatePlayer(field, 1000000, status.Turn, channels[i])
 		}
 	}
 	counter := 0
