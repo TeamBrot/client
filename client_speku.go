@@ -276,7 +276,7 @@ func rolloutMove(status *Status, action Action) *Status {
 	return status
 }
 
-func simulateRollouts(status *Status, limit int) {
+func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action{
 	longest := 0
 	longestPaths := make([][]Action, 0)
 	for j := 0; j < 10000; j++ {
@@ -306,13 +306,14 @@ func simulateRollouts(status *Status, limit int) {
 				longestPaths = make([][]Action, 0)
 				longestPaths = append(longestPaths, path)
 				longest = len(path)
-				fmt.Println(longest)
 			}
 		}
 	}
-	fmt.Println(len(longestPaths))
-	fmt.Println(longestPaths[0])
+    if ch != nil {
+        ch <- longestPaths
+    }
 	fmt.Println("ich habe fertig")
+    return longestPaths
 
 }
 func copyPlayer(player *SimPlayer) *SimPlayer {
@@ -424,16 +425,18 @@ type SpekuClient struct{}
 //TODO: use player information
 func (c SpekuClient) GetAction(player Player, status *Status) Action {
 	start := time.Now()
-	go simulateRollouts(status, 200)
+    simChan := make(chan [][]Action)
+    go simulateRollouts(status, 100, simChan)
 	fieldArray := convertCellsToField(status)
 	channels := make(map[int]chan *Field, 0)
 	for i, field := range fieldArray {
 		if field != nil {
 			channels[i] = make(chan *Field)
-			go simulatePlayer(field, 100000, status.Turn, channels[i])
+			go simulatePlayer(field, 100, status.Turn, channels[i])
 		}
 	}
 	counter := 0
+    bestPaths := <- simChan
 	var targetField *Field
 	for _, ch := range channels {
 		newField := <-ch
@@ -445,9 +448,43 @@ func (c SpekuClient) GetAction(player Player, status *Status) Action {
 		}
 
 	}
+    counterNothing := 0
+    counterLeft := 0
+    counterRight := 0
+    counterUp := 0
+    counterDown := 0
+    fmt.Println(bestPaths[0][0])
+    for _, path := range bestPaths {
+        switch path[0] {
+        case ChangeNothing:
+            counterNothing++
+        case TurnLeft:
+            counterLeft++
+        case TurnRight:
+            counterRight++
+        case SpeedUp:
+            counterUp++
+        case SlowDown:
+            counterDown++
+        }
+    }
+    fmt.Println("Change Nothing: ", counterNothing)
+    fmt.Println("Turn Left: ", counterLeft)
+    fmt.Println("TurnRight: ", counterRight)
+    fmt.Println("Speed Up: ", counterUp)
+    fmt.Println("Slow Down: ", counterDown)
 	t := time.Now()
-
 	elapsed := t.Sub(start)
 	fmt.Println(elapsed)
-	return ChangeNothing
+    if counterNothing > counterLeft && counterNothing > counterRight && counterNothing > counterUp && counterNothing > counterDown {
+        return ChangeNothing
+    } else if counterLeft > counterRight && counterLeft > counterUp && counterLeft > counterDown {
+        return TurnLeft
+    } else if counterRight > counterUp && counterRight > counterDown {
+        return TurnRight
+    } else if counterUp > counterDown {
+        return SpeedUp
+    } else {
+        return SlowDown
+    }
 }

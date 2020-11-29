@@ -1,19 +1,16 @@
 #!/usr/bin/bash
 
 killall server
-for i in {0..1000}
+for i in {0..100000}
 do
     echo "Spiele Spiel Nummer $i"
-    ../server/server &
+    ../server/server  &> /dev/null &
     spid=$!
     echo "Der Server wurde gestartet"
-    sleep 0.2
-    ./client speku &
+    ./qlearningclient.py &> /dev/null & 
     cpid=$!
-    ./client smart &
+    ./client smart &> /dev/null &
     c2pid=$!
     wait $cpid
-    sleep 0.1
-    kill $spid
-    sleep  0.1
+    killall server
 done

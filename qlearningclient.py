@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import asyncio
 import websockets
 import random
@@ -129,8 +131,8 @@ class Logik:
 
     def update_q_table(self):
         r_val = self.calculate_r_val()
-        area_state = self.get_area_state(3, False, self.cells, self.players)
-        last_area_state = self.get_area_state(3, True, self.last_cells, self.last_players)
+        area_state = self.get_area_state(7, False, self.cells, self.players)
+        last_area_state = self.get_area_state(7, True, self.last_cells, self.last_players)
         q_index = self.find_q_index(area_state)
         last_q_index = self.find_q_index(last_area_state)
         action_index = self.actions.index(self.last_action)
