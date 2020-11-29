@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"math/rand"
 	"time"
 )
 
@@ -201,6 +202,119 @@ func simulateMove(field *Field, playerID int, probability float64, action Action
 	}
 	return field, 1
 }
+
+func rolloutMove(status *Status, action Action) *Status {
+	player := status.Players[status.You]
+	turn := status.Turn
+	if action == SpeedUp {
+		if player.Speed != 10 {
+			player.Speed++
+		} else {
+			player.Active = false
+			return status
+		}
+	} else if action == SlowDown {
+		if player.Speed != 1 {
+			player.Speed--
+		} else {
+			player.Active = false
+			return status
+		}
+	} else if action == TurnLeft {
+		switch player.Direction {
+		case Left:
+			player.Direction = Down
+			break
+		case Down:
+			player.Direction = Right
+			break
+		case Right:
+			player.Direction = Up
+			break
+		case Up:
+			player.Direction = Left
+			break
+		}
+	} else if action == TurnRight {
+		switch player.Direction {
+		case Left:
+			player.Direction = Up
+			break
+		case Down:
+			player.Direction = Left
+			break
+		case Right:
+			player.Direction = Down
+			break
+		case Up:
+			player.Direction = Right
+			break
+		}
+	}
+
+	jump := turn%6 == 0
+	for i := 1; i <= player.Speed; i++ {
+		if player.Direction == Up {
+			player.Y--
+		} else if player.Direction == Down {
+			player.Y++
+		} else if player.Direction == Right {
+			player.X++
+		} else if player.Direction == Left {
+			player.X--
+		}
+		inCells := player.Y >= 0 && player.Y < len(status.Cells) && player.X >= 0 && player.X < len(status.Cells[0])
+		if !jump || i == 1 || i == player.Speed {
+			if inCells && status.Cells[player.Y][player.X] == 0 {
+				status.Cells[player.Y][player.X] = status.You
+			} else {
+				player.Active = false
+				return status
+			}
+		}
+	}
+	return status
+}
+
+func simulateRollouts(status *Status, limit int) {
+	longest := 0
+	longestPaths := make([][]Action, 0)
+	for j := 0; j < 10000; j++ {
+		rolloutStatus := copyStatus(status)
+		path := make([]Action, 0)
+		for i := 0; i < limit; i++ {
+			possibleMoves := moves(rolloutStatus, rolloutStatus.Players[status.You])
+			if len(possibleMoves) == 0 {
+				break
+			}
+			randomAction := possibleMoves[rand.Intn(len(possibleMoves))]
+			rolloutStatus = rolloutMove(rolloutStatus, randomAction)
+			if rolloutStatus.Players[status.You].Active == true {
+				path = append(path, randomAction)
+
+				rolloutStatus.Turn = rolloutStatus.Turn + 1
+			} else {
+				break
+			}
+		}
+		if len(path) >= longest {
+
+			if longest == len(path) {
+				longestPaths = append(longestPaths, path)
+			} else {
+
+				longestPaths = make([][]Action, 0)
+				longestPaths = append(longestPaths, path)
+				longest = len(path)
+				fmt.Println(longest)
+			}
+		}
+	}
+	fmt.Println(len(longestPaths))
+	fmt.Println(longestPaths[0])
+	fmt.Println("ich habe fertig")
+
+}
 func copyPlayer(player *SimPlayer) *SimPlayer {
 	var p SimPlayer
 	p.Direction = player.Direction
@@ -241,34 +355,30 @@ func simulatePlayer(field *Field, limit int, elapsedTurns int, ch chan *Field) *
 	for i := 1; i < len(field.Players); i++ {
 		if i >= lenTurn {
 			turns++
-			counter := 1
-			for j := lenTurn; j < lenTurn+move; j++ {
-				player1 := field.Players[j]
-				if player1 != nil {
-					for z := j + 1; z < lenTurn+move; z++ {
-						player2 := field.Players[z]
-						if player2 != nil {
-							if playerEqual(player1, player2) {
-								for field.Players[lenTurn+move-counter] == nil {
-									counter++
-								}
-								field.Players[z] = field.Players[lenTurn+move-counter]
-								field.Players[lenTurn+move-counter] = nil
-								counter++
-							}
-						} else {
-							break
-						}
-					}
-				} else {
-					break
-				}
+			//			counter := 1
+			//for j := lenTurn; j < lenTurn+move; j++ {
+			//player1 := field.Players[j]
+			//if player1 != nil {
+			//for z := j + 1; z < lenTurn+move; z++ {
+			//player2 := field.Players[z]
+			//if player2 != nil {
+			//if playerEqual(player1, player2) {
+			//for field.Players[lenTurn+move-counter] == nil {
+			//counter++
+			//}
+			//field.Players[z] = field.Players[lenTurn+move-counter]
+			//field.Players[lenTurn+move-counter] = nil
+			//counter++
+			//}
+			//} else {
+			//break
+			//}
+			//}
+			//} else {
+			//break
+			//}
 
-			}
-			counter = 0
-			if move < 1000 {
-				fmt.Println(field.Players[lenTurn : lenTurn+move])
-			}
+			//}
 			lenTurn = lenTurn + move
 			move = 0
 		}
@@ -276,16 +386,16 @@ func simulatePlayer(field *Field, limit int, elapsedTurns int, ch chan *Field) *
 			fmt.Println("Ich habe abgebrochen")
 			break
 		}
-		if field.Players[i] != nil {
-			probability := 1.0 / math.Pow(5.0, float64(turns))
-			for _, action := range Actions {
-				field, movemade = simulateMove(field, i, probability, action, elapsedTurns+turns-1, limit)
-				move = move + movemade
-			}
-			field.Players[i] = nil
-		} else {
-			continue
+		//if field.Players[i] != nil {
+		probability := 1.0 / math.Pow(5.0, float64(turns))
+		for _, action := range Actions {
+			field, movemade = simulateMove(field, i, probability, action, elapsedTurns+turns-1, limit)
+			move = move + movemade
 		}
+		field.Players[i] = nil
+		//} else {
+		//	continue
+		//}
 
 	}
 	//	fmt.Println(field.Cells)
@@ -314,12 +424,13 @@ type SpekuClient struct{}
 //TODO: use player information
 func (c SpekuClient) GetAction(player Player, status *Status) Action {
 	start := time.Now()
+	go simulateRollouts(status, 200)
 	fieldArray := convertCellsToField(status)
 	channels := make(map[int]chan *Field, 0)
 	for i, field := range fieldArray {
 		if field != nil {
 			channels[i] = make(chan *Field)
-			go simulatePlayer(field, 1000000, status.Turn, channels[i])
+			go simulatePlayer(field, 100000, status.Turn, channels[i])
 		}
 	}
 	counter := 0
