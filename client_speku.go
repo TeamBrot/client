@@ -279,7 +279,7 @@ func rolloutMove(status *Status, action Action) *Status {
 func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action{
 	longest := 0
 	longestPaths := make([][]Action, 0)
-	for j := 0; j < 10000; j++ {
+	for j := 0; j < 20000; j++ {
 		rolloutStatus := copyStatus(status)
 		path := make([]Action, 0)
 		for i := 0; i < limit; i++ {
@@ -297,9 +297,9 @@ func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action{
 				break
 			}
 		}
-		if len(path) >= longest {
+		if float32(len(path)) >= float32(longest) * 0.9 {
 
-			if longest == len(path) {
+            if longest >= len(path) {
 				longestPaths = append(longestPaths, path)
 			} else {
 
@@ -425,29 +425,41 @@ type SpekuClient struct{}
 //TODO: use player information
 func (c SpekuClient) GetAction(player Player, status *Status) Action {
 	start := time.Now()
+    if len(moves(status, &player)) == 1 {
+        return moves(status, &player)[0]
+    } else if len(moves(status, &player)) == 0 {
+        return ChangeNothing
+    }
     simChan := make(chan [][]Action)
     go simulateRollouts(status, 100, simChan)
-	fieldArray := convertCellsToField(status)
-	channels := make(map[int]chan *Field, 0)
-	for i, field := range fieldArray {
-		if field != nil {
-			channels[i] = make(chan *Field)
-			go simulatePlayer(field, 100, status.Turn, channels[i])
-		}
-	}
-	counter := 0
+	//fieldArray := convertCellsToField(status)
+	//channels := make(map[int]chan *Field, 0)
+    //for i, field := range fieldArray {
+	//	if field != nil {
+	//		channels[i] = make(chan *Field)
+	//		go simulatePlayer(field, 100, status.Turn, channels[i])
+	//	}
+	//}
+	//counter := 0
+    var otherPlayerID int
+    for id, player := range status.Players {
+        if player.Active && status.You != id {
+            otherPlayerID = id
+        }
+    }
+    minimaxActions := bestActionsMinimax(status.You, otherPlayerID, status, 7, true)
     bestPaths := <- simChan
-	var targetField *Field
-	for _, ch := range channels {
-		newField := <-ch
-		if counter == 0 {
-			targetField = newField
-			counter++
-		} else {
-			targetField = addFields(targetField, newField)
-		}
-
-	}
+	//var targetField *Field
+	//for _, ch := range channels {
+//		newField := <-ch
+//		if counter == 0 {
+//			targetField = newField
+//			counter++
+//		} else {
+//			targetField = addFields(targetField, newField)
+//		}
+//
+//	}
     counterNothing := 0
     counterLeft := 0
     counterRight := 0
@@ -468,21 +480,40 @@ func (c SpekuClient) GetAction(player Player, status *Status) Action {
             counterDown++
         }
     }
-    fmt.Println("Change Nothing: ", counterNothing)
-    fmt.Println("Turn Left: ", counterLeft)
-    fmt.Println("TurnRight: ", counterRight)
-    fmt.Println("Speed Up: ", counterUp)
-    fmt.Println("Slow Down: ", counterDown)
+    valueNothing := float32(counterNothing) / float32(len(bestPaths))
+    valueLeft := float32(counterLeft) / float32(len(bestPaths))
+    valueRight := float32(counterRight) / float32(len(bestPaths))
+    valueUp := float32(counterUp) / float32(len(bestPaths))
+    valueDown := float32(counterDown) / float32(len(bestPaths))
+    for _, action := range minimaxActions {
+        switch action {
+        case ChangeNothing:
+            valueNothing = valueNothing * 1.2
+        case TurnLeft:
+            valueLeft = valueLeft * 1.2
+        case TurnRight:
+            valueRight = valueRight *1.2
+        case SpeedUp:
+            valueUp =valueUp *1.2
+        case SlowDown:
+            valueDown = valueDown * 1.2
+        }
+    }
+    fmt.Println("Change Nothing: ", valueNothing)
+    fmt.Println("Turn Left: ", valueLeft)
+    fmt.Println("TurnRight: ", valueRight)
+    fmt.Println("Speed Up: ", valueUp)
+    fmt.Println("Slow Down: ", valueDown)
 	t := time.Now()
 	elapsed := t.Sub(start)
 	fmt.Println(elapsed)
-    if counterNothing > counterLeft && counterNothing > counterRight && counterNothing > counterUp && counterNothing > counterDown {
+    if valueNothing > valueLeft && valueNothing > valueRight && valueNothing > valueUp && valueNothing > valueDown {
         return ChangeNothing
-    } else if counterLeft > counterRight && counterLeft > counterUp && counterLeft > counterDown {
+    } else if valueLeft > valueRight && valueLeft > valueUp && valueLeft > valueDown {
         return TurnLeft
-    } else if counterRight > counterUp && counterRight > counterDown {
+    } else if valueRight > valueUp && valueRight > valueDown {
         return TurnRight
-    } else if counterUp > counterDown {
+    } else if valueUp > valueDown {
         return SpeedUp
     } else {
         return SlowDown

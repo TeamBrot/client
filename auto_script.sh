@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 
 killall server
-for i in {0..100000}
+for i in {0..10000000}
 do
     echo "Spiele Spiel Nummer $i"
     ../server/server  &> /dev/null &
