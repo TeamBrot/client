@@ -21,7 +21,7 @@ type MCTSNode struct {
 
 func expansion(node *MCTSNode) {
 	player := node.status.Players[node.status.You]
-	for _, action := range moves(node.status, player) {
+	for _, action := range Moves(node.status, player, nil) {
 		newStatus := copyStatus(node.status)
 		//newPlayer := newStatus.Players[newStatus.You]
 		nextActions := make(map[int]Action)
@@ -56,7 +56,7 @@ func simulateMCTS(node *MCTSNode, depth int) float64 {
 			for id, p := range status.Players {
 				if p.Active {
 					// Is checking for possible moves usefull?
-					possibleMoves := moves(status, p)
+					possibleMoves := Moves(status, p, nil)
 					var randomAction Action
 					if len(possibleMoves) > 0 {
 						randomAction = possibleMoves[rand.Intn(len(possibleMoves))]

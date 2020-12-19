@@ -283,7 +283,7 @@ func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action{
 		rolloutStatus := copyStatus(status)
 		path := make([]Action, 0)
 		for i := 0; i < limit; i++ {
-			possibleMoves := moves(rolloutStatus, rolloutStatus.Players[status.You])
+			possibleMoves := Moves(rolloutStatus, rolloutStatus.Players[status.You], nil)
 			if len(possibleMoves) == 0 {
 				break
 			}
