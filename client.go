@@ -129,6 +129,8 @@ func main() {
 		return
 	}
 
+	log.Println("The Field is: ", status.Width, " x ", status.Height)
+	log.Println("Player on Server: ", len(status.Players))
 	for status.Running && status.Players[status.You].Active {
 		log.Println("Turn: ", status.Turn)
 		for _, p := range status.Players {
@@ -145,6 +147,26 @@ func main() {
 		err = c.ReadJSON(&status)
 		if err != nil {
 			break
+		}
+		counter := 0
+		for _, player := range status.Players {
+			if player.Active {
+				counter++
+			}
+		}
+		if counter > 1 {
+			log.Println("There are ", counter, "Players still active")
+			if !status.Players[status.You].Active {
+				log.Println("I lost")
+			}
+		} else if counter == 1 {
+			if status.Players[status.You].Active {
+				log.Println("Game won")
+			} else {
+				log.Println("I lost")
+			}
+		} else {
+			log.Println("I lost")
 		}
 	}
 	log.Println("player not active anymore, disconnecting")

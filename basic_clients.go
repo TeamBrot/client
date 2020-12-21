@@ -148,7 +148,7 @@ func (c SmartClient) GetAction(player Player, status *Status) Action {
 			bestAction = ChangeNothing
 		}
 	case Right:
-		if player.X+1 >= len(board) {
+		if player.X+1 >= len(board[0]) {
 			if player.Y == 0 {
 				bestAction = TurnRight
 			} else if player.Y+1 >= len(board) {
@@ -172,6 +172,5 @@ func (c SmartClient) GetAction(player Player, status *Status) Action {
 			bestAction = ChangeNothing
 		}
 	}
-	log.Println(bestAction)
 	return bestAction
 }
