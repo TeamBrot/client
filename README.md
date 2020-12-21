@@ -22,6 +22,8 @@ im Format `./clients <bot strategy>`
     - [ ] Test schreiben, um zu überprüfen was passiert
     - [ ] Verschiedene Parameter in Abhängigkeit der Eingabe nutzen
 - [ ] Dokumentation aufteilen und schreiben
+- [ ] Spiele auf der offiziellen api sichtbar machen
+- [ ] Logging entwickeln um erfolg auswerten zu können
 
 
 
