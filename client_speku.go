@@ -28,10 +28,7 @@ type SimPlayer struct {
 	visitedCells map[Coords]struct{}
 }
 
-func combineFields(field1 Field, field2 Field) {
-
-}
-
+//Converts the Cells array of a status to a field
 func convertCellsToField(status *Status) []*Field {
 	cells := status.Cells
 	height := status.Height
@@ -65,6 +62,7 @@ func convertCellsToField(status *Status) []*Field {
 	return fieldArray
 }
 
+//Simulates a move. Doesnt mark a field as occupied. Only writes the probability, that it could be occupied. (Needs improvment at the undo part)
 func simulateMove(field *Field, playerID int, probability float64, action Action, turn int, limit int) (*Field, int) {
 	if field.Players[playerID] == nil {
 		return field, 0
@@ -203,6 +201,7 @@ func simulateMove(field *Field, playerID int, probability float64, action Action
 	return field, 1
 }
 
+//implements the doMove function for the rollout function (it is possible to take illegal moves -> the player dies)
 func rolloutMove(status *Status, action Action) *Status {
 	player := status.Players[status.You]
 	turn := status.Turn
@@ -276,7 +275,8 @@ func rolloutMove(status *Status, action Action) *Status {
 	return status
 }
 
-func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action{
+//searche for the longest paths a player could reach. Only simulates moves for one player!
+func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action {
 	longest := 0
 	longestPaths := make([][]Action, 0)
 	for j := 0; j < 20000; j++ {
@@ -297,9 +297,9 @@ func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action{
 				break
 			}
 		}
-		if float32(len(path)) >= float32(longest) * 0.9 {
+		if float32(len(path)) >= float32(longest)*0.9 {
 
-            if longest >= len(path) {
+			if longest >= len(path) {
 				longestPaths = append(longestPaths, path)
 			} else {
 
@@ -309,13 +309,15 @@ func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action{
 			}
 		}
 	}
-    if ch != nil {
-        ch <- longestPaths
-    }
+	if ch != nil {
+		ch <- longestPaths
+	}
 	fmt.Println("ich habe fertig")
-    return longestPaths
+	return longestPaths
 
 }
+
+//Copys a SimPlayer Object (Might be transfered to a util.go)
 func copyPlayer(player *SimPlayer) *SimPlayer {
 	var p SimPlayer
 	p.Direction = player.Direction
@@ -329,6 +331,7 @@ func copyPlayer(player *SimPlayer) *SimPlayer {
 	return &p
 }
 
+//Compares to SimPlayers and returns true if they are. THIS FUNCTION IS CURRENTLY NOT USED AND COULD BE REMOVED!
 func playerEqual(player1 *SimPlayer, player2 *SimPlayer) bool {
 	if player1.Y != player2.Y || player1.X != player2.X {
 		return false
@@ -348,6 +351,7 @@ func playerEqual(player1 *SimPlayer, player2 *SimPlayer) bool {
 	return true
 }
 
+// simulates all possible moves for a given field.
 func simulatePlayer(field *Field, limit int, elapsedTurns int, ch chan *Field) *Field {
 	turns := 1
 	lenTurn := 1
@@ -418,104 +422,104 @@ func addFields(field1 *Field, field2 *Field) *Field {
 	return field2
 }
 
-// SpekuClient is a client implementation that uses Minimax to decide what to do next
+// SpekuClient is a client implementation that uses speculation to decide what to do next
 type SpekuClient struct{}
 
 // GetAction implements the Client interface
 //TODO: use player information
 func (c SpekuClient) GetAction(player Player, status *Status) Action {
 	start := time.Now()
-    if len(moves(status, &player)) == 1 {
-        return moves(status, &player)[0]
-    } else if len(moves(status, &player)) == 0 {
-        return ChangeNothing
-    }
-    simChan := make(chan [][]Action)
-    go simulateRollouts(status, 100, simChan)
-	//fieldArray := convertCellsToField(status)
-	//channels := make(map[int]chan *Field, 0)
-    //for i, field := range fieldArray {
-	//	if field != nil {
-	//		channels[i] = make(chan *Field)
-	//		go simulatePlayer(field, 100, status.Turn, channels[i])
-	//	}
-	//}
-	//counter := 0
-    var otherPlayerID int
-    for id, player := range status.Players {
-        if player.Active && status.You != id {
-            otherPlayerID = id
-        }
-    }
-    minimaxActions := bestActionsMinimax(status.You, otherPlayerID, status, 7, true)
-    bestPaths := <- simChan
-	//var targetField *Field
-	//for _, ch := range channels {
-//		newField := <-ch
-//		if counter == 0 {
-//			targetField = newField
-//			counter++
-//		} else {
-//			targetField = addFields(targetField, newField)
-//		}
-//
-//	}
-    counterNothing := 0
-    counterLeft := 0
-    counterRight := 0
-    counterUp := 0
-    counterDown := 0
-    fmt.Println(bestPaths[0][0])
-    for _, path := range bestPaths {
-        switch path[0] {
-        case ChangeNothing:
-            counterNothing++
-        case TurnLeft:
-            counterLeft++
-        case TurnRight:
-            counterRight++
-        case SpeedUp:
-            counterUp++
-        case SlowDown:
-            counterDown++
-        }
-    }
-    valueNothing := float32(counterNothing) / float32(len(bestPaths))
-    valueLeft := float32(counterLeft) / float32(len(bestPaths))
-    valueRight := float32(counterRight) / float32(len(bestPaths))
-    valueUp := float32(counterUp) / float32(len(bestPaths))
-    valueDown := float32(counterDown) / float32(len(bestPaths))
-    for _, action := range minimaxActions {
-        switch action {
-        case ChangeNothing:
-            valueNothing = valueNothing * 1.2
-        case TurnLeft:
-            valueLeft = valueLeft * 1.2
-        case TurnRight:
-            valueRight = valueRight *1.2
-        case SpeedUp:
-            valueUp =valueUp *1.2
-        case SlowDown:
-            valueDown = valueDown * 1.2
-        }
-    }
-    fmt.Println("Change Nothing: ", valueNothing)
-    fmt.Println("Turn Left: ", valueLeft)
-    fmt.Println("TurnRight: ", valueRight)
-    fmt.Println("Speed Up: ", valueUp)
-    fmt.Println("Slow Down: ", valueDown)
+	if len(Moves(status, &player, nil)) == 1 {
+		return Moves(status, &player, nil)[0]
+	} else if len(Moves(status, &player, nil)) == 0 {
+		return ChangeNothing
+	}
+	simChan := make(chan [][]Action)
+	go simulateRollouts(status, 100, simChan)
+	fieldArray := convertCellsToField(status)
+	channels := make(map[int]chan *Field, 0)
+	for i, field := range fieldArray {
+		if field != nil {
+			channels[i] = make(chan *Field)
+			go simulatePlayer(field, 100, status.Turn, channels[i])
+		}
+	}
+	counter := 0
+	var otherPlayerID int
+	for id, player := range status.Players {
+		if player.Active && status.You != id {
+			otherPlayerID = id
+		}
+	}
+	minimaxActions := bestActionsMinimax(status.You, otherPlayerID, status, 5, true)
+	bestPaths := <-simChan
+	var targetField *Field
+	for _, ch := range channels {
+		newField := <-ch
+		if counter == 0 {
+			targetField = newField
+			counter++
+		} else {
+			targetField = addFields(targetField, newField)
+		}
+
+	}
+	counterNothing := 0
+	counterLeft := 0
+	counterRight := 0
+	counterUp := 0
+	counterDown := 0
+	fmt.Println(bestPaths[0][0])
+	for _, path := range bestPaths {
+		switch path[0] {
+		case ChangeNothing:
+			counterNothing++
+		case TurnLeft:
+			counterLeft++
+		case TurnRight:
+			counterRight++
+		case SpeedUp:
+			counterUp++
+		case SlowDown:
+			counterDown++
+		}
+	}
+	valueNothing := float32(counterNothing) / float32(len(bestPaths))
+	valueLeft := float32(counterLeft) / float32(len(bestPaths))
+	valueRight := float32(counterRight) / float32(len(bestPaths))
+	valueUp := float32(counterUp) / float32(len(bestPaths))
+	valueDown := float32(counterDown) / float32(len(bestPaths))
+	for _, action := range minimaxActions {
+		switch action {
+		case ChangeNothing:
+			valueNothing = valueNothing * 1.2
+		case TurnLeft:
+			valueLeft = valueLeft * 1.2
+		case TurnRight:
+			valueRight = valueRight * 1.2
+		case SpeedUp:
+			valueUp = valueUp * 1.2
+		case SlowDown:
+			valueDown = valueDown * 1.2
+		}
+	}
+	fmt.Println("Change Nothing: ", valueNothing)
+	fmt.Println("Turn Left: ", valueLeft)
+	fmt.Println("TurnRight: ", valueRight)
+	fmt.Println("Speed Up: ", valueUp)
+	fmt.Println("Slow Down: ", valueDown)
 	t := time.Now()
 	elapsed := t.Sub(start)
 	fmt.Println(elapsed)
-    if valueNothing > valueLeft && valueNothing > valueRight && valueNothing > valueUp && valueNothing > valueDown {
-        return ChangeNothing
-    } else if valueLeft > valueRight && valueLeft > valueUp && valueLeft > valueDown {
-        return TurnLeft
-    } else if valueRight > valueUp && valueRight > valueDown {
-        return TurnRight
-    } else if valueUp > valueDown {
-        return SpeedUp
-    } else {
-        return SlowDown
-    }
+	if valueNothing > valueLeft && valueNothing > valueRight && valueNothing > valueUp && valueNothing > valueDown {
+		return ChangeNothing
+	} else if valueLeft > valueRight && valueLeft > valueUp && valueLeft > valueDown {
+		return TurnLeft
+	} else if valueRight > valueUp && valueRight > valueDown {
+		return TurnRight
+	} else if valueUp > valueDown {
+		return SpeedUp
+	} else {
+		return SlowDown
+	}
 }
