@@ -24,6 +24,7 @@ im Format `./clients <bot strategy>`
 - [ ] Dokumentation aufteilen und schreiben
 - [ ] Spiele auf der offiziellen api sichtbar machen
 - [ ] Logging entwickeln um erfolg auswerten zu können
+- [ ] Docker image erstellen
 
 
 
