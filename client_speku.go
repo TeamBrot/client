@@ -476,8 +476,7 @@ func (c SpekuClient) GetAction(player Player, status *Status) Action {
 	fieldChan := make(chan [][]float64, simDepth)
 	go simulateGame(status, fieldChan, simDepth)
 	for i := 0; i < simDepth; i++ {
-		//fmt.Println(<-fieldChan)
-		fmt.Println("nix")
+		fmt.Println(<-fieldChan)
 	}
 	bestPaths := <-simChan
 	fmt.Println(len(bestPaths))
