@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"time"
 )
@@ -11,6 +12,13 @@ type Result struct {
 	Player []*SimPlayer
 	turn   int
 	ID     int
+}
+type EvaluateStatus struct {
+	Width    int           `json:"width"`
+	Height   int           `json:"height"`
+	AllCells [][][]float64 `json:"cells"`
+	Player   Player
+	Turn     int
 }
 
 //Coords store the coordinates of a player
@@ -28,36 +36,6 @@ type SimPlayer struct {
 	allVisitedCells      map[Coords]struct{}
 	lastMoveVisitedCells map[Coords]struct{}
 	parent               *SimPlayer
-}
-
-//Converts the Cells array of a status to a field
-func convertCellsToField(status *Status) {
-	cells := status.Cells
-	height := status.Height
-	width := status.Width
-	for i, player := range status.Players {
-
-		if i != status.You {
-			fieldCells := make([][]float64, height)
-			for i := range fieldCells {
-				fieldCells[i] = make([]float64, width)
-			}
-			for i := range cells {
-				for j := range cells[i] {
-					if cells[i][j] != 0 {
-						fieldCells[i][j] = -1.0
-					} else {
-						fieldCells[i][j] = 0.0
-					}
-				}
-			}
-			simPlayerMap := make([]*SimPlayer, 0)
-			simPlayerMap = append(simPlayerMap, nil)
-			newSimPlayer := SimPlayer{X: player.X, Y: player.Y, Direction: player.Direction, Speed: player.Speed, allVisitedCells: make(map[Coords]struct{})}
-			simPlayerMap = append(simPlayerMap, &newSimPlayer)
-
-		}
-	}
 }
 
 func checkCell2(cells [][]int, direction Direction, y int, x int, fields int, player *SimPlayer) bool {
@@ -184,22 +162,16 @@ func simulateMove(fieldPointer *[][]int, parentPlayer *SimPlayer, action Action,
 }
 
 //implements the doMove function for the rollout function (it is possible to take illegal moves -> the player dies)
-func rolloutMove(status *Status, action Action) *Status {
+func rolloutMove(status *Status, action Action) {
 	player := status.Players[status.You]
 	turn := status.Turn
 	if action == SpeedUp {
 		if player.Speed != 10 {
 			player.Speed++
-		} else {
-			player.Active = false
-			return status
 		}
 	} else if action == SlowDown {
 		if player.Speed != 1 {
 			player.Speed--
-		} else {
-			player.Active = false
-			return status
 		}
 	} else if action == TurnLeft {
 		switch player.Direction {
@@ -244,22 +216,20 @@ func rolloutMove(status *Status, action Action) *Status {
 		} else if player.Direction == Left {
 			player.X--
 		}
-		inCells := player.Y >= 0 && player.Y < len(status.Cells) && player.X >= 0 && player.X < len(status.Cells[0])
+
 		if !jump || i == 1 || i == player.Speed {
-			if inCells && status.Cells[player.Y][player.X] == 0 {
-				status.Cells[player.Y][player.X] = status.You
-			} else {
-				player.Active = false
-				return status
-			}
+
+			status.Cells[player.Y][player.X] = status.You
+
 		}
 	}
-	return status
+
 }
 
 //searche for the longest paths a player could reach. Only simulates moves for one player!
 func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action {
 	longest := 0
+	filterValue := 0.8
 	longestPaths := make([][]Action, 0)
 	for j := 0; j < 20000; j++ {
 		rolloutStatus := copyStatus(status)
@@ -269,23 +239,18 @@ func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action 
 			if len(possibleMoves) == 0 {
 				break
 			}
-			randomAction := possibleMoves[rand.Intn(len(possibleMoves))]
-			rolloutStatus = rolloutMove(rolloutStatus, randomAction)
-			if rolloutStatus.Players[status.You].Active == true {
-				path = append(path, randomAction)
 
-				rolloutStatus.Turn = rolloutStatus.Turn + 1
-			} else {
-				break
-			}
+			rolloutStatus.Turn = rolloutStatus.Turn + 1
+			randomAction := possibleMoves[rand.Intn(len(possibleMoves))]
+			rolloutMove(rolloutStatus, randomAction)
+			path = append(path, randomAction)
 		}
-		if float32(len(path)) >= float32(longest)*0.8 {
+		if float64(len(path)) >= float64(longest)*filterValue {
 
 			if longest >= len(path) {
 				longestPaths = append(longestPaths, path)
 			} else {
-
-				longestPaths = make([][]Action, 0)
+				longestPaths = filterPaths(longestPaths, len(path), filterValue)
 				longestPaths = append(longestPaths, path)
 				longest = len(path)
 			}
@@ -296,6 +261,16 @@ func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action 
 	}
 	return longestPaths
 
+}
+
+func filterPaths(paths [][]Action, longest int, percent float64) [][]Action {
+	filteredPaths := make([][]Action, 0)
+	for _, path := range paths {
+		if float64(len(path)) >= float64(longest)*percent {
+			filteredPaths = append(filteredPaths, path)
+		}
+	}
+	return filteredPaths
 }
 
 //Copys a SimPlayer Object (Might be transfered to a util.go)
@@ -458,34 +433,130 @@ func makeEmptyCells(height int, width int) [][]int {
 	return field
 }
 
-// SpekuClient is a client implementation that uses speculation to decide what to do next
-type SpekuClient struct{}
+func evaluateScore(player *Player, field [][]float64, action Action, turn int) float64 {
+	score := 0.0
+	if action == SpeedUp {
+		if player.Speed != 10 {
+			player.Speed++
+		}
+	} else if action == SlowDown {
+		if player.Speed != 1 {
+			player.Speed--
+		}
+	} else if action == TurnLeft {
+		switch player.Direction {
+		case Left:
+			player.Direction = Down
+			break
+		case Down:
+			player.Direction = Right
+			break
+		case Right:
+			player.Direction = Up
+			break
+		case Up:
+			player.Direction = Left
+			break
+		}
+	} else if action == TurnRight {
+		switch player.Direction {
+		case Left:
+			player.Direction = Up
+			break
+		case Down:
+			player.Direction = Left
+			break
+		case Right:
+			player.Direction = Down
+			break
+		case Up:
+			player.Direction = Right
+			break
+		}
+	}
 
-// GetAction implements the Client interface
-//TODO: use player information
-func (c SpekuClient) GetAction(player Player, status *Status) Action {
-	start := time.Now()
-	if len(Moves(status, &player, nil)) == 1 {
-		return Moves(status, &player, nil)[0]
-	} else if len(Moves(status, &player, nil)) == 0 {
-		return ChangeNothing
+	jump := turn%6 == 0
+	for i := 1; i <= player.Speed; i++ {
+		if player.Direction == Up {
+			player.Y--
+		} else if player.Direction == Down {
+			player.Y++
+		} else if player.Direction == Right {
+			player.X++
+		} else if player.Direction == Left {
+			player.X--
+		}
+
+		if !jump || i == 1 || i == player.Speed {
+
+			score += field[player.Y][player.X]
+		}
 	}
-	simChan := make(chan [][]Action, 1)
-	go simulateRollouts(status, 10000, simChan)
-	simDepth := 9
-	fieldChan := make(chan [][]float64, simDepth)
-	go simulateGame(status, fieldChan, simDepth)
-	for i := 0; i < simDepth; i++ {
-		fmt.Println(<-fieldChan)
+	return score / float64(player.Speed)
+}
+func copyNormalPlayer(oldPlayer *Player) *Player {
+	var newPlayer Player
+	newPlayer.Direction = oldPlayer.Direction
+	newPlayer.Speed = oldPlayer.Speed
+	newPlayer.X = oldPlayer.X
+	newPlayer.Y = oldPlayer.Y
+	return &newPlayer
+}
+func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, turn int, simDepth int, possibleActions []Action) Action {
+	var scoreNothing float64
+	var scoreLeft float64
+	var scoreRight float64
+	var scoreSlow float64
+	var scoreSpeed float64
+	possibleNothing := false
+	possibleLeft := false
+	possibleRight := false
+	possibleUp := false
+	possibleDown := false
+	for _, action := range possibleActions {
+		switch action {
+		case ChangeNothing:
+			possibleNothing = true
+		case TurnLeft:
+			possibleLeft = true
+		case TurnRight:
+			possibleRight = true
+		case SpeedUp:
+			possibleUp = true
+		case SlowDown:
+			possibleDown = true
+		}
 	}
-	bestPaths := <-simChan
-	fmt.Println(len(bestPaths))
-	counterNothing := 0
-	counterLeft := 0
-	counterRight := 0
-	counterUp := 0
-	counterDown := 0
-	for _, path := range bestPaths {
+	turn++
+	for _, path := range paths {
+		score := 0.0
+		newPlayer := copyNormalPlayer(&player)
+		for i := 0; i < simDepth; i++ {
+			if i != len(path) {
+				score += evaluateScore(newPlayer, allFields[i], path[i], turn+i)
+			} else {
+				break
+			}
+		}
+		switch path[0] {
+		case ChangeNothing:
+			scoreNothing += score
+		case TurnLeft:
+			scoreLeft += score
+		case TurnRight:
+			scoreRight += score
+		case SpeedUp:
+			scoreSpeed += score
+		case SlowDown:
+			scoreSlow += score
+		}
+	}
+	counterNothing := 1
+	counterLeft := 1
+	counterRight := 1
+	counterUp := 1
+	counterDown := 1
+	for _, path := range paths {
 		switch path[0] {
 		case ChangeNothing:
 			counterNothing++
@@ -499,28 +570,65 @@ func (c SpekuClient) GetAction(player Player, status *Status) Action {
 			counterDown++
 		}
 	}
-	valueNothing := float32(counterNothing) / float32(len(bestPaths))
-	valueLeft := float32(counterLeft) / float32(len(bestPaths))
-	valueRight := float32(counterRight) / float32(len(bestPaths))
-	valueUp := float32(counterUp) / float32(len(bestPaths))
-	valueDown := float32(counterDown) / float32(len(bestPaths))
+	valueNothing := scoreNothing + (float64(len(paths)) / float64(counterNothing))
+	valueLeft := scoreLeft + (float64(len(paths)) / float64(counterLeft))
+	valueRight := scoreRight + (float64(len(paths)) / float64(counterRight))
+	valueUp := scoreSpeed + (float64(len(paths)) / float64(counterUp))
+	valueDown := scoreSlow + (float64(len(paths)) / float64(counterDown))
+
 	fmt.Println("Change Nothing: ", valueNothing)
 	fmt.Println("Turn Left: ", valueLeft)
 	fmt.Println("TurnRight: ", valueRight)
 	fmt.Println("Speed Up: ", valueUp)
 	fmt.Println("Slow Down: ", valueDown)
-	t := time.Now()
-	elapsed := t.Sub(start)
-	fmt.Println(elapsed)
-	if valueNothing > valueLeft && valueNothing > valueRight && valueNothing > valueUp && valueNothing > valueDown {
+	if possibleNothing && (valueNothing < valueLeft || !possibleLeft) && (!possibleRight || valueNothing < valueRight) && (valueNothing < valueUp || !possibleUp) && (valueNothing < valueDown || !possibleDown) {
 		return ChangeNothing
-	} else if valueLeft > valueRight && valueLeft > valueUp && valueLeft > valueDown {
+	} else if possibleLeft && (valueLeft < valueRight || !possibleRight) && (valueLeft < valueUp || !possibleUp) && (valueLeft < valueDown || !possibleDown) {
 		return TurnLeft
-	} else if valueRight > valueUp && valueRight > valueDown {
+	} else if possibleRight && (valueRight < valueUp || !possibleUp) && (valueRight < valueDown || !possibleDown) {
 		return TurnRight
-	} else if valueUp > valueDown {
+	} else if possibleUp && (valueUp < valueDown || !possibleDown) {
 		return SpeedUp
 	} else {
 		return SlowDown
 	}
+}
+
+// SpekuClient is a client implementation that uses speculation to decide what to do next
+type SpekuClient struct{}
+
+// GetAction implements the Client interface
+//TODO: use player information
+func (c SpekuClient) GetAction(player Player, status *Status) Action {
+	start := time.Now()
+	var bestAction Action
+	possibleActions := Moves(status, &player, nil)
+	if len(possibleActions) == 1 {
+		fmt.Println("Only possible Action: ", possibleActions[0])
+		return possibleActions[0]
+	} else if len(possibleActions) == 0 {
+		fmt.Println("I'll die...")
+		return ChangeNothing
+	}
+	simChan := make(chan [][]Action, 1)
+	go simulateRollouts(status, 10000, simChan)
+	simDepth := 9
+	fieldChan := make(chan [][]float64, simDepth)
+	go simulateGame(status, fieldChan, simDepth)
+	otherPlayerID := findClosestPlayer(status)
+	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
+	possibleActions = bestActionsMinimax(status.You, otherPlayerID, status, 6)
+	allFields := make([][][]float64, simDepth+1)
+	for i := 0; i < simDepth; i++ {
+		allFields[i] = <-fieldChan
+	}
+	bestPaths := <-simChan
+	bestAction = evaluatePaths(player, allFields, bestPaths, status.Turn, simDepth, possibleActions)
+	fmt.Println(len(bestPaths))
+
+	t := time.Now()
+	elapsed := t.Sub(start)
+	fmt.Println(elapsed)
+	fmt.Println(bestAction)
+	return bestAction
 }
