@@ -2,15 +2,13 @@ package main
 
 import (
 	"fmt"
-	"math"
 	"math/rand"
 	"time"
 )
 
 //Field to store probabilities
 type Field struct {
-	Cells   [][]float64
-	Players []*SimPlayer
+	Cells [][]float64
 }
 
 //Coords store the coordinates of a player
@@ -20,12 +18,14 @@ type Coords struct {
 
 //SimPlayer to add a new array of visited cells
 type SimPlayer struct {
-	X            int `json:"x"`
-	Y            int `json:"y"`
-	Direction    Direction
-	Speed        int `json:"speed"`
-	probability  float64
-	visitedCells map[Coords]struct{}
+	X                    int `json:"x"`
+	Y                    int `json:"y"`
+	Direction            Direction
+	Speed                int `json:"speed"`
+	probability          float64
+	allVisitedCells      map[Coords]struct{}
+	lastMoveVisitedCells map[Coords]struct{}
+	parent               *SimPlayer
 }
 
 //Converts the Cells array of a status to a field
@@ -52,34 +52,85 @@ func convertCellsToField(status *Status) []*Field {
 			}
 			simPlayerMap := make([]*SimPlayer, 0)
 			simPlayerMap = append(simPlayerMap, nil)
-			newSimPlayer := SimPlayer{X: player.X, Y: player.Y, Direction: player.Direction, Speed: player.Speed, visitedCells: make(map[Coords]struct{})}
+			newSimPlayer := SimPlayer{X: player.X, Y: player.Y, Direction: player.Direction, Speed: player.Speed, allVisitedCells: make(map[Coords]struct{})}
 			simPlayerMap = append(simPlayerMap, &newSimPlayer)
 
-			field := Field{Cells: fieldCells, Players: simPlayerMap}
+			field := Field{Cells: fieldCells}
 			fieldArray = append(fieldArray, &field)
 		}
 	}
 	return fieldArray
 }
 
-//Simulates a move. Doesnt mark a field as occupied. Only writes the probability, that it could be occupied. (Needs improvment at the undo part)
-func simulateMove(field *Field, playerID int, probability float64, action Action, turn int, limit int) (*Field, int) {
-	if field.Players[playerID] == nil {
-		return field, 0
+func checkCell2(cells [][]int, direction Direction, y int, x int, fields int, player *SimPlayer) bool {
+	if direction == Up {
+		y -= fields
+	} else if direction == Down {
+		y += fields
+	} else if direction == Left {
+		x -= fields
+	} else {
+		x += fields
 	}
-	player := copyPlayer(field.Players[playerID])
+	if x >= len(cells[0]) || y >= len(cells) || x < 0 || y < 0 {
+		return false
+	}
+	coordsNow := Coords{y, x}
+	_, fieldVisited := player.allVisitedCells[coordsNow]
+	return cells[y][x] == 0 && !fieldVisited
+}
+
+func possibleMoves(player *SimPlayer, cells [][]int, turn int) []Action {
+	changeNothing := true
+	turnRight := true
+	turnLeft := true
+	slowDown := player.Speed != 1
+	speedUp := player.Speed != 10
+	direction := player.Direction
+	y := player.Y
+	x := player.X
+	for i := 1; i <= player.Speed; i++ {
+		checkJump := turn%6 == 0 && i > 1 && i < player.Speed
+		checkJumpSlowDown := turn%6 == 0 && i > 1 && i < player.Speed-1
+		checkJumpSpeedUp := turn%6 == 0 && i > 1 && i <= player.Speed
+
+		turnLeft = turnLeft && (checkJump || checkCell2(cells, (direction+1)%4, y, x, i, player))
+		changeNothing = changeNothing && (checkJump || checkCell2(cells, direction, y, x, i, player))
+		turnRight = turnRight && (checkJump || checkCell2(cells, (direction+3)%4, y, x, i, player))
+		if i != player.Speed {
+			slowDown = slowDown && (checkJumpSlowDown || checkCell2(cells, direction, y, x, i, player))
+		}
+		speedUp = speedUp && (checkJumpSpeedUp || checkCell2(cells, direction, y, x, i, player))
+	}
+	speedUp = speedUp && checkCell2(cells, direction, y, x, player.Speed+1, player)
+
+	possibleMoves := make([]Action, 0)
+
+	if slowDown {
+		possibleMoves = append(possibleMoves, SlowDown)
+	}
+	if changeNothing {
+		possibleMoves = append(possibleMoves, ChangeNothing)
+	}
+	if speedUp {
+		possibleMoves = append(possibleMoves, SpeedUp)
+	}
+	if turnLeft {
+		possibleMoves = append(possibleMoves, TurnLeft)
+	}
+	if turnRight {
+		possibleMoves = append(possibleMoves, TurnRight)
+	}
+	return possibleMoves
+}
+
+//Simulates a move. Doesnt mark a field as occupied. Only writes the probability, that it could be occupied. (Needs improvment at the undo part)
+func simulateMove(field [][]int, parentPlayer *SimPlayer, action Action, turn int) *SimPlayer {
+	player := copyPlayer(parentPlayer)
 	if action == SpeedUp {
-		if player.Speed != 10 {
-			player.Speed++
-		} else {
-			return field, 0
-		}
+		player.Speed++
 	} else if action == SlowDown {
-		if player.Speed != 1 {
-			player.Speed--
-		} else {
-			return field, 0
-		}
+		player.Speed--
 	} else if action == TurnLeft {
 		switch player.Direction {
 		case Left:
@@ -123,82 +174,14 @@ func simulateMove(field *Field, playerID int, probability float64, action Action
 		} else if player.Direction == Left {
 			player.X--
 		}
-
 		if !jump || i == 1 || i == player.Speed {
-
-			inField := player.Y >= 0 && player.Y < len(field.Cells) && player.X >= 0 && player.X < len(field.Cells[0])
-			coordsNow := Coords{Y: player.Y, X: player.X}
-			_, fieldVisited := player.visitedCells[coordsNow]
-
-			if inField && field.Cells[player.Y][player.X] >= 0 && !fieldVisited {
-				field.Cells[player.Y][player.X] = field.Cells[player.Y][player.X] + probability
-				player.visitedCells[coordsNow] = struct{}{}
-			} else {
-				for j := i; j > 1; j-- {
-					if player.Direction == Up {
-						player.Y++
-					} else if player.Direction == Down {
-						player.Y--
-					} else if player.Direction == Right {
-						player.X--
-					} else if player.Direction == Left {
-						player.X++
-					}
-					coordsNow := Coords{Y: player.Y, X: player.X}
-					if (!jump || j == 1 || j == player.Speed) && inField {
-						field.Cells[player.Y][player.X] = field.Cells[player.Y][player.X] - probability
-						if !fieldVisited {
-							delete(player.visitedCells, coordsNow)
-						}
-						fieldVisited = false
-					}
-					if action == SpeedUp {
-						player.Speed--
-					} else if action == SlowDown {
-						player.Speed++
-					} else if action == TurnLeft {
-						switch player.Direction {
-						case Left:
-							player.Direction = Up
-							break
-						case Down:
-							player.Direction = Left
-							break
-						case Right:
-							player.Direction = Down
-							break
-						case Up:
-							player.Direction = Right
-							break
-						}
-					} else if action == TurnRight {
-						switch player.Direction {
-						case Left:
-							player.Direction = Down
-							break
-						case Down:
-							player.Direction = Right
-							break
-						case Right:
-							player.Direction = Up
-							break
-						case Up:
-							player.Direction = Left
-							break
-						}
-					}
-				}
-				return field, 0
-			}
-
+			field[player.Y][player.X]++
+			coordsNow := Coords{player.Y, player.X}
+			player.allVisitedCells[coordsNow] = struct{}{}
+			player.lastMoveVisitedCells[coordsNow] = struct{}{}
 		}
 	}
-	if len(field.Players)+1 > limit+10 {
-		field.Players = append(field.Players, nil)
-	} else {
-		field.Players = append(field.Players, player)
-	}
-	return field, 1
+	return player
 }
 
 //implements the doMove function for the rollout function (it is possible to take illegal moves -> the player dies)
@@ -324,92 +307,73 @@ func copyPlayer(player *SimPlayer) *SimPlayer {
 	p.Speed = player.Speed
 	p.X = player.X
 	p.Y = player.Y
-	p.visitedCells = make(map[Coords]struct{})
-	for k := range player.visitedCells {
-		p.visitedCells[k] = struct{}{}
+	p.parent = player
+	p.lastMoveVisitedCells = make(map[Coords]struct{})
+	p.allVisitedCells = make(map[Coords]struct{})
+	for k := range player.allVisitedCells {
+		p.allVisitedCells[k] = struct{}{}
 	}
 	return &p
 }
 
-//Compares to SimPlayers and returns true if they are. THIS FUNCTION IS CURRENTLY NOT USED AND COULD BE REMOVED!
-func playerEqual(player1 *SimPlayer, player2 *SimPlayer) bool {
-	if player1.Y != player2.Y || player1.X != player2.X {
-		return false
-	} else if player1.Speed != player2.Speed {
-		return false
-	} else if player1.Direction != player2.Direction {
-		return false
-	} else if len(player1.visitedCells) != len(player2.visitedCells) {
-		return false
-	}
-	for k := range player1.visitedCells {
-		_, w := player2.visitedCells[k]
-		if !w {
-			return false
+//TODO: simulate game
+func simulateGame(status *Status, ch chan *Field, limit int) {
+	allSimPlayer := make([]*SimPlayer, 0)
+	for _, player := range status.Players {
+		if player.Active {
+			var p SimPlayer
+			p.Direction = player.Direction
+			p.Speed = player.Speed
+			p.X = player.X
+			p.Y = player.Y
+			p.parent = nil
+			p.lastMoveVisitedCells = make(map[Coords]struct{})
+			p.allVisitedCells = make(map[Coords]struct{})
+			allSimPlayer = append(allSimPlayer, &p)
 		}
 	}
-	return true
+	fieldChannels := make(map[int]chan [][]int, 0)
+	playerChannels := make(map[int]chan []*SimPlayer, 0)
+	for j, simPlayer := range allSimPlayer {
+		playerTree := make([][]*SimPlayer, 0)
+		playerTree[0] = make([]*SimPlayer, 0)
+		playerTree[0][0] = simPlayer
+		fieldChannels[j] = make(chan [][]int)
+		playerChannels[j] = make(chan []*SimPlayer)
+		go simulatePlayer(playerTree, status, limit, status.Turn, fieldChannels[j], playerChannels[j])
+
+	}
+	return
 }
 
 // simulates all possible moves for a given field.
-func simulatePlayer(field *Field, limit int, elapsedTurns int, ch chan *Field) *Field {
-	turns := 1
-	lenTurn := 1
-	move := 0
-	var movemade int
-	for i := 1; i < len(field.Players); i++ {
-		if i >= lenTurn {
-			turns++
-			//			counter := 1
-			//for j := lenTurn; j < lenTurn+move; j++ {
-			//player1 := field.Players[j]
-			//if player1 != nil {
-			//for z := j + 1; z < lenTurn+move; z++ {
-			//player2 := field.Players[z]
-			//if player2 != nil {
-			//if playerEqual(player1, player2) {
-			//for field.Players[lenTurn+move-counter] == nil {
-			//counter++
-			//}
-			//field.Players[z] = field.Players[lenTurn+move-counter]
-			//field.Players[lenTurn+move-counter] = nil
-			//counter++
-			//}
-			//} else {
-			//break
-			//}
-			//}
-			//} else {
-			//break
-			//}
+func simulatePlayer(playerTree [][]*SimPlayer, status *Status, limit int, elapsedTurns int, ch1 chan [][]int, ch2 chan []*SimPlayer) {
+	for i := 0; i <= limit; i++ {
+		turn := i + 1
+		writeField := make([][]int, status.Height)
+		for r := range writeField {
+			writeField[r] = make([]int, status.Width)
+		}
+		for _, player := range playerTree[i] {
+			children := make([]*SimPlayer, 0)
+			for _, action := range possibleMoves(player, status.Cells, elapsedTurns+turn) {
+				newPlayer := simulateMove(writeField, player, action, elapsedTurns+turn)
+				children = append(children, newPlayer)
+			}
+			for _, child := range children {
+				child.probability = 1.0 / float64(len(children))
+				playerTree[turn] = append(playerTree[turn], child)
+			}
+		}
+		if ch1 != nil {
+			ch1 <- writeField
+		}
 
-			//}
-			lenTurn = lenTurn + move
-			move = 0
+		if ch2 != nil {
+			ch2 <- playerTree[turn]
 		}
-		if i > limit {
-			fmt.Println("Ich habe abgebrochen")
-			break
-		}
-		//if field.Players[i] != nil {
-		probability := 1.0 / math.Pow(5.0, float64(turns))
-		for _, action := range Actions {
-			field, movemade = simulateMove(field, i, probability, action, elapsedTurns+turns-1, limit)
-			move = move + movemade
-		}
-		field.Players[i] = nil
-		//} else {
-		//	continue
-		//}
-
 	}
-	//	fmt.Println(field.Cells)
-	fmt.Println(turns)
-
-	if ch != nil {
-		ch <- field
-	}
-	return field
+	return
 }
 
 func addFields(field1 *Field, field2 *Field) *Field {
@@ -417,7 +381,6 @@ func addFields(field1 *Field, field2 *Field) *Field {
 		for j := 0; j < len(field1.Cells[i]); j++ {
 			field2.Cells[i][j] = field2.Cells[i][j] + field1.Cells[i][j]
 		}
-
 	}
 	return field2
 }
@@ -441,7 +404,6 @@ func (c SpekuClient) GetAction(player Player, status *Status) Action {
 	for i, field := range fieldArray {
 		if field != nil {
 			channels[i] = make(chan *Field)
-			go simulatePlayer(field, 100, status.Turn, channels[i])
 		}
 	}
 	counter := 0
