@@ -73,7 +73,6 @@ type SmartClient struct{}
 func (c SmartClient) GetAction(player Player, status *Status) Action {
 	var bestAction Action
 	board := status.Cells
-	log.Println(player.Direction)
 	switch player.Direction {
 	case Up:
 		if player.Y == 0 {
@@ -172,5 +171,6 @@ func (c SmartClient) GetAction(player Player, status *Status) Action {
 			bestAction = ChangeNothing
 		}
 	}
+	log.Println("using", bestAction)
 	return bestAction
 }

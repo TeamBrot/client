@@ -275,7 +275,7 @@ func findClosestPlayer(status *Status) int {
 	return nearestPlayer
 }
 
-func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth int, print bool) []Action {
+func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth int) []Action {
 	bestScore := -100
 	bestActions := make([]Action, 0)
 	possibleMoves := Moves(status, status.Players[maximizerID], nil)
@@ -295,14 +295,10 @@ func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth 
 		}
 	}
 	if len(bestActions) == 0 {
-		if print {
-			log.Println("No best action, possibleMoves: ", possibleMoves)
-		}
+		log.Println("no best actions, using possible moves", possibleMoves)
 		return possibleMoves
 	}
-	if print {
-		log.Println("bestActions: ", bestActions, bestScore)
-	}
+	log.Println("best actions are", bestActions, "with score", bestScore)
 	return bestActions
 }
 
@@ -311,11 +307,14 @@ type MinimaxClient struct{}
 
 // GetAction implements the Client interface
 func (c MinimaxClient) GetAction(player Player, status *Status) Action {
-	actions := bestActionsMinimax(status.You, otherPlayerID, status, 6, true)
 	otherPlayerID := findClosestPlayer(status)
+	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
 	actions := bestActionsMinimax(status.You, otherPlayerID, status, 6)
 	if len(actions) == 0 {
+		log.Println("no best action, using change_nothing")
 		return ChangeNothing
 	}
-	return actions[rand.Intn(len(actions))]
+	action := actions[rand.Intn(len(actions))]
+	log.Println("multiple best actions, using", action)
+	return action
 }

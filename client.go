@@ -85,8 +85,9 @@ type Client interface {
 
 func main() {
 
+	logger := log.New(os.Stdout, "[client] ", log.Lmsgprefix | log.LstdFlags)
 	if len(os.Args) <= 1 {
-		log.Fatal("Usage: ", os.Args[0], " <client>")
+		logger.Fatalln("usage:", os.Args[0], "<client>")
 	}
 
 	var client Client
@@ -105,30 +106,33 @@ func main() {
 		break
 	case "mcts":
 		client = MctsClient{}
+		break
 	case "speku":
 		client = SpekuClient{}
+		break
 	default:
-		log.Fatal("Usage:", os.Args[0], "<client>")
+		logger.Fatal("usage:", os.Args[0], "<client>")
 	}
+	logger.Println("using client", os.Args[1])
+	log.SetPrefix(fmt.Sprintf("[%s] ", os.Args[1]))
+	log.SetFlags(log.Lmsgprefix | log.LstdFlags)
 
 	url := os.Getenv("URL")
 	if url == "" {
 		url = "ws://localhost:8080/spe_ed"
 	}
+	logger.Println("connecting to server", url)
 	key := os.Getenv("KEY")
 	if key != "" {
 		url = fmt.Sprintf("%s?key=%s", url, key)
 	}
 
-	log.Println("using client", os.Args[1])
-	log.Println("connecting to server")
 	c, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
-		fmt.Println("could not establish connection", err)
-		return
+		logger.Fatalln("could not establish connection:", err)
 	}
 	defer c.Close()
-	log.Println("connected to server")
+	logger.Println("connected to server")
 
 	var status Status
 	var input Input
@@ -138,10 +142,11 @@ func main() {
 		return
 	}
 
-	log.Println("The Field is: ", status.Width, " x ", status.Height)
-	log.Println("Player on Server: ", len(status.Players))
+	logger.Println("field dimensions:", status.Width, "x", status.Height)
+	logger.Println("number of players:", len(status.Players))
 	for status.Running && status.Players[status.You].Active {
-		log.Println("Turn: ", status.Turn)
+		logger.Println("turn", status.Turn)
+		logger.Println("deadline", status.Deadline)
 		for _, p := range status.Players {
 			p.Direction = Directions[p.StringDirection]
 		}
@@ -164,19 +169,19 @@ func main() {
 			}
 		}
 		if counter > 1 {
-			log.Println("There are ", counter, "Players still active")
+			logger.Println("active players:", counter)
 			if !status.Players[status.You].Active {
-				log.Println("I lost")
+				logger.Println("lost")
 			}
 		} else if counter == 1 {
 			if status.Players[status.You].Active {
-				log.Println("Game won")
+				logger.Println("won")
 			} else {
-				log.Println("I lost")
+				logger.Println("lost")
 			}
 		} else {
-			log.Println("I lost")
+			logger.Println("lost")
 		}
 	}
-	log.Println("player not active anymore, disconnecting")
+	logger.Println("player inactive, disconnecting...")
 }
