@@ -156,7 +156,7 @@ func simulate(you int, minimizer int, isMaximizer bool, status *Status, action A
 	var bestScore int
 	if isMaximizer {
 		playerID = you
-		bestScore = 100 + depth
+		bestScore = 5
 	} else {
 		playerID = minimizer
 		bestScore = -100 - depth
