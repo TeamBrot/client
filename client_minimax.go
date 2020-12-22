@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"math"
 	"math/rand"
 )
 
@@ -257,9 +258,21 @@ func copyStatus(status *Status) *Status {
 	return &s
 }
 
-func findClosestPlayer(playerID int, status *Status) int {
-	//TODO: write function
-	return 0
+func findClosestPlayer(status *Status) int {
+	ourPlayer := status.Players[status.You]
+	nearestPlayer := 0
+	nearestPlayerDistance := 0.0
+	for playerID, player := range status.Players {
+		distance := math.Sqrt(math.Pow(float64(player.X - ourPlayer.X), 2) + math.Pow(float64(player.Y - ourPlayer.Y), 2))
+		if playerID != status.You && player.Active && (nearestPlayer == 0 || distance < nearestPlayerDistance) {
+			nearestPlayer = playerID
+			nearestPlayerDistance = distance
+		}
+	}
+	if nearestPlayer == 0 {
+		log.Fatalln("no non-dead player found")
+	}
+	return nearestPlayer
 }
 
 func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth int, print bool) []Action {
@@ -297,19 +310,10 @@ func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth 
 type MinimaxClient struct{}
 
 // GetAction implements the Client interface
-//TODO: use player information
 func (c MinimaxClient) GetAction(player Player, status *Status) Action {
-	//change remainingPlayers to minimizer and choose minimizer from active remaining players
-	// TODO: use closest player
-	// TODO: make player move at the same time
-	// findClosestPlayer(status.You, status)
-	var otherPlayerID int
-	for id, player := range status.Players {
-		if player.Active && status.You != id {
-			otherPlayerID = id
-		}
-	}
 	actions := bestActionsMinimax(status.You, otherPlayerID, status, 6, true)
+	otherPlayerID := findClosestPlayer(status)
+	actions := bestActionsMinimax(status.You, otherPlayerID, status, 6)
 	if len(actions) == 0 {
 		return ChangeNothing
 	}
