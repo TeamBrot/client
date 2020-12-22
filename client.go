@@ -111,9 +111,18 @@ func main() {
 		log.Fatal("Usage:", os.Args[0], "<client>")
 	}
 
+	url := os.Getenv("URL")
+	if url == "" {
+		url = "ws://localhost:8080/spe_ed"
+	}
+	key := os.Getenv("KEY")
+	if key != "" {
+		url = fmt.Sprintf("%s?key=%s", url, key)
+	}
+
 	log.Println("using client", os.Args[1])
 	log.Println("connecting to server")
-	c, _, err := websocket.DefaultDialer.Dial("ws://localhost:8080/spe_ed", nil)
+	c, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		fmt.Println("could not establish connection", err)
 		return
