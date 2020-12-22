@@ -111,7 +111,7 @@ func getClient() Client {
 }
 
 func setupLogging() *log.Logger {
-	logger := log.New(os.Stdout, "[client] ", log.Lmsgprefix | log.LstdFlags)
+	logger := log.New(os.Stdout, "[client] ", log.Lmsgprefix|log.LstdFlags)
 	logger.Println("using client", os.Args[1])
 	log.SetPrefix(fmt.Sprintf("[%s] ", os.Args[1]))
 	log.SetFlags(log.Lmsgprefix | log.LstdFlags)
@@ -130,7 +130,6 @@ func getUrl(logger *log.Logger) string {
 	}
 	return url
 }
-
 
 func main() {
 	if len(os.Args) <= 1 {
@@ -192,11 +191,49 @@ func main() {
 		} else if counter == 1 {
 			if status.Players[status.You].Active {
 				clientLogger.Println("won")
+				// open output file
+				fo, err := os.OpenFile("logging.txt", os.O_APPEND|os.O_WRONLY, 0644)
+				if err != nil {
+					panic(err)
+				}
+				// close fo on exit and check for its returned error
+				defer func() {
+					if err := fo.Close(); err != nil {
+						panic(err)
+					}
+				}()
+
+				fo.WriteString("WON\n")
 			} else {
 				clientLogger.Println("lost")
+				// open output file
+				fo, err := os.OpenFile("logging.txt", os.O_APPEND|os.O_WRONLY, 0644)
+				if err != nil {
+					panic(err)
+				}
+				// close fo on exit and check for its returned error
+				defer func() {
+					if err := fo.Close(); err != nil {
+						panic(err)
+					}
+				}()
+
+				fo.WriteString("lost\n")
 			}
 		} else {
 			clientLogger.Println("lost")
+			fo, err := os.OpenFile("logging.txt", os.O_APPEND|os.O_WRONLY, 0644)
+			if err != nil {
+				panic(err)
+			}
+			// close fo on exit and check for its returned error
+			defer func() {
+				if err := fo.Close(); err != nil {
+					panic(err)
+				}
+			}()
+
+			fo.WriteString("lost\n")
 		}
 	}
 	clientLogger.Println("player inactive, disconnecting...")
