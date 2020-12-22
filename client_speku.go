@@ -317,10 +317,10 @@ func copyPlayer(player *SimPlayer) *SimPlayer {
 }
 
 //TODO: simulate game
-func simulateGame(status *Status, ch chan *Field, limit int) {
+func simulateGame(status *Status, ch chan *Field, numberOfTurns int) {
 	allSimPlayer := make([]*SimPlayer, 0)
 	for _, player := range status.Players {
-		if player.Active {
+		if player.Active && status.Players[status.You] != player {
 			var p SimPlayer
 			p.Direction = player.Direction
 			p.Speed = player.Speed
@@ -332,23 +332,36 @@ func simulateGame(status *Status, ch chan *Field, limit int) {
 			allSimPlayer = append(allSimPlayer, &p)
 		}
 	}
-	fieldChannels := make(map[int]chan [][]int, 0)
-	playerChannels := make(map[int]chan []*SimPlayer, 0)
+	fieldChannels := make(map[int]chan [][][]int, 0)
+	playerChannels := make(map[int]chan [][]*SimPlayer, 0)
 	for j, simPlayer := range allSimPlayer {
 		playerTree := make([][]*SimPlayer, 0)
 		playerTree[0] = make([]*SimPlayer, 0)
 		playerTree[0][0] = simPlayer
-		fieldChannels[j] = make(chan [][]int)
-		playerChannels[j] = make(chan []*SimPlayer)
-		go simulatePlayer(playerTree, status, limit, status.Turn, fieldChannels[j], playerChannels[j])
-
+		fieldChannels[j] = make(chan [][][]int)
+		playerChannels[j] = make(chan [][]*SimPlayer)
+		go simulatePlayer(playerTree, status, numberOfTurns, status.Turn, fieldChannels[j], playerChannels[j])
 	}
+
+	// combine fields
+	overallCombinedFields := make([][][]int, numberOfTurns)
+	for i := range overallCombinedFields {
+		for j := range allSimPlayer {
+			combinedFields := <-fieldChannels[j]
+			overallCombinedFields[i] = addCells(overallCombinedFields[i], combinedFields[i])
+		}
+	}
+
+	// calculate Malus with go routines
+
+	// calculate probabilities and return field
 	return
 }
 
 // simulates all possible moves for a given field.
-func simulatePlayer(playerTree [][]*SimPlayer, status *Status, limit int, elapsedTurns int, ch1 chan [][]int, ch2 chan []*SimPlayer) {
-	for i := 0; i <= limit; i++ {
+func simulatePlayer(playerTree [][]*SimPlayer, status *Status, numberOfTurns int, elapsedTurns int, ch1 chan [][][]int, ch2 chan [][]*SimPlayer) {
+	combinedFields := make([][][]int, numberOfTurns)
+	for i := 0; i < numberOfTurns; i++ {
 		turn := i + 1
 		writeField := make([][]int, status.Height)
 		for r := range writeField {
@@ -365,13 +378,14 @@ func simulatePlayer(playerTree [][]*SimPlayer, status *Status, limit int, elapse
 				playerTree[turn] = append(playerTree[turn], child)
 			}
 		}
-		if ch1 != nil {
-			ch1 <- writeField
-		}
+		combinedFields[i] = writeField
+	}
 
-		if ch2 != nil {
-			ch2 <- playerTree[turn]
-		}
+	if ch1 != nil {
+		ch1 <- combinedFields
+	}
+	if ch2 != nil {
+		ch2 <- playerTree
 	}
 	return
 }
@@ -383,6 +397,24 @@ func addFields(field1 *Field, field2 *Field) *Field {
 		}
 	}
 	return field2
+}
+
+func addCells(field1 [][]int, field2 [][]int) [][]int {
+	for i := 0; i < len(field1); i++ {
+		for j := 0; j < len(field1[i]); j++ {
+			field2[i][j] = field2[i][j] + field1[i][j]
+		}
+	}
+	return field2
+}
+
+// returns an empty field
+func makeEmptyCells(height int, width int) [][]int {
+	field := make([][]int, height)
+	for r := range field {
+		field[r] = make([]int, width)
+	}
+	return field
 }
 
 // SpekuClient is a client implementation that uses speculation to decide what to do next
