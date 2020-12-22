@@ -1,5 +1,17 @@
+## Docker
+
+Bauen:
+`docker build . -t spe_ed`
+
+Ausführen:
+`docker run -e URL="wss://msoll.de/spe_ed" -e KEY="<key>" spe_ed`
+
+## Python
+
 Für client.py:
 `pip install websockets`
+
+## Go Clients
 
 Für go clients:
 `go build .` ausführen
