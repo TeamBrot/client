@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"math"
 	"math/rand"
 )
 
@@ -155,7 +156,7 @@ func simulate(you int, minimizer int, isMaximizer bool, status *Status, action A
 	var bestScore int
 	if isMaximizer {
 		playerID = you
-		bestScore = 100 + depth
+		bestScore = 5
 	} else {
 		playerID = minimizer
 		bestScore = -100 - depth
@@ -257,12 +258,24 @@ func copyStatus(status *Status) *Status {
 	return &s
 }
 
-func findClosestPlayer(playerID int, status *Status) int {
-	//TODO: write function
-	return 0
+func findClosestPlayer(status *Status) int {
+	ourPlayer := status.Players[status.You]
+	nearestPlayer := 0
+	nearestPlayerDistance := 0.0
+	for playerID, player := range status.Players {
+		distance := math.Sqrt(math.Pow(float64(player.X - ourPlayer.X), 2) + math.Pow(float64(player.Y - ourPlayer.Y), 2))
+		if playerID != status.You && player.Active && (nearestPlayer == 0 || distance < nearestPlayerDistance) {
+			nearestPlayer = playerID
+			nearestPlayerDistance = distance
+		}
+	}
+	if nearestPlayer == 0 {
+		log.Fatalln("no non-dead player found")
+	}
+	return nearestPlayer
 }
 
-func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth int, print bool) []Action {
+func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth int) []Action {
 	bestScore := -100
 	bestActions := make([]Action, 0)
 	possibleMoves := Moves(status, status.Players[maximizerID], nil)
@@ -282,14 +295,10 @@ func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth 
 		}
 	}
 	if len(bestActions) == 0 {
-		if print {
-			log.Println("No best action, possibleMoves: ", possibleMoves)
-		}
+		log.Println("no best actions, using possible moves", possibleMoves)
 		return possibleMoves
 	}
-	if print {
-		log.Println("bestActions: ", bestActions, bestScore)
-	}
+	log.Println("best actions are", bestActions, "with score", bestScore)
 	return bestActions
 }
 
@@ -297,21 +306,15 @@ func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth 
 type MinimaxClient struct{}
 
 // GetAction implements the Client interface
-//TODO: use player information
 func (c MinimaxClient) GetAction(player Player, status *Status) Action {
-	//change remainingPlayers to minimizer and choose minimizer from active remaining players
-	// TODO: use closest player
-	// TODO: make player move at the same time
-	// findClosestPlayer(status.You, status)
-	var otherPlayerID int
-	for id, player := range status.Players {
-		if player.Active && status.You != id {
-			otherPlayerID = id
-		}
-	}
-	actions := bestActionsMinimax(status.You, otherPlayerID, status, 6, true)
+	otherPlayerID := findClosestPlayer(status)
+	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
+	actions := bestActionsMinimax(status.You, otherPlayerID, status, 6)
 	if len(actions) == 0 {
+		log.Println("no best action, using change_nothing")
 		return ChangeNothing
 	}
-	return actions[rand.Intn(len(actions))]
+	action := actions[rand.Intn(len(actions))]
+	log.Println("multiple best actions, using", action)
+	return action
 }

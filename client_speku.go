@@ -445,7 +445,7 @@ func (c SpekuClient) GetAction(player Player, status *Status) Action {
 			otherPlayerID = id
 		}
 	}
-	minimaxActions := bestActionsMinimax(status.You, otherPlayerID, status, 5, true)
+	minimaxActions := bestActionsMinimax(status.You, otherPlayerID, status, 5)
 	bestPaths := <-simChan
 	var targetField *Field
 	for _, ch := range channels {
