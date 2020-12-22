@@ -83,13 +83,7 @@ type Client interface {
 	GetAction(player Player, status *Status) Action
 }
 
-func main() {
-
-	logger := log.New(os.Stdout, "[client] ", log.Lmsgprefix | log.LstdFlags)
-	if len(os.Args) <= 1 {
-		logger.Fatalln("usage:", os.Args[0], "<client>")
-	}
-
+func getClient() Client {
 	var client Client
 	switch os.Args[1] {
 	case "minimax":
@@ -111,12 +105,20 @@ func main() {
 		client = SpekuClient{}
 		break
 	default:
-		logger.Fatal("usage:", os.Args[0], "<client>")
+		log.Fatal("usage:", os.Args[0], "<client>")
 	}
+	return client
+}
+
+func setupLogging() *log.Logger {
+	logger := log.New(os.Stdout, "[client] ", log.Lmsgprefix | log.LstdFlags)
 	logger.Println("using client", os.Args[1])
 	log.SetPrefix(fmt.Sprintf("[%s] ", os.Args[1]))
 	log.SetFlags(log.Lmsgprefix | log.LstdFlags)
+	return logger
+}
 
+func getUrl(logger *log.Logger) string {
 	url := os.Getenv("URL")
 	if url == "" {
 		url = "ws://localhost:8080/spe_ed"
@@ -126,27 +128,39 @@ func main() {
 	if key != "" {
 		url = fmt.Sprintf("%s?key=%s", url, key)
 	}
+	return url
+}
+
+
+func main() {
+	if len(os.Args) <= 1 {
+		log.Fatalln("usage:", os.Args[0], "<client>")
+	}
+
+	client := getClient()
+	clientLogger := setupLogging()
+	url := getUrl(clientLogger)
 
 	c, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
-		logger.Fatalln("could not establish connection:", err)
+		clientLogger.Fatalln("could not establish connection:", err)
 	}
 	defer c.Close()
-	logger.Println("connected to server")
+	clientLogger.Println("connected to server")
 
 	var status Status
 	var input Input
 	status.Turn = 1
 	err = c.ReadJSON(&status)
 	if err != nil {
-		return
+		clientLogger.Fatalln("error on first ws read:", err)
 	}
 
-	logger.Println("field dimensions:", status.Width, "x", status.Height)
-	logger.Println("number of players:", len(status.Players))
+	clientLogger.Println("field dimensions:", status.Width, "x", status.Height)
+	clientLogger.Println("number of players:", len(status.Players))
 	for status.Running && status.Players[status.You].Active {
-		logger.Println("turn", status.Turn)
-		logger.Println("deadline", status.Deadline)
+		clientLogger.Println("turn", status.Turn)
+		clientLogger.Println("deadline", status.Deadline)
 		for _, p := range status.Players {
 			p.Direction = Directions[p.StringDirection]
 		}
@@ -156,10 +170,12 @@ func main() {
 		input = Input{action}
 		err = c.WriteJSON(&input)
 		if err != nil {
+			clientLogger.Fatalln("error on ws write:", err)
 			break
 		}
 		err = c.ReadJSON(&status)
 		if err != nil {
+			clientLogger.Fatalln("error on ws read:", err)
 			break
 		}
 		counter := 0
@@ -169,19 +185,19 @@ func main() {
 			}
 		}
 		if counter > 1 {
-			logger.Println("active players:", counter)
+			clientLogger.Println("active players:", counter)
 			if !status.Players[status.You].Active {
-				logger.Println("lost")
+				clientLogger.Println("lost")
 			}
 		} else if counter == 1 {
 			if status.Players[status.You].Active {
-				logger.Println("won")
+				clientLogger.Println("won")
 			} else {
-				logger.Println("lost")
+				clientLogger.Println("lost")
 			}
 		} else {
-			logger.Println("lost")
+			clientLogger.Println("lost")
 		}
 	}
-	logger.Println("player inactive, disconnecting...")
+	clientLogger.Println("player inactive, disconnecting...")
 }
