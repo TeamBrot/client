@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"math"
 	"math/rand"
 	"time"
 )
@@ -290,31 +291,30 @@ func copySimPlayer(player *SimPlayer) *SimPlayer {
 }
 
 // Simulate games for all active player except yourself
-func simulateGame(status *Status, chField chan [][]float64, numberOfTurns int) {
+func simulateGame(status *Status, chField chan [][]float64, simDepth int, activePlayersInRange []*Player) {
 	allSimPlayer := make([]*SimPlayer, 0)
-	for _, player := range status.Players {
-		if player.Active && status.Players[status.You] != player {
-			var p SimPlayer
-			p.Direction = player.Direction
-			p.Speed = player.Speed
-			p.X = player.X
-			p.Y = player.Y
-			p.parent = nil
-			p.lastMoveVisitedCells = make(map[Coords]struct{})
-			p.allVisitedCells = make(map[Coords]struct{})
-			allSimPlayer = append(allSimPlayer, &p)
-		}
+	for _, player := range activePlayersInRange {
+		var p SimPlayer
+		p.Direction = player.Direction
+		p.Speed = player.Speed
+		p.X = player.X
+		p.Y = player.Y
+		p.parent = nil
+		p.lastMoveVisitedCells = make(map[Coords]struct{})
+		p.allVisitedCells = make(map[Coords]struct{})
+		allSimPlayer = append(allSimPlayer, &p)
 	}
+
 	resultChannels := make(map[int]chan Result, 0)
 	for j, simPlayer := range allSimPlayer {
-		playerTree := make([][]*SimPlayer, numberOfTurns+1)
+		playerTree := make([][]*SimPlayer, simDepth+1)
 		playerTree[0] = make([]*SimPlayer, 1)
 		playerTree[0][0] = simPlayer
-		resultChannels[j] = make(chan Result, numberOfTurns)
-		go simulatePlayer(playerTree, j, status, numberOfTurns, status.Turn, resultChannels[j])
+		resultChannels[j] = make(chan Result, simDepth)
+		go simulatePlayer(playerTree, j, status, simDepth, status.Turn, resultChannels[j])
 	}
-	// combine fields
-	for z := 0; z < numberOfTurns; z++ {
+
+	for z := 0; z < simDepth; z++ {
 		results := make([]*Result, 0)
 		for _, ch := range resultChannels {
 			val := <-ch
@@ -608,6 +608,7 @@ type SpekuClient struct{}
 //TODO: use player information
 func (c SpekuClient) GetAction(player Player, status *Status) Action {
 	start := time.Now()
+	calculationTime := 2000 // calculation time in ms (difference between start and deadline)
 	var bestAction Action
 	possibleActions := Moves(status, &player, nil)
 	if len(possibleActions) == 1 {
@@ -619,9 +620,23 @@ func (c SpekuClient) GetAction(player Player, status *Status) Action {
 	}
 	simChan := make(chan [][]Action, 1)
 	go simulateRollouts(status, 10000, simChan)
-	simDepth := 5
+
+	radius := 20.0
+	activePlayersInRange := make([]*Player, 0)
+	for _, player := range status.Players {
+		if player.Active && distanceToPlayer(player, status.Players[status.You]) <= radius && status.Players[status.You] != player {
+			activePlayersInRange = append(activePlayersInRange, player)
+		}
+	}
+	totalNumberOfSimPlayers := calculationTime * 25 // Was für ein Faktor bzw. welche Formel ist hier sinnvoll?
+	var simDepth int
+	if len(activePlayersInRange) > 0 {
+		simDepth = int((math.Log2(float64(totalNumberOfSimPlayers)) / math.Log2(4)) / float64(len(activePlayersInRange)))
+	} else {
+		simDepth = 1
+	}
 	fieldChan := make(chan [][]float64, simDepth)
-	go simulateGame(status, fieldChan, simDepth)
+	go simulateGame(status, fieldChan, simDepth, activePlayersInRange)
 	//activate or deacitvate this codeblock to combine minimax and speku
 	otherPlayerID := findClosestPlayer(status)
 	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
