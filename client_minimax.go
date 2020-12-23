@@ -43,7 +43,7 @@ func Moves(status *Status, player *Player, occupiedCells [][]bool) []Action {
 	}
 	speedUp = speedUp && checkCell(status, player.Direction, player.Y, player.X, player.Speed+1, occupiedCells)
 
-	possibleMoves := make([]Action, 0)
+	possibleMoves := make([]Action, 0, 5)
 
 	if slowDown {
 		possibleMoves = append(possibleMoves, SlowDown)
@@ -263,7 +263,7 @@ func findClosestPlayer(status *Status) int {
 	nearestPlayer := 0
 	nearestPlayerDistance := 0.0
 	for playerID, player := range status.Players {
-		distance := math.Sqrt(math.Pow(float64(player.X - ourPlayer.X), 2) + math.Pow(float64(player.Y - ourPlayer.Y), 2))
+		distance := math.Sqrt(math.Pow(float64(player.X-ourPlayer.X), 2) + math.Pow(float64(player.Y-ourPlayer.Y), 2))
 		if playerID != status.You && player.Active && (nearestPlayer == 0 || distance < nearestPlayerDistance) {
 			nearestPlayer = playerID
 			nearestPlayerDistance = distance

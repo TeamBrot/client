@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"math/rand"
 	"time"
@@ -80,7 +79,7 @@ func possibleMoves(player *SimPlayer, cells [][]int, turn int) []Action {
 	}
 	speedUp = speedUp && checkCell2(cells, direction, y, x, player.Speed+1, player)
 
-	possibleMoves := make([]Action, 0)
+	possibleMoves := make([]Action, 0, 5)
 
 	if slowDown {
 		possibleMoves = append(possibleMoves, SlowDown)
@@ -166,13 +165,9 @@ func rolloutMove(status *Status, action Action) {
 	player := status.Players[status.You]
 	turn := status.Turn
 	if action == SpeedUp {
-		if player.Speed != 10 {
-			player.Speed++
-		}
+		player.Speed++
 	} else if action == SlowDown {
-		if player.Speed != 1 {
-			player.Speed--
-		}
+		player.Speed--
 	} else if action == TurnLeft {
 		switch player.Direction {
 		case Left:
@@ -216,11 +211,8 @@ func rolloutMove(status *Status, action Action) {
 		} else if player.Direction == Left {
 			player.X--
 		}
-
 		if !jump || i == 1 || i == player.Speed {
-
 			status.Cells[player.Y][player.X] = status.You
-
 		}
 	}
 
@@ -230,8 +222,9 @@ func rolloutMove(status *Status, action Action) {
 func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action {
 	longest := 0
 	filterValue := 0.8
-	longestPaths := make([][]Action, 0)
-	for j := 0; j < 20000; j++ {
+	numberofRollouts := 50000
+	longestPaths := make([][]Action, 0, numberofRollouts)
+	for j := 0; j < numberofRollouts; j++ {
 		rolloutStatus := copyStatus(status)
 		path := make([]Action, 0)
 		for i := 0; i < limit; i++ {
@@ -239,9 +232,13 @@ func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action 
 			if len(possibleMoves) == 0 {
 				break
 			}
-
 			rolloutStatus.Turn = rolloutStatus.Turn + 1
-			randomAction := possibleMoves[rand.Intn(len(possibleMoves))]
+			var randomAction Action
+			if i == 0 {
+				randomAction = possibleMoves[i%len(possibleMoves)]
+			} else {
+				randomAction = possibleMoves[rand.Intn(len(possibleMoves))]
+			}
 			rolloutMove(rolloutStatus, randomAction)
 			path = append(path, randomAction)
 		}
@@ -250,7 +247,7 @@ func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action 
 			if longest >= len(path) {
 				longestPaths = append(longestPaths, path)
 			} else {
-				longestPaths = filterPaths(longestPaths, len(path), filterValue)
+				longestPaths = filterPaths(longestPaths, len(path), filterValue, numberofRollouts-j+len(longestPaths))
 				longestPaths = append(longestPaths, path)
 				longest = len(path)
 			}
@@ -263,8 +260,8 @@ func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action 
 
 }
 
-func filterPaths(paths [][]Action, longest int, percent float64) [][]Action {
-	filteredPaths := make([][]Action, 0)
+func filterPaths(paths [][]Action, longest int, percent float64, maxRemaining int) [][]Action {
+	filteredPaths := make([][]Action, 0, maxRemaining)
 	for _, path := range paths {
 		if float64(len(path)) >= float64(longest)*percent {
 			filteredPaths = append(filteredPaths, path)
@@ -307,7 +304,7 @@ func simulateGame(status *Status, chField chan [][]float64, numberOfTurns int) {
 	}
 	resultChannels := make(map[int]chan Result, 0)
 	for j, simPlayer := range allSimPlayer {
-		playerTree := make([][]*SimPlayer, 1)
+		playerTree := make([][]*SimPlayer, numberOfTurns+1)
 		playerTree[0] = make([]*SimPlayer, 1)
 		playerTree[0][0] = simPlayer
 		resultChannels[j] = make(chan Result, numberOfTurns)
@@ -320,20 +317,17 @@ func simulateGame(status *Status, chField chan [][]float64, numberOfTurns int) {
 			val := <-ch
 			results = append(results, &val)
 		}
-		go resultsToField(results, status.Width, status.Height, chField)
+		log.Println("Starting calculating field for turn: ", z)
+		resultsToField(results, status.Width, status.Height, chField, z)
 	}
-	// calculate Malus with go routines
 
-	// calculate probabilities and return field
 	return
 }
 
-func resultsToField(results []*Result, width int, height int, ch chan [][]float64) {
+func resultsToField(results []*Result, width int, height int, ch chan [][]float64, turn int) {
 	intermediateFields := make([][][]int, len(results))
 	for u := 0; u < len(results); u++ {
 		intermediateFields[u] = makeEmptyCells(height, width)
-		//fmt.Println("the intermediate field")
-		//fmt.Println(intermediateFields[u])
 	}
 	for m, cells := range intermediateFields {
 		for n, result := range results {
@@ -365,13 +359,16 @@ func resultsToField(results []*Result, width int, height int, ch chan [][]float6
 	}
 	for _, result := range results {
 		for _, player := range result.Player {
+			if player == nil {
+				break
+			}
 			player.probability = player.probability * player.parent.probability
 			for coords := range player.lastMoveVisitedCells {
 				resultField[coords.Y][coords.X] = resultField[coords.Y][coords.X] + player.probability
 			}
 		}
 	}
-
+	log.Println("Finished calculating field", turn)
 	ch <- resultField
 
 	return
@@ -381,27 +378,33 @@ func resultsToField(results []*Result, width int, height int, ch chan [][]float6
 // simulates all possible moves for a given field.
 func simulatePlayer(playerTree [][]*SimPlayer, id int, status *Status, numberOfTurns int, elapsedTurns int, ch chan Result) {
 	for i := 0; i < numberOfTurns; i++ {
-		playerTree = append(playerTree, make([]*SimPlayer, 0))
+
+		playerTree[i+1] = make([]*SimPlayer, len(playerTree[i])*5)
 		turn := i + 1
 		writeField := make([][]int, status.Height)
 		for r := range writeField {
 			writeField[r] = make([]int, status.Width)
 		}
-		for _, player := range playerTree[i] {
-			children := make([]*SimPlayer, 0)
-			for _, action := range possibleMoves(player, status.Cells, elapsedTurns+turn) {
+		for u, player := range playerTree[i] {
+			if player == nil {
+				break
+			}
+			possibleActions := possibleMoves(player, status.Cells, elapsedTurns+turn)
+			children := make([]*SimPlayer, len(possibleActions))
+			for o, action := range possibleActions {
 				newPlayer := simulateMove(&writeField, player, action, elapsedTurns+turn)
-				children = append(children, newPlayer)
+				children[o] = newPlayer
 			}
 			for _, child := range children {
 				child.probability = 1.0 / float64(len(children))
-				playerTree[turn] = append(playerTree[turn], child)
+				playerTree[turn][u] = child
 			}
 		}
 		if ch != nil {
 			ch <- Result{Cells: writeField, ID: id, Player: playerTree[turn], turn: turn}
 		}
 	}
+	log.Println("Finished Calculation for player: ", id)
 	close(ch)
 	return
 }
@@ -570,17 +573,17 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 			counterDown++
 		}
 	}
-	valueNothing := scoreNothing + (float64(len(paths)) / float64(counterNothing))
-	valueLeft := scoreLeft + (float64(len(paths)) / float64(counterLeft))
-	valueRight := scoreRight + (float64(len(paths)) / float64(counterRight))
-	valueUp := scoreSpeed + (float64(len(paths)) / float64(counterUp))
-	valueDown := scoreSlow + (float64(len(paths)) / float64(counterDown))
-
-	fmt.Println("Change Nothing: ", valueNothing)
-	fmt.Println("Turn Left: ", valueLeft)
-	fmt.Println("TurnRight: ", valueRight)
-	fmt.Println("Speed Up: ", valueUp)
-	fmt.Println("Slow Down: ", valueDown)
+	valueNothing := scoreNothing + (1.0 - (float64(counterNothing) / float64(len(paths))))
+	valueLeft := scoreLeft + (1.0 - (float64(counterLeft) / float64(len(paths))))
+	valueRight := scoreRight + (1.0 - (float64(counterRight) / float64(len(paths))))
+	valueUp := scoreSpeed + (1.0 - (float64(counterUp) / float64(len(paths))))
+	valueDown := scoreSlow + (1.0 - (float64(counterDown) / float64(len(paths))))
+	log.Println("Calculated Scores")
+	log.Println("Change Nothing: ", valueNothing)
+	log.Println("Turn Left: ", valueLeft)
+	log.Println("TurnRight: ", valueRight)
+	log.Println("Speed Up: ", valueUp)
+	log.Println("Slow Down: ", valueDown)
 	if possibleNothing && (valueNothing < valueLeft || !possibleLeft) && (!possibleRight || valueNothing < valueRight) && (valueNothing < valueUp || !possibleUp) && (valueNothing < valueDown || !possibleDown) {
 		return ChangeNothing
 	} else if possibleLeft && (valueLeft < valueRight || !possibleRight) && (valueLeft < valueUp || !possibleUp) && (valueLeft < valueDown || !possibleDown) {
@@ -604,34 +607,36 @@ func (c SpekuClient) GetAction(player Player, status *Status) Action {
 	var bestAction Action
 	possibleActions := Moves(status, &player, nil)
 	if len(possibleActions) == 1 {
-		fmt.Println("Only possible Action: ", possibleActions[0])
+		log.Println("Only possible Action: ", possibleActions[0])
 		return possibleActions[0]
 	} else if len(possibleActions) == 0 {
-		fmt.Println("I'll die...")
+		log.Println("I'll die... choosing change nothing as last action")
 		return ChangeNothing
 	}
 	simChan := make(chan [][]Action, 1)
-	go simulateRollouts(status, 10000, simChan)
+	go simulateRollouts(status, 160, simChan)
 	simDepth := 9
 	fieldChan := make(chan [][]float64, simDepth)
 	go simulateGame(status, fieldChan, simDepth)
+	//activate or deacitvate this codeblock to combine minimax and speku
 	otherPlayerID := findClosestPlayer(status)
 	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
 	possibleActions = bestActionsMinimax(status.You, otherPlayerID, status, 6)
+
 	allFields := make([][][]float64, simDepth+1)
 	for i := 0; i < simDepth; i++ {
 		allFields[i] = <-fieldChan
+		log.Println("recieved field for Turn: ", i)
 		if i > 0 {
 			allFields[i] = addFields(allFields[i-1], allFields[i])
 		}
 	}
 	bestPaths := <-simChan
 	bestAction = evaluatePaths(player, allFields, bestPaths, status.Turn, simDepth, possibleActions)
-	fmt.Println(len(bestPaths))
 
 	t := time.Now()
 	elapsed := t.Sub(start)
-	fmt.Println(elapsed)
-	fmt.Println(bestAction)
+	log.Println("The calculation took: ", elapsed)
+	log.Println("Choose as best action: ", bestAction)
 	return bestAction
 }
