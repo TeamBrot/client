@@ -239,7 +239,7 @@ func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action 
 			rolloutStatus.Turn = rolloutStatus.Turn + 1
 			var randomAction Action
 			if i == 0 {
-				randomAction = possibleMoves[i%len(possibleMoves)]
+				randomAction = possibleMoves[j%len(possibleMoves)]
 			} else {
 				randomAction = possibleMoves[rand.Intn(len(possibleMoves))]
 			}
@@ -619,7 +619,7 @@ func (c SpekuClient) GetAction(player Player, status *Status) Action {
 	}
 	simChan := make(chan [][]Action, 1)
 	go simulateRollouts(status, 10000, simChan)
-	simDepth := 8
+	simDepth := 5
 	fieldChan := make(chan [][]float64, simDepth)
 	go simulateGame(status, fieldChan, simDepth)
 	//activate or deacitvate this codeblock to combine minimax and speku
