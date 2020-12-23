@@ -2,16 +2,20 @@ package main
 
 import (
 	"log"
+	"math"
 	"math/rand"
 	"time"
 )
 
+// Result :
 type Result struct {
 	Cells  [][]int
 	Player []*SimPlayer
 	turn   int
 	ID     int
 }
+
+// EvaluateStatus :
 type EvaluateStatus struct {
 	Width    int           `json:"width"`
 	Height   int           `json:"height"`
@@ -55,6 +59,7 @@ func checkCell2(cells [][]int, direction Direction, y int, x int, fields int, pl
 	return cells[y][x] == 0 && !fieldVisited
 }
 
+// Returns possible actions for a given situation
 func possibleMoves(player *SimPlayer, cells [][]int, turn int) []Action {
 	changeNothing := true
 	turnRight := true
@@ -102,7 +107,7 @@ func possibleMoves(player *SimPlayer, cells [][]int, turn int) []Action {
 //Simulates a move. Doesnt mark a field as occupied. Only writes the probability, that it could be occupied. (Needs improvment at the undo part)
 func simulateMove(fieldPointer *[][]int, parentPlayer *SimPlayer, action Action, turn int) *SimPlayer {
 	field := *fieldPointer
-	player := copyPlayer(parentPlayer)
+	player := copySimPlayer(parentPlayer)
 	if action == SpeedUp {
 		player.Speed++
 	} else if action == SlowDown {
@@ -218,7 +223,7 @@ func rolloutMove(status *Status, action Action) {
 
 }
 
-//searche for the longest paths a player could reach. Only simulates moves for one player!
+//search for the longest paths a player could reach. Only simulates moves for one player!
 func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action {
 	longest := 0
 	filterValue := 0.8
@@ -235,7 +240,7 @@ func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action 
 			rolloutStatus.Turn = rolloutStatus.Turn + 1
 			var randomAction Action
 			if i == 0 {
-				randomAction = possibleMoves[i%len(possibleMoves)]
+				randomAction = possibleMoves[j%len(possibleMoves)]
 			} else {
 				randomAction = possibleMoves[rand.Intn(len(possibleMoves))]
 			}
@@ -257,7 +262,6 @@ func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action 
 		ch <- longestPaths
 	}
 	return longestPaths
-
 }
 
 func filterPaths(paths [][]Action, longest int, percent float64, maxRemaining int) [][]Action {
@@ -270,8 +274,8 @@ func filterPaths(paths [][]Action, longest int, percent float64, maxRemaining in
 	return filteredPaths
 }
 
-//Copys a SimPlayer Object (Might be transfered to a util.go)
-func copyPlayer(player *SimPlayer) *SimPlayer {
+// Copys a SimPlayer Object (Might be transfered to a util.go)
+func copySimPlayer(player *SimPlayer) *SimPlayer {
 	var p SimPlayer
 	p.Direction = player.Direction
 	p.Speed = player.Speed
@@ -286,8 +290,8 @@ func copyPlayer(player *SimPlayer) *SimPlayer {
 	return &p
 }
 
-//TODO: simulate game
-func simulateGame(status *Status, chField chan [][]float64, numberOfTurns int) {
+// Simulate games for all active player except yourself
+func simulateGame(status *Status, chField chan [][]float64, simDepth int, activePlayersInRange []*Player) {
 	allSimPlayer := make([]*SimPlayer, 0)
 	for _, player := range status.Players {
 		if player.Active && status.Players[status.You] != player {
@@ -303,16 +307,17 @@ func simulateGame(status *Status, chField chan [][]float64, numberOfTurns int) {
 			allSimPlayer = append(allSimPlayer, &p)
 		}
 	}
+
 	resultChannels := make(map[int]chan Result, 0)
 	for j, simPlayer := range allSimPlayer {
-		playerTree := make([][]*SimPlayer, numberOfTurns+1)
+		playerTree := make([][]*SimPlayer, simDepth+1)
 		playerTree[0] = make([]*SimPlayer, 1)
 		playerTree[0][0] = simPlayer
-		resultChannels[j] = make(chan Result, numberOfTurns)
-		go simulatePlayer(playerTree, j, status, numberOfTurns, status.Turn, resultChannels[j])
+		resultChannels[j] = make(chan Result, simDepth)
+		go simulatePlayer(playerTree, j, status, simDepth, status.Turn, resultChannels[j])
 	}
-	// combine fields
-	for z := 0; z < numberOfTurns; z++ {
+
+	for z := 0; z < simDepth; z++ {
 		results := make([]*Result, 0)
 		for _, ch := range resultChannels {
 			val := <-ch
@@ -321,7 +326,6 @@ func simulateGame(status *Status, chField chan [][]float64, numberOfTurns int) {
 		log.Println("Starting calculating field for turn: ", z)
 		resultsToField(results, status.Width, status.Height, chField, z)
 	}
-
 	return
 }
 
@@ -376,7 +380,7 @@ func resultsToField(results []*Result, width int, height int, ch chan [][]float6
 
 }
 
-// simulates all possible moves for a given field.
+// simulate all possible moves for a given field.
 func simulatePlayer(playerTree [][]*SimPlayer, id int, status *Status, numberOfTurns int, elapsedTurns int, ch chan Result) {
 	for i := 0; i < numberOfTurns; i++ {
 
@@ -502,6 +506,7 @@ func evaluateScore(player *Player, field [][]float64, action Action, turn int) f
 	}
 	return score / float64(player.Speed)
 }
+
 func copyNormalPlayer(oldPlayer *Player) *Player {
 	var newPlayer Player
 	newPlayer.Direction = oldPlayer.Direction
@@ -510,6 +515,7 @@ func copyNormalPlayer(oldPlayer *Player) *Player {
 	newPlayer.Y = oldPlayer.Y
 	return &newPlayer
 }
+
 func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, turn int, simDepth int, possibleActions []Action) Action {
 	var scoreNothing float64
 	var scoreLeft float64
@@ -618,6 +624,7 @@ type SpekuClient struct{}
 //TODO: use player information
 func (c SpekuClient) GetAction(player Player, status *Status) Action {
 	start := time.Now()
+	calculationTime := 2000 // calculation time in ms (difference between start and deadline)
 	var bestAction Action
 	possibleActions := Moves(status, &player, nil)
 	if len(possibleActions) == 1 {
@@ -628,15 +635,28 @@ func (c SpekuClient) GetAction(player Player, status *Status) Action {
 		return ChangeNothing
 	}
 	simChan := make(chan [][]Action, 1)
-	go simulateRollouts(status, 160, simChan)
-	simDepth := 9
-	fieldChan := make(chan [][]float64)
-	go simulateGame(status, fieldChan, simDepth)
+	go simulateRollouts(status, 10000, simChan)
+
+	radius := 20.0
+	activePlayersInRange := make([]*Player, 0)
+	for _, player := range status.Players {
+		if player.Active && distanceToPlayer(player, status.Players[status.You]) <= radius && status.Players[status.You] != player {
+			activePlayersInRange = append(activePlayersInRange, player)
+		}
+	}
+	totalNumberOfSimPlayers := calculationTime * 25 // Was für ein Faktor bzw. welche Formel ist hier sinnvoll?
+	var simDepth int
+	if len(activePlayersInRange) > 0 {
+		simDepth = int((math.Log2(float64(totalNumberOfSimPlayers)) / math.Log2(4)) / float64(len(activePlayersInRange)))
+	} else {
+		simDepth = 1
+	}
+	fieldChan := make(chan [][]float64, simDepth)
+	go simulateGame(status, fieldChan, simDepth, activePlayersInRange)
 	//activate or deacitvate this codeblock to combine minimax and speku
 	otherPlayerID := findClosestPlayer(status)
 	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
-	possibleActions = bestActionsMinimax(status.You, otherPlayerID, status, 6)
-
+	possibleActions = bestActionsMinimax(status.You, otherPlayerID, status, 3)
 	allFields := make([][][]float64, simDepth+1)
 	for i := 0; i < simDepth; i++ {
 		allFields[i] = <-fieldChan

@@ -258,12 +258,16 @@ func copyStatus(status *Status) *Status {
 	return &s
 }
 
+func distanceToPlayer(player1 *Player, player2 *Player) float64 {
+	return math.Sqrt(math.Pow(float64(player1.X-player2.X), 2) + math.Pow(float64(player1.Y-player2.Y), 2))
+}
+
 func findClosestPlayer(status *Status) int {
 	ourPlayer := status.Players[status.You]
 	nearestPlayer := 0
 	nearestPlayerDistance := 0.0
 	for playerID, player := range status.Players {
-		distance := math.Sqrt(math.Pow(float64(player.X-ourPlayer.X), 2) + math.Pow(float64(player.Y-ourPlayer.Y), 2))
+		distance := distanceToPlayer(player, ourPlayer) //math.Sqrt(math.Pow(float64(player.X-ourPlayer.X), 2) + math.Pow(float64(player.Y-ourPlayer.Y), 2))
 		if playerID != status.You && player.Active && (nearestPlayer == 0 || distance < nearestPlayerDistance) {
 			nearestPlayer = playerID
 			nearestPlayerDistance = distance
