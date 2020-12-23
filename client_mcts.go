@@ -249,7 +249,7 @@ type MctsClient struct{}
 
 // GetAction implements the Client interface
 //TODO: use player information
-func (c MctsClient) GetAction(player Player, status *Status) Action {
+func (c MctsClient) GetAction(player Player, status *Status, serverTime *ServerTime) Action {
 	depth := 70
 	firstNode := &MCTSNode{status: status, plays: 1, children: make([]*MCTSNode, 0), parent: nil}
 	for i := 0; i < 2000; i++ {

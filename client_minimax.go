@@ -310,7 +310,7 @@ func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth 
 type MinimaxClient struct{}
 
 // GetAction implements the Client interface
-func (c MinimaxClient) GetAction(player Player, status *Status) Action {
+func (c MinimaxClient) GetAction(player Player, status *Status, serverTime *ServerTime) Action {
 	otherPlayerID := findClosestPlayer(status)
 	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
 	actions := bestActionsMinimax(status.You, otherPlayerID, status, 6)

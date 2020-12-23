@@ -36,6 +36,8 @@ type SimPlayer struct {
 	Direction            Direction
 	Speed                int `json:"speed"`
 	probability          float64
+	numChilds            int
+	numChecked           int
 	allVisitedCells      map[Coords]struct{}
 	lastMoveVisitedCells map[Coords]struct{}
 	parent               *SimPlayer
@@ -227,7 +229,7 @@ func rolloutMove(status *Status, action Action) {
 func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action {
 	longest := 0
 	filterValue := 0.8
-	numberofRollouts := 50000
+	numberofRollouts := 70000
 	longestPaths := make([][]Action, 0, numberofRollouts)
 	for j := 0; j < numberofRollouts; j++ {
 		rolloutStatus := copyStatus(status)
@@ -324,12 +326,12 @@ func simulateGame(status *Status, chField chan [][]float64, simDepth int, active
 			results = append(results, &val)
 		}
 		log.Println("Starting calculating field for turn: ", z)
-		resultsToField(results, status.Width, status.Height, chField, z)
+		resultsToField(results, status.Width, status.Height, chField, z, !(z+1 < simDepth))
 	}
 	return
 }
 
-func resultsToField(results []*Result, width int, height int, ch chan [][]float64, turn int) {
+func resultsToField(results []*Result, width int, height int, ch chan [][]float64, turn int, last bool) {
 	intermediateFields := make([][][]int, len(results))
 	for u := 0; u < len(results); u++ {
 		intermediateFields[u] = makeEmptyCells(height, width)
@@ -368,8 +370,15 @@ func resultsToField(results []*Result, width int, height int, ch chan [][]float6
 				break
 			}
 			player.probability = player.probability * player.parent.probability
+			player.parent.numChecked++
 			for coords := range player.lastMoveVisitedCells {
 				resultField[coords.Y][coords.X] = resultField[coords.Y][coords.X] + player.probability
+			}
+			if player.parent.numChecked == player.parent.numChilds {
+				player.parent = nil
+			}
+			if last {
+				player = nil
 			}
 		}
 	}
@@ -401,6 +410,7 @@ func simulatePlayer(playerTree [][]*SimPlayer, id int, status *Status, numberOfT
 				newPlayer := simulateMove(&writeField, player, action, elapsedTurns+turn)
 				children[o] = newPlayer
 			}
+			player.numChilds = len(children)
 			for _, child := range children {
 				child.probability = 1.0 / float64(len(children))
 				playerTree[turn][counter] = child
@@ -412,6 +422,7 @@ func simulatePlayer(playerTree [][]*SimPlayer, id int, status *Status, numberOfT
 		}
 	}
 	log.Println("Finished Calculation for player: ", id)
+	playerTree = make([][]*SimPlayer, 0)
 	close(ch)
 	return
 }
@@ -622,7 +633,7 @@ type SpekuClient struct{}
 
 // GetAction implements the Client interface
 //TODO: use player information
-func (c SpekuClient) GetAction(player Player, status *Status) Action {
+func (c SpekuClient) GetAction(player Player, status *Status, serverTime *ServerTime) Action {
 	start := time.Now()
 	calculationTime := 2000 // calculation time in ms (difference between start and deadline)
 	var bestAction Action
@@ -635,9 +646,9 @@ func (c SpekuClient) GetAction(player Player, status *Status) Action {
 		return ChangeNothing
 	}
 	simChan := make(chan [][]Action, 1)
-	go simulateRollouts(status, 10000, simChan)
+	go simulateRollouts(status, 150, simChan)
 
-	radius := 20.0
+	radius := 10000.0
 	activePlayersInRange := make([]*Player, 0)
 	for _, player := range status.Players {
 		if player.Active && distanceToPlayer(player, status.Players[status.You]) <= radius && status.Players[status.You] != player {
@@ -656,7 +667,7 @@ func (c SpekuClient) GetAction(player Player, status *Status) Action {
 	//activate or deacitvate this codeblock to combine minimax and speku
 	otherPlayerID := findClosestPlayer(status)
 	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
-	possibleActions = bestActionsMinimax(status.You, otherPlayerID, status, 3)
+	possibleActions = bestActionsMinimax(status.You, otherPlayerID, status, 6)
 	allFields := make([][][]float64, simDepth+1)
 	for i := 0; i < simDepth; i++ {
 		allFields[i] = <-fieldChan
@@ -664,8 +675,8 @@ func (c SpekuClient) GetAction(player Player, status *Status) Action {
 		if i > 0 {
 			addFields(&allFields[i], allFields[i-1])
 		}
-		log.Println(allFields[i])
 	}
+	close(fieldChan)
 	bestPaths := <-simChan
 	bestAction = evaluatePaths(player, allFields, bestPaths, status.Turn, simDepth, possibleActions)
 	log.Println(addFieldAndOriginalCells(allFields[simDepth-1], status.Cells))

@@ -1,9 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -17,6 +20,11 @@ type Player struct {
 	Speed           int    `json:"speed"`
 	Active          bool   `json:"active"`
 	Name            string `json:"name"`
+}
+
+type ServerTime struct {
+	time        time.Time `json:"time"`
+	miliseconds int       `json:"miliseconds"`
 }
 
 // Status contains all information on the current game status
@@ -80,7 +88,7 @@ const (
 
 // Client represents a handler that decides what the specific player should do next
 type Client interface {
-	GetAction(player Player, status *Status) Action
+	GetAction(player Player, status *Status, serverTime *ServerTime) Action
 }
 
 func getClient() Client {
@@ -88,12 +96,6 @@ func getClient() Client {
 	switch os.Args[1] {
 	case "minimax":
 		client = MinimaxClient{}
-		break
-	case "left":
-		client = LeftClient{}
-		break
-	case "right":
-		client = RightClient{}
 		break
 	case "smart":
 		client = SmartClient{}
@@ -118,7 +120,7 @@ func setupLogging() *log.Logger {
 	return logger
 }
 
-func getUrl(logger *log.Logger) string {
+func getGameURL(logger *log.Logger) string {
 	url := os.Getenv("URL")
 	if url == "" {
 		url = "ws://localhost:8080/spe_ed"
@@ -130,6 +132,23 @@ func getUrl(logger *log.Logger) string {
 	}
 	return url
 }
+func getTimeURL(logger *log.Logger) string {
+	url := os.Getenv("URL")
+	if url == "" {
+		url = "http://localhost:8080/spe_ed_time"
+	}
+	logger.Println("connecting to time server", url)
+	return url
+}
+func getTime(url string, target interface{}, httpClient *http.Client) error {
+	r, err := httpClient.Get(url)
+	if err != nil {
+		return err
+	}
+	defer r.Body.Close()
+
+	return json.NewDecoder(r.Body).Decode(target)
+}
 
 func main() {
 	if len(os.Args) <= 1 {
@@ -138,9 +157,10 @@ func main() {
 
 	client := getClient()
 	clientLogger := setupLogging()
-	url := getUrl(clientLogger)
-
-	c, _, err := websocket.DefaultDialer.Dial(url, nil)
+	gameURL := getGameURL(clientLogger)
+	timeURL := getTimeURL(clientLogger)
+	httpClient := &http.Client{Timeout: 2 * time.Second}
+	c, _, err := websocket.DefaultDialer.Dial(gameURL, nil)
 	if err != nil {
 		clientLogger.Fatalln("could not establish connection:", err)
 	}
@@ -148,9 +168,11 @@ func main() {
 	clientLogger.Println("connected to server")
 
 	var status Status
+	var serverTime ServerTime
 	var input Input
 	status.Turn = 1
 	err = c.ReadJSON(&status)
+	getTime(timeURL, &serverTime, httpClient)
 	if err != nil {
 		clientLogger.Fatalln("error on first ws read:", err)
 	}
@@ -163,7 +185,7 @@ func main() {
 		for _, p := range status.Players {
 			p.Direction = Directions[p.StringDirection]
 		}
-		action := client.GetAction(*status.Players[status.You], &status)
+		action := client.GetAction(*status.Players[status.You], &status, &serverTime)
 		status.Turn++
 
 		input = Input{action}
@@ -177,6 +199,7 @@ func main() {
 			clientLogger.Fatalln("error on ws read:", err)
 			break
 		}
+		getTime(timeURL, &serverTime, httpClient)
 		counter := 0
 		for _, player := range status.Players {
 			if player.Active {
