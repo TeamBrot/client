@@ -7,12 +7,15 @@ import (
 	"time"
 )
 
+// Result :
 type Result struct {
 	Cells  [][]int
 	Player []*SimPlayer
 	turn   int
 	ID     int
 }
+
+// EvaluateStatus :
 type EvaluateStatus struct {
 	Width    int           `json:"width"`
 	Height   int           `json:"height"`
@@ -56,6 +59,7 @@ func checkCell2(cells [][]int, direction Direction, y int, x int, fields int, pl
 	return cells[y][x] == 0 && !fieldVisited
 }
 
+// Returns possible actions for a given situation
 func possibleMoves(player *SimPlayer, cells [][]int, turn int) []Action {
 	changeNothing := true
 	turnRight := true
@@ -103,7 +107,7 @@ func possibleMoves(player *SimPlayer, cells [][]int, turn int) []Action {
 //Simulates a move. Doesnt mark a field as occupied. Only writes the probability, that it could be occupied. (Needs improvment at the undo part)
 func simulateMove(fieldPointer *[][]int, parentPlayer *SimPlayer, action Action, turn int) *SimPlayer {
 	field := *fieldPointer
-	player := copyPlayer(parentPlayer)
+	player := copySimPlayer(parentPlayer)
 	if action == SpeedUp {
 		player.Speed++
 	} else if action == SlowDown {
@@ -226,12 +230,12 @@ func rolloutMove(status *Status, action Action) {
 
 }
 
-//searche for the longest paths a player could reach. Only simulates moves for one player!
+//search for the longest paths a player could reach. Only simulates moves for one player!
 func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action {
 	longest := 0
 	filterValue := 0.8
 	longestPaths := make([][]Action, 0)
-	for j := 0; j < 20000; j++ {
+	for j := 0; j < 1000; j++ {
 		rolloutStatus := copyStatus(status)
 		path := make([]Action, 0)
 		for i := 0; i < limit; i++ {
@@ -260,7 +264,6 @@ func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action 
 		ch <- longestPaths
 	}
 	return longestPaths
-
 }
 
 func filterPaths(paths [][]Action, longest int, percent float64) [][]Action {
@@ -273,8 +276,8 @@ func filterPaths(paths [][]Action, longest int, percent float64) [][]Action {
 	return filteredPaths
 }
 
-//Copys a SimPlayer Object (Might be transfered to a util.go)
-func copyPlayer(player *SimPlayer) *SimPlayer {
+// Copys a SimPlayer Object (Might be transfered to a util.go)
+func copySimPlayer(player *SimPlayer) *SimPlayer {
 	var p SimPlayer
 	p.Direction = player.Direction
 	p.Speed = player.Speed
@@ -289,7 +292,7 @@ func copyPlayer(player *SimPlayer) *SimPlayer {
 	return &p
 }
 
-//TODO: simulate game
+// Simulate games for all active player except yourself
 func simulateGame(status *Status, chField chan [][]float64, numberOfTurns int) {
 	allSimPlayer := make([]*SimPlayer, 0)
 	for _, player := range status.Players {
@@ -322,9 +325,6 @@ func simulateGame(status *Status, chField chan [][]float64, numberOfTurns int) {
 		}
 		go resultsToField(results, status.Width, status.Height, chField)
 	}
-	// calculate Malus with go routines
-
-	// calculate probabilities and return field
 	return
 }
 
@@ -378,7 +378,7 @@ func resultsToField(results []*Result, width int, height int, ch chan [][]float6
 
 }
 
-// simulates all possible moves for a given field.
+// simulate all possible moves for a given field.
 func simulatePlayer(playerTree [][]*SimPlayer, id int, status *Status, numberOfTurns int, elapsedTurns int, ch chan Result) {
 	for i := 0; i < numberOfTurns; i++ {
 		playerTree = append(playerTree, make([]*SimPlayer, 0))
@@ -494,6 +494,7 @@ func evaluateScore(player *Player, field [][]float64, action Action, turn int) f
 	}
 	return score / float64(player.Speed)
 }
+
 func copyNormalPlayer(oldPlayer *Player) *Player {
 	var newPlayer Player
 	newPlayer.Direction = oldPlayer.Direction
@@ -502,6 +503,7 @@ func copyNormalPlayer(oldPlayer *Player) *Player {
 	newPlayer.Y = oldPlayer.Y
 	return &newPlayer
 }
+
 func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, turn int, simDepth int, possibleActions []Action) Action {
 	var scoreNothing float64
 	var scoreLeft float64
@@ -612,12 +614,12 @@ func (c SpekuClient) GetAction(player Player, status *Status) Action {
 	}
 	simChan := make(chan [][]Action, 1)
 	go simulateRollouts(status, 10000, simChan)
-	simDepth := 9
+	simDepth := 8
 	fieldChan := make(chan [][]float64, simDepth)
 	go simulateGame(status, fieldChan, simDepth)
 	otherPlayerID := findClosestPlayer(status)
 	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
-	possibleActions = bestActionsMinimax(status.You, otherPlayerID, status, 6)
+	possibleActions = bestActionsMinimax(status.You, otherPlayerID, status, 3)
 	allFields := make([][][]float64, simDepth+1)
 	for i := 0; i < simDepth; i++ {
 		allFields[i] = <-fieldChan
