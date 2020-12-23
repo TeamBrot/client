@@ -623,6 +623,9 @@ func (c SpekuClient) GetAction(player Player, status *Status) Action {
 	allFields := make([][][]float64, simDepth+1)
 	for i := 0; i < simDepth; i++ {
 		allFields[i] = <-fieldChan
+		if i > 0 {
+			allFields[i] = addFields(allFields[i-1], allFields[i])
+		}
 	}
 	bestPaths := <-simChan
 	bestAction = evaluatePaths(player, allFields, bestPaths, status.Turn, simDepth, possibleActions)
