@@ -23,8 +23,8 @@ type Player struct {
 }
 
 type ServerTime struct {
-	time        time.Time `json:"time"`
-	miliseconds int       `json:"miliseconds"`
+	Time         time.Time `json:"time"`
+	Milliseconds int       `json:"milliseconds"`
 }
 
 // Status contains all information on the current game status
@@ -88,7 +88,7 @@ const (
 
 // Client represents a handler that decides what the specific player should do next
 type Client interface {
-	GetAction(player Player, status *Status, serverTime *ServerTime) Action
+	GetAction(player Player, status *Status, timingChannel <-chan time.Time) Action
 }
 
 func getClient() Client {
@@ -132,6 +132,8 @@ func getGameURL(logger *log.Logger) string {
 	}
 	return url
 }
+
+//Parses the URL for the Time API specified via the environment or defaults back to local
 func getTimeURL(logger *log.Logger) string {
 	url := os.Getenv("URL")
 	if url == "" {
@@ -140,6 +142,8 @@ func getTimeURL(logger *log.Logger) string {
 	logger.Println("connecting to time server", url)
 	return url
 }
+
+//gets the current server Time via the specified API
 func getTime(url string, target interface{}, httpClient *http.Client) error {
 	r, err := httpClient.Get(url)
 	if err != nil {
@@ -148,6 +152,26 @@ func getTime(url string, target interface{}, httpClient *http.Client) error {
 	defer r.Body.Close()
 
 	return json.NewDecoder(r.Body).Decode(target)
+}
+
+//Sends Signals to the Client after a specified amount of time has passed
+func calculateTiming(deadline time.Time, serverTime ServerTime, timingChannel chan<- time.Time) {
+	calculationTime := deadline.Sub(serverTime.Time)
+	calculationTime = time.Duration((calculationTime.Milliseconds() - int64(serverTime.Milliseconds) - 150) * 1000000)
+	//send First Singal(Calculations are interrupted, Action is chosen)
+	time.Sleep(time.Duration(0.7 * float64(calculationTime.Nanoseconds())))
+	log.Println("Send first Signal")
+	if timingChannel != nil {
+		timingChannel <- time.Now()
+	} else {
+		return
+	}
+	//send Second Signal (Action has to be send immediately)
+	time.Sleep(time.Duration(0.2 * float64(calculationTime)))
+	if timingChannel != nil {
+		timingChannel <- time.Now()
+	}
+	close(timingChannel)
 }
 
 func main() {
@@ -169,14 +193,16 @@ func main() {
 
 	var status Status
 	var serverTime ServerTime
+	var timingChannel chan time.Time
 	var input Input
 	status.Turn = 1
 	err = c.ReadJSON(&status)
-	getTime(timeURL, &serverTime, httpClient)
 	if err != nil {
 		clientLogger.Fatalln("error on first ws read:", err)
 	}
-
+	getTime(timeURL, &serverTime, httpClient)
+	timingChannel = make(chan time.Time)
+	go calculateTiming(status.Deadline, serverTime, timingChannel)
 	clientLogger.Println("field dimensions:", status.Width, "x", status.Height)
 	clientLogger.Println("number of players:", len(status.Players))
 	for status.Running && status.Players[status.You].Active {
@@ -185,7 +211,7 @@ func main() {
 		for _, p := range status.Players {
 			p.Direction = Directions[p.StringDirection]
 		}
-		action := client.GetAction(*status.Players[status.You], &status, &serverTime)
+		action := client.GetAction(*status.Players[status.You], &status, timingChannel)
 		status.Turn++
 
 		input = Input{action}
@@ -200,6 +226,8 @@ func main() {
 			break
 		}
 		getTime(timeURL, &serverTime, httpClient)
+		timingChannel = make(chan time.Time)
+		go calculateTiming(status.Deadline, serverTime, timingChannel)
 		counter := 0
 		for _, player := range status.Players {
 			if player.Active {

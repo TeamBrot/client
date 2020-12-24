@@ -4,6 +4,7 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"time"
 )
 
 func checkCell(status *Status, direction Direction, y int, x int, fields int, occupiedCells [][]bool) bool {
@@ -310,7 +311,7 @@ func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth 
 type MinimaxClient struct{}
 
 // GetAction implements the Client interface
-func (c MinimaxClient) GetAction(player Player, status *Status, serverTime *ServerTime) Action {
+func (c MinimaxClient) GetAction(player Player, status *Status, timingChannel <-chan time.Time) Action {
 	otherPlayerID := findClosestPlayer(status)
 	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
 	actions := bestActionsMinimax(status.You, otherPlayerID, status, 6)

@@ -692,7 +692,7 @@ type SpekuClient struct{}
 
 // GetAction implements the Client interface
 //TODO: use player information
-func (c SpekuClient) GetAction(player Player, status *Status, serverTime *ServerTime) Action {
+func (c SpekuClient) GetAction(player Player, status *Status, timingChannel <-chan time.Time) Action {
 	start := time.Now()
 	calculationTime := 2000 // calculation time in ms (difference between start and deadline)
 	var bestAction Action

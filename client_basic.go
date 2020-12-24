@@ -1,12 +1,15 @@
 package main
 
-import "log"
+import (
+	"log"
+	"time"
+)
 
 // SmartClient always moves at speed one and chooses right or left if there is an obstacle
 type SmartClient struct{}
 
 // GetAction Implementation for SmartClient
-func (c SmartClient) GetAction(player Player, status *Status, serverTime *ServerTime) Action {
+func (c SmartClient) GetAction(player Player, status *Status, timingChannel <-chan time.Time) Action {
 	var bestAction Action
 	board := status.Cells
 	switch player.Direction {
