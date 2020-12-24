@@ -272,6 +272,10 @@ func simulateRollouts(status *Status, limit int, ch chan [][]Action) [][]Action 
 
 			if longest >= len(path) {
 				longestPaths = append(longestPaths, path)
+			} else if float64(len(path))*filterValue > float64(longest) {
+				longestPaths = make([][]Action, 0, numberofRollouts-j)
+				longestPaths = append(longestPaths, path)
+				longest = len(path)
 			} else {
 				longestPaths = filterPaths(longestPaths, len(path), filterValue, numberofRollouts-j+len(longestPaths))
 				longestPaths = append(longestPaths, path)
@@ -437,7 +441,8 @@ func simulatePlayer(playerTree [][]*SimPlayer, id int, status *Status, numberOfT
 		}
 		var fieldAfterTurn [][]float64
 		if i != 0 {
-			fieldAfterTurn = <-ch1
+			newField := <-ch1
+			addFields(&fieldAfterTurn, newField)
 		} else {
 			fieldAfterTurn = make([][]float64, status.Height)
 			for z := range fieldAfterTurn {
