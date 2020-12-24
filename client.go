@@ -35,7 +35,7 @@ type Status struct {
 	Players  map[int]*Player `json:"players"`
 	You      int             `json:"you"`
 	Running  bool            `json:"running"`
-	Deadline string          `json:"deadline"`
+	Deadline time.Time       `json:"deadline"`
 	Turn     int
 }
 

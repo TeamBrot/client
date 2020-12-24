@@ -362,6 +362,8 @@ func resultsToField(me int, results []*Result, width int, height int, ch chan []
 	for u := 0; u < len(results); u++ {
 		intermediateFields[u] = makeEmptyCells(height, width)
 	}
+
+	//
 	for m, cells := range intermediateFields {
 		for n, result := range results {
 			if n != m {
@@ -382,13 +384,14 @@ func resultsToField(me int, results []*Result, width int, height int, ch chan []
 						}
 						_, isIn := player.lastMoveVisitedCells[coordsNow]
 						if isIn {
-							player.probability = player.probability * (1.0 / float64(cells[y][x]))
+							player.probability /= float64(cells[y][x])
 						}
 					}
 				}
 			}
 		}
 	}
+
 	playerFields := make([][][]float64, len(results))
 	for k := range playerFields {
 		newField := make([][]float64, height)
@@ -397,6 +400,7 @@ func resultsToField(me int, results []*Result, width int, height int, ch chan []
 		}
 		playerFields[k] = newField
 	}
+	//naming of l and z
 	for l, result := range results {
 		for _, player := range result.Player {
 			if player == nil {
@@ -429,10 +433,10 @@ func resultsToField(me int, results []*Result, width int, height int, ch chan []
 
 }
 
+//TODO: only sim player as argument not player Tree
 // simulate all possible moves for a given field.
-func simulatePlayer(playerTree [][]*SimPlayer, id int, status *Status, numberOfTurns int, elapsedTurns int, ch chan Result, ch1 chan [][]float64) {
+func simulatePlayer(playerTree [][]*SimPlayer, id int, status *Status, numberOfTurns int, elapsedTurns int, resultChannel chan<- Result, boardChannel <-chan [][]float64) {
 	for i := 0; i < numberOfTurns; i++ {
-
 		playerTree[i+1] = make([]*SimPlayer, len(playerTree[i])*5)
 		turn := i + 1
 		writeField := make([][]int, status.Height)
@@ -441,7 +445,7 @@ func simulatePlayer(playerTree [][]*SimPlayer, id int, status *Status, numberOfT
 		}
 		var fieldAfterTurn [][]float64
 		if i != 0 {
-			newField := <-ch1
+			newField := <-boardChannel
 			addFields(&fieldAfterTurn, newField)
 		} else {
 			fieldAfterTurn = make([][]float64, status.Height)
@@ -463,8 +467,8 @@ func simulatePlayer(playerTree [][]*SimPlayer, id int, status *Status, numberOfT
 				scores[o] = score
 			}
 			player.numChilds = len(children)
-			for _, child := range children {
-				child.probability = 1.0/float64(len(children)) - (scores[0] / float64(len(child.lastMoveVisitedCells)))
+			for h, child := range children {
+				child.probability = 1.0/float64(len(children)) - (scores[h] / float64(len(child.lastMoveVisitedCells)))
 				if child.probability < 0 {
 					child.probability = 0
 				}
@@ -472,13 +476,13 @@ func simulatePlayer(playerTree [][]*SimPlayer, id int, status *Status, numberOfT
 				counter++
 			}
 		}
-		if ch != nil {
-			ch <- Result{Cells: writeField, ID: id, Player: playerTree[turn], turn: turn}
+		if resultChannel != nil {
+			resultChannel <- Result{Cells: writeField, ID: id, Player: playerTree[turn], turn: turn}
 		}
 	}
 	log.Println("Finished Calculation for player: ", id)
 	playerTree = make([][]*SimPlayer, 0)
-	close(ch)
+	close(resultChannel)
 	return
 }
 
@@ -693,6 +697,7 @@ func (c SpekuClient) GetAction(player Player, status *Status, serverTime *Server
 	calculationTime := 2000 // calculation time in ms (difference between start and deadline)
 	var bestAction Action
 	possibleActions := Moves(status, &player, nil)
+	//handle trivial cases (zero or one possible Action)
 	if len(possibleActions) == 1 {
 		log.Println("Only possible Action: ", possibleActions[0])
 		return possibleActions[0]
@@ -700,7 +705,8 @@ func (c SpekuClient) GetAction(player Player, status *Status, serverTime *Server
 		log.Println("I'll die... choosing change nothing as last action")
 		return ChangeNothing
 	}
-	simChan := make(chan [][]Action, 1)
+
+	simChan := make(chan [][]Action)
 	go simulateRollouts(status, 150, simChan)
 
 	radius := 100.0
@@ -718,6 +724,7 @@ func (c SpekuClient) GetAction(player Player, status *Status, serverTime *Server
 		simDepth = 1
 	}
 	fieldChan := make(chan [][]float64, simDepth)
+	// Make all fileds return value of simulateGame
 	go simulateGame(status, fieldChan, simDepth, activePlayersInRange)
 	//activate or deacitvate this codeblock to combine minimax and speku
 	otherPlayerID := findClosestPlayer(status)
