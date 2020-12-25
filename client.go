@@ -135,7 +135,7 @@ func getGameURL(logger *log.Logger) string {
 
 //Parses the URL for the Time API specified via the environment or defaults back to local
 func getTimeURL(logger *log.Logger) string {
-	url := os.Getenv("URL")
+	url := os.Getenv("TIME_URL")
 	if url == "" {
 		url = "http://localhost:8080/spe_ed_time"
 	}
@@ -156,8 +156,11 @@ func getTime(url string, target interface{}, httpClient *http.Client) error {
 
 //Sends Signals to the Client after a specified amount of time has passed
 func calculateTiming(deadline time.Time, serverTime ServerTime, timingChannel chan<- time.Time) {
+	fmt.Println(serverTime.Time)
 	calculationTime := deadline.Sub(serverTime.Time)
+	fmt.Println(calculationTime)
 	calculationTime = time.Duration((calculationTime.Milliseconds() - int64(serverTime.Milliseconds) - 150) * 1000000)
+	log.Println(calculationTime)
 	//send First Singal(Calculations that need time to finish are interrupted)
 	time.Sleep(time.Duration(0.4 * float64(calculationTime.Nanoseconds())))
 	if timingChannel != nil {
@@ -203,12 +206,15 @@ func main() {
 	if err != nil {
 		clientLogger.Fatalln("error on first ws read:", err)
 	}
-	getTime(timeURL, &serverTime, httpClient)
-	timingChannel = make(chan time.Time)
-	go calculateTiming(status.Deadline, serverTime, timingChannel)
 	clientLogger.Println("field dimensions:", status.Width, "x", status.Height)
 	clientLogger.Println("number of players:", len(status.Players))
 	for status.Running && status.Players[status.You].Active {
+		timingChannel = make(chan time.Time)
+		err = getTime(timeURL, &serverTime, httpClient)
+		if err != nil {
+			clientLogger.Fatalln("Error recieving time from server")
+		}
+		go calculateTiming(status.Deadline, serverTime, timingChannel)
 		clientLogger.Println("turn", status.Turn)
 		clientLogger.Println("deadline", status.Deadline)
 		for _, p := range status.Players {
@@ -228,9 +234,6 @@ func main() {
 			clientLogger.Fatalln("error on ws read:", err)
 			break
 		}
-		getTime(timeURL, &serverTime, httpClient)
-		timingChannel = make(chan time.Time)
-		go calculateTiming(status.Deadline, serverTime, timingChannel)
 		counter := 0
 		for _, player := range status.Players {
 			if player.Active {

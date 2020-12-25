@@ -11,6 +11,10 @@ Ausführen:
 Für client.py:
 `pip install websockets`
 
+
+## Run on remote Server
+For Running on a remote Server you have to set the Environment variables URL, TIME_URL and KEY 
+For the official api URL has to be wss://msoll.de/spe_ed and TIME_URL has to be https://msoll.de/spe_ed_time
 ## Go Clients
 
 Für go clients:
