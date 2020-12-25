@@ -158,16 +158,19 @@ func getTime(url string, target interface{}, httpClient *http.Client) error {
 func calculateTiming(deadline time.Time, serverTime ServerTime, timingChannel chan<- time.Time) {
 	calculationTime := deadline.Sub(serverTime.Time)
 	calculationTime = time.Duration((calculationTime.Milliseconds() - int64(serverTime.Milliseconds) - 150) * 1000000)
-	//send First Singal(Calculations are interrupted, Action is chosen)
-	time.Sleep(time.Duration(0.7 * float64(calculationTime.Nanoseconds())))
-	log.Println("Send first Signal")
+	//send First Singal(Calculations that need time to finish are interrupted)
+	time.Sleep(time.Duration(0.4 * float64(calculationTime.Nanoseconds())))
 	if timingChannel != nil {
 		timingChannel <- time.Now()
 	} else {
 		return
 	}
-	//send Second Signal (Action has to be send immediately)
-	time.Sleep(time.Duration(0.2 * float64(calculationTime)))
+	//send Second Signal (All Calculations are interripted, the results are interpreted)
+	time.Sleep(time.Duration(0.4 * float64(calculationTime)))
+	if timingChannel != nil {
+		timingChannel <- time.Now()
+	}
+	time.Sleep(time.Duration(0.1 * float64(calculationTime)))
 	if timingChannel != nil {
 		timingChannel <- time.Now()
 	}
