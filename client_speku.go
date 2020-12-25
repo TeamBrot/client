@@ -470,7 +470,7 @@ func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns 
 		for _, playerTreeTurn := range playerTree {
 			simPlayerCounter += len(playerTreeTurn)
 		}
-		log.Println("Have to remember ", simPlayerCounter, " SimPlayers")
+		//log.Println("Have to remember ", simPlayerCounter, " SimPlayers")
 		counter := 0
 		for _, player := range playerTree[i] {
 			select {
@@ -718,7 +718,7 @@ func addFieldAndOriginalCells(field [][]float64, cells [][]int) [][]float64 {
 
 //This Method is work in progress and does basically nothing
 func analyzeBoard(status *Status) []*Player {
-	//var playerSimulation []Player
+	var playerSimulation []*Player
 	//var playerRollouts []Player
 	numberOfCells := status.Width * status.Height
 
@@ -743,12 +743,21 @@ func analyzeBoard(status *Status) []*Player {
 	influenceWidhtOfPlayer := make(map[*Player]int, 0)
 
 	for _, player := range allActivePlayers {
-
-		influenceWidth := player.Speed - int(math.Round(math.Pow(9, boardCoverage))) + 5
+		influenceWidth := (player.Speed - int(math.Round(math.Pow(9, boardCoverage))) + 4) * 8
 		log.Println(influenceWidth)
 		influenceWidhtOfPlayer[player] = influenceWidth
 	}
-	return allActivePlayers
+	me := status.Players[status.You]
+	for _, player := range allActivePlayers {
+		if player == me {
+			continue
+		}
+		if distanceToPlayer(me, player) < float64(influenceWidhtOfPlayer[player]+influenceWidhtOfPlayer[me]) {
+			playerSimulation = append(playerSimulation, player)
+		}
+	}
+	playerSimulation = append(playerSimulation, me)
+	return playerSimulation
 }
 
 // SpekuClient is a client implementation that uses speculation to decide what to do next
@@ -777,6 +786,7 @@ func (c SpekuClient) GetAction(player Player, status *Status, timingChannel <-ch
 
 	//calculate which players are simulated TODO: Move this code to an external function and improve it
 	activePlayersInRange := analyzeBoard(status)
+	log.Println("Simulating ", activePlayersInRange, " Players")
 	var maxSimDepth int
 	//if Your Computer is really beefy it might be a good idea to set this higher (else it is not and your computer will crash!!)
 	maxSimDepth = 9
