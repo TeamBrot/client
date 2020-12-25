@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"math"
 	"math/rand"
 	"time"
 )
@@ -465,6 +466,11 @@ func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns 
 				fieldAfterTurn[z] = make([]float64, status.Width)
 			}
 		}
+		simPlayerCounter := 0
+		for _, playerTreeTurn := range playerTree {
+			simPlayerCounter += len(playerTreeTurn)
+		}
+		log.Println("Have to remember ", simPlayerCounter, " SimPlayers")
 		counter := 0
 		for _, player := range playerTree[i] {
 			select {
@@ -474,23 +480,17 @@ func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns 
 				resultChannel <- nil
 				return
 			default:
-
 				possibleActions := possibleMoves(player, status.Cells, elapsedTurns+turn)
-				children := make([]*SimPlayer, len(possibleActions))
-				scores := make([]float64, len(possibleActions))
-				for o, action := range possibleActions {
-					newPlayer, score := simulateMove(&writeField, player, action, elapsedTurns+turn, fieldAfterTurn)
-					children[o] = newPlayer
-					scores[o] = score
-				}
-				for h, child := range children {
-					child.Probability = 1.0/float64(len(children)) - (scores[h] / float64(len(child.LastMoveVisitedCells)))
+				for _, action := range possibleActions {
+					child, score := simulateMove(&writeField, player, action, elapsedTurns+turn, fieldAfterTurn)
+					child.Probability = 1.0/float64(len(possibleActions)) - (score / float64(len(child.LastMoveVisitedCells)))
 					if child.Probability < 0 {
 						continue
 					}
 					playerTree[turn][counter] = child
 					counter++
 				}
+
 			}
 
 		}
@@ -716,6 +716,41 @@ func addFieldAndOriginalCells(field [][]float64, cells [][]int) [][]float64 {
 	return field
 }
 
+//This Method is work in progress and does basically nothing
+func analyzeBoard(status *Status) []*Player {
+	//var playerSimulation []Player
+	//var playerRollouts []Player
+	numberOfCells := status.Width * status.Height
+
+	var numberOfOccupiedCells float64
+	for _, row := range status.Cells {
+		for _, cellValue := range row {
+			if cellValue != 0 {
+				numberOfOccupiedCells++
+			}
+		}
+	}
+	boardCoverage := numberOfOccupiedCells / float64(numberOfCells)
+	log.Println(boardCoverage, "% of the board are used")
+
+	allActivePlayers := make([]*Player, 0)
+	for _, player := range status.Players {
+		if player.Active {
+			allActivePlayers = append(allActivePlayers, player)
+		}
+	}
+
+	influenceWidhtOfPlayer := make(map[*Player]int, 0)
+
+	for _, player := range allActivePlayers {
+
+		influenceWidth := player.Speed - int(math.Round(math.Pow(9, boardCoverage))) + 5
+		log.Println(influenceWidth)
+		influenceWidhtOfPlayer[player] = influenceWidth
+	}
+	return allActivePlayers
+}
+
 // SpekuClient is a client implementation that uses speculation to decide what to do next
 type SpekuClient struct{}
 
@@ -741,15 +776,9 @@ func (c SpekuClient) GetAction(player Player, status *Status, timingChannel <-ch
 	go simulateRollouts(status, 75, 0.7, rolloutChan, stopRolloutChan)
 
 	//calculate which players are simulated TODO: Move this code to an external function and improve it
-	radius := 100.0
-	activePlayersInRange := make([]*Player, 0)
-	for _, player := range status.Players {
-		if player.Active && distanceToPlayer(player, status.Players[status.You]) <= radius {
-			activePlayersInRange = append(activePlayersInRange, player)
-		}
-	}
+	activePlayersInRange := analyzeBoard(status)
 	var maxSimDepth int
-	//if Your Computer is really beefy it might be a good idea to set this higher (else it is not!!)
+	//if Your Computer is really beefy it might be a good idea to set this higher (else it is not and your computer will crash!!)
 	maxSimDepth = 9
 	//If this channel is closed, it will try to end simulate game
 	stopSimulateGameChan := make(chan time.Time)
