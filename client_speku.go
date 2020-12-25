@@ -227,7 +227,7 @@ func rolloutMove(status *Status, action Action, player *Player) {
 //search for the longest paths a player could reach. Simulates random move for all Players and allways processes as last player
 func simulateRollouts(status *Status, limit int, filterValue float64, ch chan [][]Action, stopSimulateRollouts <-chan time.Time) {
 	longest := 0
-	maxNumberofRollouts := 700000
+	maxNumberofRollouts := 7000000
 	longestPaths := make([][]Action, 0, maxNumberofRollouts)
 	for j := 0; j < maxNumberofRollouts; j++ {
 		select {
@@ -287,6 +287,9 @@ func simulateRollouts(status *Status, limit int, filterValue float64, ch chan []
 			}
 		}
 	}
+	ch <- longestPaths
+	log.Println("Could perfomr ", maxNumberofRollouts, " Rollouts")
+	return
 }
 
 //Filters an given array of paths and returns an array of paths that match the criteria
