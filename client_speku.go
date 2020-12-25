@@ -367,6 +367,7 @@ func simulateGame(status *Status, chField chan<- [][][]float64, stopSimulateGame
 			addFields(&allFields[z], allFields[z-1])
 		}
 	}
+	chField <- allFields
 	return
 }
 
@@ -482,7 +483,7 @@ func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns 
 				for h, child := range children {
 					child.Probability = 1.0/float64(len(children)) - (scores[h] / float64(len(child.LastMoveVisitedCells)))
 					if child.Probability < 0 {
-						child.Probability = 0
+						continue
 					}
 					playerTree[turn][counter] = child
 					counter++
@@ -734,7 +735,7 @@ func (c SpekuClient) GetAction(player Player, status *Status, timingChannel <-ch
 	possibleActions = bestActionsMinimax(status.You, otherPlayerID, status, 3)
 	stopRolloutChan := make(chan time.Time)
 	rolloutChan := make(chan [][]Action, 1)
-	go simulateRollouts(status, 150, 0.8, rolloutChan, stopRolloutChan)
+	go simulateRollouts(status, 75, 0.7, rolloutChan, stopRolloutChan)
 
 	//calculate which players are simulated TODO: Move this code to an external function and improve it
 	radius := 100.0
@@ -746,7 +747,7 @@ func (c SpekuClient) GetAction(player Player, status *Status, timingChannel <-ch
 	}
 	var maxSimDepth int
 	//if Your Computer is really beefy it might be a good idea to set this higher (else it is not!!)
-	maxSimDepth = 15
+	maxSimDepth = 9
 	//If this channel is closed, it will try to end simulate game
 	stopSimulateGameChan := make(chan time.Time)
 	//This channel is used to recieve an array of all calculated Fields from simulate game
