@@ -779,7 +779,7 @@ func (c SpekuClient) GetAction(player Player, status *Status, timingChannel <-ch
 
 	otherPlayerID := findClosestPlayer(status)
 	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
-	possibleActions = bestActionsMinimax(status.You, otherPlayerID, status, 3)
+	possibleActions, _ = bestActionsMinimax(status.You, otherPlayerID, status, 3, nil)
 	stopRolloutChan := make(chan time.Time)
 	rolloutChan := make(chan [][]Action, 1)
 	go simulateRollouts(status, 75, 0.7, rolloutChan, stopRolloutChan)
