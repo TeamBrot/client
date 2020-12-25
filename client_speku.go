@@ -743,7 +743,7 @@ func analyzeBoard(status *Status) []*Player {
 	influenceWidhtOfPlayer := make(map[*Player]int, 0)
 
 	for _, player := range allActivePlayers {
-		influenceWidth := (player.Speed - int(math.Round(math.Pow(9, boardCoverage))) + 4) * 8
+		influenceWidth := (player.Speed - int(math.Round(9*boardCoverage)) + 4) * 8
 		log.Println(influenceWidth)
 		influenceWidhtOfPlayer[player] = influenceWidth
 	}
@@ -779,14 +779,16 @@ func (c SpekuClient) GetAction(player Player, status *Status, timingChannel <-ch
 
 	otherPlayerID := findClosestPlayer(status)
 	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
-	possibleActions, _ = bestActionsMinimax(status.You, otherPlayerID, status, 3, nil)
+	miniMaxChannel := make(chan []Action, 1)
+	stopMiniMaxChannel := make(chan time.Time)
+	go bestActionsMinimaxTimed(status.You, otherPlayerID, status, stopMiniMaxChannel, miniMaxChannel)
 	stopRolloutChan := make(chan time.Time)
 	rolloutChan := make(chan [][]Action, 1)
 	go simulateRollouts(status, 75, 0.7, rolloutChan, stopRolloutChan)
 
 	//calculate which players are simulated TODO: Move this code to an external function and improve it
 	activePlayersInRange := analyzeBoard(status)
-	log.Println("Simulating ", activePlayersInRange, " Players")
+	log.Println("Simulating ", len(activePlayersInRange), " Players")
 	var maxSimDepth int
 	//if Your Computer is really beefy it might be a good idea to set this higher (else it is not and your computer will crash!!)
 	maxSimDepth = 9
@@ -801,6 +803,8 @@ func (c SpekuClient) GetAction(player Player, status *Status, timingChannel <-ch
 	_ = <-timingChannel
 	log.Println("Sending stop signal to Simulate Rollouts...")
 	close(stopRolloutChan)
+	close(stopMiniMaxChannel)
+	possibleActions = <-miniMaxChannel
 	allFields := <-fieldChan
 	bestPaths := <-rolloutChan
 
