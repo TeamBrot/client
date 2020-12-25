@@ -19,27 +19,6 @@ type Client interface {
 	GetAction(player Player, status *Status, timingChannel <-chan time.Time) Action
 }
 
-func getClient() Client {
-	var client Client
-	switch os.Args[1] {
-	case "minimax":
-		client = MinimaxClient{}
-		break
-	case "smart":
-		client = SmartClient{}
-		break
-	case "mcts":
-		client = MctsClient{}
-		break
-	case "speku":
-		client = SpekuClient{}
-		break
-	default:
-		log.Fatal("usage:", os.Args[0], "<client>")
-	}
-	return client
-}
-
 func setupLogging() *log.Logger {
 	logger := log.New(os.Stdout, "[client] ", log.Lmsgprefix|log.LstdFlags)
 	logger.Println("using client", os.Args[1])
@@ -84,13 +63,12 @@ func calculateTiming(deadline time.Time, serverTime ServerTime, timingChannel ch
 }
 
 func main() {
-	if len(os.Args) <= 1 {
-		log.Fatalln("usage:", os.Args[0], "<client>")
+	config, err := GetConfig()
+	if err != nil {
+		fmt.Println("could not get configuration:", err)
+		return
 	}
-
 	clientLogger := setupLogging()
-	config := GetConfig(clientLogger)
-	client := getClient()
 	httpClient := &http.Client{Timeout: 2 * time.Second}
 
 	clientLogger.Println("connecting to server")
@@ -121,7 +99,7 @@ func main() {
 			clientLogger.Fatalln("error receiving time from server")
 		}
 		go calculateTiming(status.Deadline, serverTime, timingChannel)
-		action := client.GetAction(*status.Players[status.You], status, timingChannel)
+		action := config.client.GetAction(*status.Players[status.You], status, timingChannel)
 		err = conn.WriteAction(action)
 		if err != nil {
 			clientLogger.Fatalln("error sending action:", err)

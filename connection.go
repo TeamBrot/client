@@ -76,11 +76,13 @@ const (
 	Right = 3
 )
 
+// Connection represents a connection to a game server
 type Connection struct {
 	conn *websocket.Conn
 	turn int
 }
 
+// NewConnection creates a new connection with the specified configuration
 func NewConnection(config Config) (Connection, error) {
 	c, _, err := websocket.DefaultDialer.Dial(config.GetWSURL(), nil)
 	if err != nil {
@@ -89,6 +91,7 @@ func NewConnection(config Config) (Connection, error) {
 	return Connection{c, 0}, nil
 }
 
+// WriteAction writes the specified action to the game server
 func (c *Connection) WriteAction(action Action) error {
 	err := c.conn.WriteJSON(&Input{action})
 	if err != nil {
@@ -97,6 +100,7 @@ func (c *Connection) WriteAction(action Action) error {
 	return nil
 }
 
+// ReadStatus reads the status from the connection
 func (c *Connection) ReadStatus() (*Status, error) {
 	var status Status
 	err := c.conn.ReadJSON(&status)
@@ -111,6 +115,7 @@ func (c *Connection) ReadStatus() (*Status, error) {
 	return &status, nil
 }
 
+// Close closes the connection
 func (c *Connection) Close() error {
 	return c.conn.Close()
 }
