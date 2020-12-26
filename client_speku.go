@@ -315,6 +315,7 @@ func copySimPlayer(player *SimPlayer) *SimPlayer {
 	for k := range player.AllVisitedCells {
 		p.AllVisitedCells[k] = struct{}{}
 	}
+
 	return &p
 }
 
@@ -398,6 +399,7 @@ func resultsToField(me int, results []*Result, width int, height int, fieldChann
 					player.Probability /= float64(cells[coord.Y][coord.X])
 				}
 			}
+			player.LastMoveVisitedCells = nil
 		}
 	}
 
@@ -461,7 +463,7 @@ func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns 
 		} else {
 			fieldAfterTurn = makeEmptyField(status.Height, status.Width)
 		}
-		playerTree[turn] = make([]*SimPlayer, 0, len(playerTree[i])*5)
+		playerTree[turn] = make([]*SimPlayer, len(playerTree[i])*5)
 		//simPlayerCounter := 0
 		//for _, playerTreeTurn := range playerTree {
 		//	simPlayerCounter += len(playerTreeTurn)
@@ -483,10 +485,11 @@ func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns 
 					if child.Probability < 0 {
 						continue
 					}
-					//playerTree[turn][counter] = child
-					playerTree[turn] = append(playerTree[turn], child)
+					playerTree[turn][counter] = child
+					//playerTree[turn] = append(playerTree[turn], child)
 					counter++
 				}
+				player.AllVisitedCells = nil
 
 			}
 
@@ -754,14 +757,14 @@ func (c SpekuClient) GetAction(player Player, status *Status, timingChannel <-ch
 	go getMiniMaxActions(status, otherPlayerID, stopMiniMaxChannel, miniMaxChannel)
 	stopRolloutChan := make(chan time.Time)
 	rolloutChan := make(chan [][]Action, 1)
-	go simulateRollouts(status, 75, 0.7, rolloutChan, stopRolloutChan)
+	go simulateRollouts(status, 140, 0.7, rolloutChan, stopRolloutChan)
 
 	//calculate which players are simulated TODO: Move this code to an external function and improve it
 	activePlayersInRange := analyzeBoard(status)
 	log.Println("Simulating ", len(activePlayersInRange), " Players")
 	var maxSimDepth int
 	//if Your Computer is really beefy it might be a good idea to set this higher (else it is not and your computer will crash!!)
-	maxSimDepth = 9
+	maxSimDepth = 13
 	//If this channel is closed, it will try to end simulate game
 
 	//This channel is used to recieve an array of all calculated Fields from simulate game
