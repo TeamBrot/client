@@ -4,6 +4,7 @@ import (
 	"log"
 	"math"
 	"math/rand"
+	"runtime"
 	"time"
 )
 
@@ -27,7 +28,6 @@ type SimPlayer struct {
 	Probability          float64
 	AllVisitedCells      map[Coords]struct{}
 	LastMoveVisitedCells map[Coords]struct{}
-	Parent               *SimPlayer
 }
 
 //Checks if it is legal for a SimPlayer to use a Cell
@@ -309,7 +309,7 @@ func copySimPlayer(player *SimPlayer) *SimPlayer {
 	p.Speed = player.Speed
 	p.X = player.X
 	p.Y = player.Y
-	p.Parent = player
+	p.Probability = player.Probability
 	p.LastMoveVisitedCells = make(map[Coords]struct{})
 	p.AllVisitedCells = make(map[Coords]struct{})
 	for k := range player.AllVisitedCells {
@@ -334,7 +334,6 @@ func simulateGame(status *Status, chField chan<- [][][]float64, stopSimulateGame
 		p.Probability = 1
 		p.X = player.X
 		p.Y = player.Y
-		p.Parent = nil
 		p.LastMoveVisitedCells = make(map[Coords]struct{})
 		p.AllVisitedCells = make(map[Coords]struct{})
 		allSimPlayer = append(allSimPlayer, &p)
@@ -358,7 +357,11 @@ func simulateGame(status *Status, chField chan<- [][][]float64, stopSimulateGame
 				chField <- allFields
 				return
 			case val := <-ch:
-				results = append(results, val)
+				if val != nil {
+					results = append(results, val)
+				} else {
+					break
+				}
 			}
 
 		}
@@ -369,6 +372,7 @@ func simulateGame(status *Status, chField chan<- [][][]float64, stopSimulateGame
 			addFields(&allFields[z], allFields[z-1])
 		}
 	}
+
 	chField <- allFields
 	return
 }
@@ -399,7 +403,6 @@ func resultsToField(me int, results []*Result, width int, height int, fieldChann
 					player.Probability /= float64(cells[coord.Y][coord.X])
 				}
 			}
-			player.LastMoveVisitedCells = nil
 		}
 	}
 
@@ -413,7 +416,6 @@ func resultsToField(me int, results []*Result, width int, height int, fieldChann
 			if player == nil {
 				break
 			}
-			player.Probability = player.Probability * player.Parent.Probability
 			for coords := range player.LastMoveVisitedCells {
 				for z, field := range playerFields {
 					if z != l {
@@ -421,7 +423,7 @@ func resultsToField(me int, results []*Result, width int, height int, fieldChann
 					}
 				}
 			}
-			player.Parent = nil
+			player.LastMoveVisitedCells = nil
 			player = nil
 		}
 	}
@@ -429,6 +431,7 @@ func resultsToField(me int, results []*Result, width int, height int, fieldChann
 	for o, ch := range fieldChannels {
 		ch <- playerFields[o]
 	}
+	runtime.GC()
 	return playerFields[me]
 
 }
@@ -440,9 +443,11 @@ func getMiniMaxActions(status *Status, otherPlayerID int, stopMiniMaxChannel <-c
 // simulate all possible moves for a given simPlayer and a given status until numberOfTurns is reached
 func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns int, elapsedTurns int, resultChannel chan<- *Result, boardChannel <-chan [][]float64, stopChannel <-chan time.Time) {
 	var fieldAfterTurn [][]float64
-	playerTree := make([][]*SimPlayer, numberOfTurns+1)
-	playerTree[0] = make([]*SimPlayer, 1)
-	playerTree[0][0] = simPlayer
+	//playerTree := make([][]*SimPlayer, numberOfTurns+1)
+	//playerTree[0] = make([]*SimPlayer, 1)
+	//playerTree[0][0] = simPlayer
+	currentPlayers := make([]*SimPlayer, 1)
+	currentPlayers[0] = simPlayer
 	for i := 0; i < numberOfTurns; i++ {
 		turn := i + 1
 		writeField := make([][]int, status.Height)
@@ -450,12 +455,11 @@ func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns 
 			writeField[r] = make([]int, status.Width)
 		}
 		if i != 0 {
-			playerTree[i-1] = nil
 			select {
 			case newField := <-boardChannel:
 				addFields(&fieldAfterTurn, newField)
 			case <-stopChannel:
-				playerTree = make([][]*SimPlayer, 0)
+				currentPlayers = nil
 				resultChannel <- nil
 				return
 			}
@@ -463,29 +467,30 @@ func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns 
 		} else {
 			fieldAfterTurn = makeEmptyField(status.Height, status.Width)
 		}
-		playerTree[turn] = make([]*SimPlayer, len(playerTree[i])*5)
+		children := make([]*SimPlayer, len(currentPlayers)*5)
 		//simPlayerCounter := 0
 		//for _, playerTreeTurn := range playerTree {
 		//	simPlayerCounter += len(playerTreeTurn)
 		//}
 		//log.Println("Have to remember ", simPlayerCounter, " SimPlayers")
 		counter := 0
-		for _, player := range playerTree[i] {
+		for _, player := range currentPlayers {
 			select {
 			case <-stopChannel:
 				log.Println("Ended Simulation for player ", id)
-				playerTree = make([][]*SimPlayer, 0)
+				currentPlayers = nil
+				children = nil
 				resultChannel <- nil
 				return
 			default:
 				possibleActions := possibleMoves(player, status.Cells, elapsedTurns+turn)
 				for _, action := range possibleActions {
 					child, score := simulateMove(&writeField, player, action, elapsedTurns+turn, fieldAfterTurn)
-					child.Probability = 1.0/float64(len(possibleActions)) - (score / float64(len(child.LastMoveVisitedCells)))
+					child.Probability *= 1.0/float64(len(possibleActions)) - (score / float64(len(child.LastMoveVisitedCells)))
 					if child.Probability < 0 {
 						continue
 					}
-					playerTree[turn][counter] = child
+					children[counter] = child
 					//playerTree[turn] = append(playerTree[turn], child)
 					counter++
 				}
@@ -494,13 +499,14 @@ func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns 
 			}
 
 		}
-		playerTree[turn] = playerTree[turn][0:counter]
+		currentPlayers = children[0:counter]
+		children = nil
 		if resultChannel != nil {
-			resultChannel <- &Result{Cells: writeField, Player: playerTree[turn]}
+			resultChannel <- &Result{Cells: writeField, Player: currentPlayers}
 		}
+		runtime.GC()
 	}
 	log.Println("Finished Calculation for player: ", id)
-	playerTree = make([][]*SimPlayer, 0)
 	close(resultChannel)
 	return
 }
@@ -764,7 +770,7 @@ func (c SpekuClient) GetAction(player Player, status *Status, timingChannel <-ch
 	log.Println("Simulating ", len(activePlayersInRange), " Players")
 	var maxSimDepth int
 	//if Your Computer is really beefy it might be a good idea to set this higher (else it is not and your computer will crash!!)
-	maxSimDepth = 13
+	maxSimDepth = 10
 	//If this channel is closed, it will try to end simulate game
 
 	//This channel is used to recieve an array of all calculated Fields from simulate game
