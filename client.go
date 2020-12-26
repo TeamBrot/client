@@ -63,6 +63,7 @@ func calculateTiming(deadline time.Time, serverTime ServerTime, timingChannel ch
 }
 
 func main() {
+
 	config, err := GetConfig()
 	if err != nil {
 		fmt.Println("could not get configuration:", err)
@@ -70,6 +71,11 @@ func main() {
 	}
 	clientLogger := setupLogging()
 	httpClient := &http.Client{Timeout: 2 * time.Second}
+
+	gui := Gui{nil}
+	if config.APIKey != "" {
+		gui = StartGui(clientLogger)
+	}
 
 	clientLogger.Println("connecting to server")
 	conn, err := NewConnection(config)
@@ -108,6 +114,11 @@ func main() {
 		status, err = conn.ReadStatus()
 		if err != nil {
 			clientLogger.Fatalln("error reading status:", err)
+		}
+
+		err = gui.WriteStatus(status)
+		if err != nil {
+			clientLogger.Println("could not write status to gui:", err)
 		}
 
 		counter := 0
