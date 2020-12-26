@@ -10,7 +10,7 @@ import (
 
 // Result :
 type Result struct {
-	Cells  [][]int
+	Visits [][]int
 	Player []*SimPlayer
 }
 
@@ -226,7 +226,7 @@ func simulateRollouts(status *Status, limit int, filterValue float64, ch chan []
 		select {
 		case <-stopSimulateRollouts:
 			ch <- longestPaths
-			log.Println("Could perfom ", j, " Rollouts")
+			log.Println("could perfom", j, "rollouts")
 			close(ch)
 			return
 		default:
@@ -366,7 +366,7 @@ func simulateGame(status *Status, chField chan<- [][][]float64, stopSimulateGame
 
 		}
 		log.Println("Starting calculating field for turn: ", z)
-		field := resultsToField(me, results, status.Width, status.Height, boardChannels)
+		field := visitsToProbabilities(me, results, status.Width, status.Height, boardChannels)
 		allFields = append(allFields, field)
 		if z != 0 {
 			addFields(&allFields[z], allFields[z-1])
@@ -378,21 +378,21 @@ func simulateGame(status *Status, chField chan<- [][][]float64, stopSimulateGame
 }
 
 //After every turn the given results are evaluated and fields are computed on basis of them
-func resultsToField(me int, results []*Result, width int, height int, fieldChannels map[int]chan [][]float64) [][]float64 {
-	storeBoards := make([][][]int, len(results))
+func visitsToProbabilities(me int, results []*Result, width int, height int, fieldChannels map[int]chan [][]float64) [][]float64 {
+	accumulatedVisits := make([][][]int, len(results))
 	for u := 0; u < len(results); u++ {
-		storeBoards[u] = makeEmptyBoard(height, width)
+		accumulatedVisits[u] = makeEmptyBoard(height, width)
 	}
 
-	for m, cells := range storeBoards {
+	for m, cells := range accumulatedVisits {
 		for n, result := range results {
 			if n != m {
-				addBoards(&cells, result.Cells)
+				addVisits(&cells, result.Visits)
 			}
 		}
 	}
 
-	for g, cells := range storeBoards {
+	for g, cells := range accumulatedVisits {
 		result := results[g]
 		for _, player := range result.Player {
 			if player == nil {
@@ -502,7 +502,7 @@ func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns 
 		currentPlayers = children[0:counter]
 		children = nil
 		if resultChannel != nil {
-			resultChannel <- &Result{Cells: writeField, Player: currentPlayers}
+			resultChannel <- &Result{Visits: writeField, Player: currentPlayers}
 		}
 		runtime.GC()
 	}
@@ -522,8 +522,8 @@ func addFields(field1 *[][]float64, field2 [][]float64) {
 
 }
 
-//Adds second board to first board. First board has to be a pointer an is going to be changed!
-func addBoards(field1 *[][]int, field2 [][]int) {
+//Adds second visit table to first visit table. First board has to be a pointer an is going to be changed!
+func addVisits(field1 *[][]int, field2 [][]int) {
 	field := *field1
 	for i := 0; i < len(field); i++ {
 		for j := 0; j < len(field[i]); j++ {
@@ -551,7 +551,7 @@ func makeEmptyField(height int, width int) [][]float64 {
 }
 
 //This functions executes a action and returns the average score of every visited Cell
-func evaluateScore(player *Player, field [][]float64, action Action, turn int) float64 {
+func evaluateAction(player *Player, field [][]float64, action Action, turn int) float64 {
 	score := 0.0
 	preProcessPlayer(player, action)
 	jump := turn%6 == 0
@@ -617,7 +617,7 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 		newPlayer := copyPlayer(&player)
 		for i := 0; i < simDepth; i++ {
 			if i != len(path) {
-				score += evaluateScore(newPlayer, allFields[i], path[i], turn+i)
+				score += evaluateAction(newPlayer, allFields[i], path[i], turn+i)
 				score /= float64(simDepth)
 			} else {
 				break

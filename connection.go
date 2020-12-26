@@ -85,12 +85,12 @@ type Connection struct {
 
 // NewConnection creates a new connection with the specified configuration
 func NewConnection(config Config) (Connection, error) {
-	log.Println("Trying to connect to: ", config.GameURL)
+	log.Println("trying to connect to", config.GameURL)
 	c, _, err := websocket.DefaultDialer.Dial(config.GetWSURL(), nil)
 	if err != nil {
 		return Connection{nil, 0}, err
 	}
-	log.Println("Connect successfull")
+	log.Println("connection established")
 	return Connection{c, 0}, nil
 }
 

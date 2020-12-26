@@ -310,7 +310,6 @@ func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth 
 	}
 	if len(bestActions) == 0 {
 		log.Println("no best actions, using possible moves", possibleMoves)
-		log.Println("There are", len(possibleMoves))
 		return possibleMoves, nil
 	}
 	log.Println("best actions are", bestActions, "with score", bestScore)
@@ -320,7 +319,7 @@ func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth 
 func bestActionsMinimaxTimed(maximizerID int, minimizerID int, status *Status, timingChannel <-chan time.Time) []Action {
 	var actions []Action
 	var depth int
-	startDepth := 4
+	startDepth := 1
 	depth += startDepth
 	for {
 		//Backup in Case we can not finish in time with startDepth
@@ -328,14 +327,14 @@ func bestActionsMinimaxTimed(maximizerID int, minimizerID int, status *Status, t
 		if len(actions) == 0 {
 			return []Action{ChangeNothing}
 		} else if len(actions) == 1 {
-			return []Action{actions[0]}
+			return actions
 		}
 		actionsTemp, err := bestActionsMinimax(maximizerID, minimizerID, status, depth, timingChannel)
 		if err == nil {
-			log.Println("minimax with depth ", depth, " actions ", actionsTemp, " No Error")
+			log.Println("minimax with depth", depth, "actions", actionsTemp, "no error")
 			actions = actionsTemp
 		} else {
-			log.Println("Couldn't finish calculation for depth ", depth)
+			log.Println("couldn't finish calculation for depth", depth)
 			return actions
 		}
 		depth++
