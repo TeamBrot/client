@@ -24,7 +24,7 @@
       const canvas = document.getElementById("canvas");
       let ctx = canvas.getContext("2d");
       ctx.fillStyle = colors[0]
-      let webSocket = new WebSocket("ws://localhost:8080/spe_ed/gui");
+      let webSocket = new WebSocket(URL);
       let width, height;
       let speed = 200;
       const currentSpeedDiv = document.getElementById("currentSpeed");

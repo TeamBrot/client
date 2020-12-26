@@ -72,7 +72,7 @@ func main() {
 	clientLogger := setupLogging()
 	httpClient := &http.Client{Timeout: 2 * time.Second}
 
-	gui := Gui{nil}
+	gui := &Gui{nil}
 	if config.APIKey != "" {
 		gui = StartGui(clientLogger)
 	}
