@@ -74,19 +74,19 @@ func main() {
 	}
 	defer conn.Close()
 
-	status, err := conn.ReadStatus()
+	status, JSONStatus, err := conn.ReadStatus()
 	if err != nil {
 		clientLogger.Fatalln("error on first status read:", err)
 	}
 	clientLogger.Println("field dimensions:", status.Width, "x", status.Height)
 	clientLogger.Println("number of players:", len(status.Players))
 
-	for status.Running && status.Players[status.You].Active {
+	for JSONStatus.Running && JSONStatus.Players[JSONStatus.You].Active {
 
 		clientLogger.Println("turn", status.Turn)
-		clientLogger.Println("deadline", status.Deadline)
+		clientLogger.Println("deadline", JSONStatus.Deadline)
 
-		calculationTime, err := computeCalculationTime(status.Deadline, config)
+		calculationTime, err := computeCalculationTime(JSONStatus.Deadline, config)
 		if err != nil {
 			clientLogger.Fatalln("error receiving time from server")
 		}
@@ -96,7 +96,7 @@ func main() {
 			clientLogger.Fatalln("error sending action:", err)
 		}
 
-		status, err = conn.ReadStatus()
+		status, JSONStatus, err = conn.ReadStatus()
 		if err != nil {
 			clientLogger.Fatalln("error reading status:", err)
 		}
@@ -107,18 +107,18 @@ func main() {
 		}
 
 		counter := 0
-		for _, player := range status.Players {
+		for _, player := range JSONStatus.Players {
 			if player.Active {
 				counter++
 			}
 		}
 		if counter > 1 {
 			clientLogger.Println("active players:", counter)
-			if !status.Players[status.You].Active {
+			if !JSONStatus.Players[JSONStatus.You].Active {
 				clientLogger.Println("lost")
 			}
 		} else if counter == 1 {
-			if status.Players[status.You].Active {
+			if JSONStatus.Players[JSONStatus.You].Active {
 				clientLogger.Println("won")
 				// open output file
 				fo, err := os.OpenFile("logging.txt", os.O_APPEND|os.O_WRONLY, 0644)

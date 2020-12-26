@@ -8,65 +8,8 @@ import (
 	"time"
 )
 
-func checkCell(status *Status, direction Direction, y int, x int, fields int, occupiedCells [][]bool) bool {
-	if direction == Up {
-		y -= fields
-	} else if direction == Down {
-		y += fields
-	} else if direction == Left {
-		x -= fields
-	} else {
-		x += fields
-	}
-	if x >= status.Width || y >= status.Height || x < 0 || y < 0 {
-		return false
-	}
-	return status.Cells[y][x] == 0 || (occupiedCells != nil && occupiedCells[y][x])
-}
-
-func Moves(status *Status, player *Player, occupiedCells [][]bool) []Action {
-	changeNothing := true
-	turnRight := true
-	turnLeft := true
-	slowDown := player.Speed != 1
-	speedUp := player.Speed != 10
-	for i := 1; i <= player.Speed; i++ {
-		checkJump := status.Turn%6 == 0 && i > 1 && i < player.Speed
-		checkJumpSlowDown := status.Turn%6 == 0 && i > 1 && i < player.Speed-1
-		checkJumpSpeedUp := status.Turn%6 == 0 && i > 1 && i <= player.Speed
-
-		turnLeft = turnLeft && (checkJump || checkCell(status, (player.Direction+1)%4, player.Y, player.X, i, occupiedCells))
-		changeNothing = changeNothing && (checkJump || checkCell(status, player.Direction, player.Y, player.X, i, occupiedCells))
-		turnRight = turnRight && (checkJump || checkCell(status, (player.Direction+3)%4, player.Y, player.X, i, occupiedCells))
-		if i != player.Speed {
-			slowDown = slowDown && (checkJumpSlowDown || checkCell(status, player.Direction, player.Y, player.X, i, occupiedCells))
-		}
-		speedUp = speedUp && (checkJumpSpeedUp || checkCell(status, player.Direction, player.Y, player.X, i, occupiedCells))
-	}
-	speedUp = speedUp && checkCell(status, player.Direction, player.Y, player.X, player.Speed+1, occupiedCells)
-
-	possibleMoves := make([]Action, 0, 5)
-
-	if slowDown {
-		possibleMoves = append(possibleMoves, SlowDown)
-	}
-	if changeNothing {
-		possibleMoves = append(possibleMoves, ChangeNothing)
-	}
-	if speedUp {
-		possibleMoves = append(possibleMoves, SpeedUp)
-	}
-	if turnLeft {
-		possibleMoves = append(possibleMoves, TurnLeft)
-	}
-	if turnRight {
-		possibleMoves = append(possibleMoves, TurnRight)
-	}
-	return possibleMoves
-}
-
 func score(status *Status, player *Player) int {
-	return len(Moves(status, player, nil))
+	return len(possibleMoves(player, status.Cells, status.Turn, nil, false))
 }
 
 // doMove makes the specified player do the specified action, using the specified status.
@@ -74,48 +17,10 @@ func score(status *Status, player *Player) int {
 // In this case, a function return value of false indicates that the specified action is valid but would lead to another player dying (the one that created occupiedCells)
 // Also, every field newly entered is written into occupiedCells
 // The function panics when an illegal move was selected
-func doMove(status *Status, playerID int, action Action, occupiedCells [][]bool, writeOccupiedCells bool) bool {
+func doMove(status *Status, playerID int, action Action, occupiedCells map[Coords]struct{}, writeOccupiedCells bool) bool {
 	player := status.Players[playerID]
 	// log.Println("doMove start: ", player.X, player.Y, player.Direction, player.Speed)
-	if action == SpeedUp {
-		if player.Speed != 10 {
-			player.Speed++
-		}
-	} else if action == SlowDown {
-		if player.Speed != 1 {
-			player.Speed--
-		}
-	} else if action == TurnLeft {
-		switch player.Direction {
-		case Left:
-			player.Direction = Down
-			break
-		case Down:
-			player.Direction = Right
-			break
-		case Right:
-			player.Direction = Up
-			break
-		case Up:
-			player.Direction = Left
-			break
-		}
-	} else if action == TurnRight {
-		switch player.Direction {
-		case Left:
-			player.Direction = Up
-			break
-		case Down:
-			player.Direction = Left
-			break
-		case Right:
-			player.Direction = Down
-			break
-		case Up:
-			player.Direction = Right
-			break
-		}
-	}
+	player.prepareAction(action)
 	jump := status.Turn%6 == 0
 	for i := 1; i <= player.Speed; i++ {
 		if player.Direction == Up {
@@ -127,22 +32,22 @@ func doMove(status *Status, playerID int, action Action, occupiedCells [][]bool,
 		} else if player.Direction == Left {
 			player.X--
 		}
-
+		_, isIn := occupiedCells[Coords{player.Y, player.X}]
 		if !jump || i == 1 || i == player.Speed {
-			if status.Cells[player.Y][player.X] == 0 {
-				status.Cells[player.Y][player.X] = playerID
+			if !status.Cells[player.Y][player.X] {
+				status.Cells[player.Y][player.X] = true
 				if writeOccupiedCells {
-					occupiedCells[player.Y][player.X] = true
+					occupiedCells[Coords{player.Y, player.X}] = struct{}{}
 				}
 				// defer func() { status.Cells[player.Y][player.X] = 0 }()
-			} else if occupiedCells[player.Y][player.X] {
+			} else if isIn {
 				if playerID == status.You {
 					panic("you should never be here")
 				}
 				return false
 			} else {
 				log.Println("tried to access", player.Y, player.X, "but field has value", status.Cells[player.Y][player.X])
-				panic("this field should always be 0")
+				panic("this field should always be false")
 			}
 		}
 	}
@@ -151,7 +56,7 @@ func doMove(status *Status, playerID int, action Action, occupiedCells [][]bool,
 
 }
 
-func simulate(you int, minimizer int, isMaximizer bool, status *Status, action Action, depth int, alpha int, beta int, occupiedCells [][]bool, stopChannel <-chan time.Time) (int, error) {
+func simulate(you int, minimizer int, isMaximizer bool, status *Status, action Action, depth int, alpha int, beta int, occupiedCells map[Coords]struct{}, stopChannel <-chan time.Time) (int, error) {
 	// log.Println("Simulate: ", you, minimizer, action, depth)
 	select {
 	case <-stopChannel:
@@ -173,7 +78,7 @@ func simulate(you int, minimizer int, isMaximizer bool, status *Status, action A
 		if occupiedCells != nil {
 			panic("occupiedCells should be nil if maximizer = true")
 		}
-		occupiedCells = newOccupiedCells(status)
+		occupiedCells = make(map[Coords]struct{})
 	} else if occupiedCells == nil {
 		panic("occupiedCells should not be nil if maximizer = false")
 	}
@@ -187,10 +92,10 @@ func simulate(you int, minimizer int, isMaximizer bool, status *Status, action A
 	} else {
 		turn := status.Turn
 		if isMaximizer {
-			m := Moves(status, status.Players[minimizer], occupiedCells)
+			m := possibleMoves(status.Players[minimizer], status.Cells, status.Turn, occupiedCells, true)
 			// log.Println(depth, "moves for", minimizer, m, depth)
 			for _, action := range m {
-				sCopy := copyStatus(status)
+				sCopy := status.copyStatus()
 				score, err := simulate(you, minimizer, false, sCopy, action, depth, alpha, beta, occupiedCells, stopChannel)
 				if err != nil {
 					return 0, err
@@ -209,10 +114,10 @@ func simulate(you int, minimizer int, isMaximizer bool, status *Status, action A
 			}
 		} else {
 			status.Turn++
-			m := Moves(status, status.Players[you], occupiedCells)
+			m := possibleMoves(status.Players[you], status.Cells, status.Turn, occupiedCells, true)
 			// log.Println(depth, "moves for", you, m, depth)
 			for _, action := range m {
-				sCopy := copyStatus(status)
+				sCopy := status.copyStatus()
 				score, err := simulate(you, minimizer, true, sCopy, action, depth-1, alpha, beta, nil, stopChannel)
 				if err != nil {
 					return 0, err
@@ -235,35 +140,22 @@ func simulate(you int, minimizer int, isMaximizer bool, status *Status, action A
 	return bestScore, nil
 }
 
-func newOccupiedCells(status *Status) [][]bool {
-	occupiedCells := make([][]bool, status.Height)
-	for i := range occupiedCells {
-		occupiedCells[i] = make([]bool, status.Width)
-		for j := range occupiedCells[i] {
-			occupiedCells[i][j] = false
-		}
-	}
-	return occupiedCells
-}
-
-func copyStatus(status *Status) *Status {
+func (status *Status) copyStatus() *Status {
 	var s Status
 	s.Width = status.Width
 	s.Height = status.Height
-	s.Deadline = status.Deadline
-	s.Running = status.Running
 	s.Turn = status.Turn
 	s.You = status.You
-	s.Cells = make([][]int, s.Height)
+	s.Cells = make([][]bool, s.Height)
 	for i := range s.Cells {
-		s.Cells[i] = make([]int, status.Width)
+		s.Cells[i] = make([]bool, status.Width)
 		for j := range s.Cells[i] {
 			s.Cells[i][j] = status.Cells[i][j]
 		}
 	}
 	s.Players = make(map[int]*Player)
 	for id, player := range status.Players {
-		s.Players[id] = &Player{X: player.X, Y: player.Y, Active: player.Active, Name: player.Name, Direction: player.Direction, Speed: player.Speed}
+		s.Players[id] = player.copyPlayer()
 	}
 	return &s
 }
@@ -278,7 +170,7 @@ func findClosestPlayer(status *Status) int {
 	nearestPlayerDistance := 0.0
 	for playerID, player := range status.Players {
 		distance := distanceToPlayer(player, ourPlayer) //math.Sqrt(math.Pow(float64(player.X-ourPlayer.X), 2) + math.Pow(float64(player.Y-ourPlayer.Y), 2))
-		if playerID != status.You && player.Active && (nearestPlayer == 0 || distance < nearestPlayerDistance) {
+		if playerID != status.You && (nearestPlayer == 0 || distance < nearestPlayerDistance) {
 			nearestPlayer = playerID
 			nearestPlayerDistance = distance
 		}
@@ -300,9 +192,9 @@ func minimaxTiming(calculationTime time.Duration, timingChannel chan<- time.Time
 func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth int, stopChannel <-chan time.Time) ([]Action, error) {
 	bestScore := -100
 	bestActions := make([]Action, 0)
-	possibleMoves := Moves(status, status.Players[maximizerID], nil)
+	possibleMoves := possibleMoves(status.Players[maximizerID], status.Cells, status.Turn, nil, true)
 	for _, action := range possibleMoves {
-		sCopy := copyStatus(status)
+		sCopy := status.copyStatus()
 		score, err := simulate(maximizerID, minimizerID, true, sCopy, action, depth, -200, 200, nil, stopChannel)
 		if err != nil {
 			return []Action{}, err
@@ -327,7 +219,7 @@ func bestActionsMinimaxTimed(maximizerID int, minimizerID int, status *Status, t
 	depth += startDepth
 	for {
 		//Backup in Case we can not finish in time with startDepth
-		actions = Moves(status, status.Players[status.You], nil)
+		actions = possibleMoves(status.Players[status.You], status.Cells, status.Turn, nil, true)
 		if len(actions) == 0 {
 			return []Action{ChangeNothing}
 		} else if len(actions) == 1 {

@@ -34,9 +34,6 @@ func getClient() (Client, error) {
 	case "smart":
 		client = SmartClient{}
 		break
-	case "mcts":
-		client = MctsClient{}
-		break
 	case "speku":
 		client = SpekuClient{}
 		break

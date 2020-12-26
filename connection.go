@@ -7,20 +7,36 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// Status contains all information on the current game status
 type Status struct {
-	Width    int             `json:"width"`
-	Height   int             `json:"height"`
-	Cells    [][]int         `json:"cells"`
-	Players  map[int]*Player `json:"players"`
-	You      int             `json:"you"`
-	Running  bool            `json:"running"`
-	Deadline time.Time       `json:"deadline"`
+	Width   int
+	Height  int
+	Cells   [][]bool
+	Players map[int]*Player
+	You     int
+	Turn    int
+}
+
+// Status contains all information on the current game status
+type JSONStatus struct {
+	Width    int                 `json:"width"`
+	Height   int                 `json:"height"`
+	Cells    [][]int             `json:"cells"`
+	Players  map[int]*JSONPlayer `json:"players"`
+	You      int                 `json:"you"`
+	Running  bool                `json:"running"`
+	Deadline time.Time           `json:"deadline"`
 	Turn     int
 }
 
-// Player contains information on a specific player. It is provided by the server,
 type Player struct {
+	X         int
+	Y         int
+	Direction Direction
+	Speed     int
+}
+
+// Player contains information on a specific player. It is provided by the server,
+type JSONPlayer struct {
 	X               int `json:"x"`
 	Y               int `json:"y"`
 	Direction       Direction
@@ -94,6 +110,40 @@ func NewConnection(config Config) (Connection, error) {
 	return Connection{c, 0}, nil
 }
 
+func (JSONPlayer *JSONPlayer) ToPlayer() *Player {
+	var player Player
+	player.X = JSONPlayer.X
+	player.Y = JSONPlayer.Y
+	player.Speed = JSONPlayer.Speed
+	player.Direction = JSONPlayer.Direction
+	return &player
+}
+
+//
+func (js JSONStatus) ToStatus() *Status {
+	var status Status
+	status.Height = js.Height
+	status.Turn = js.Turn
+	status.Width = js.Width
+	status.You = js.You
+	status.Players = make(map[int]*Player, 0)
+	for z, JSONPlayer := range js.Players {
+		status.Players[z] = JSONPlayer.ToPlayer()
+	}
+	status.Cells = make([][]bool, status.Height)
+	for y := range status.Cells {
+		status.Cells[y] = make([]bool, status.Width)
+	}
+	for y := range js.Cells {
+		for x := range js.Cells[0] {
+			if js.Cells[y][x] != 0 {
+				status.Cells[y][x] = true
+			}
+		}
+	}
+	return &status
+}
+
 // WriteAction writes the specified action to the game server
 func (c *Connection) WriteAction(action Action) error {
 	err := c.Conn.WriteJSON(&Input{action})
@@ -104,18 +154,19 @@ func (c *Connection) WriteAction(action Action) error {
 }
 
 // ReadStatus reads the status from the connection
-func (c *Connection) ReadStatus() (*Status, error) {
-	var status Status
-	err := c.Conn.ReadJSON(&status)
+func (c *Connection) ReadStatus() (*Status, *JSONStatus, error) {
+	var JSONstatus JSONStatus
+	err := c.Conn.ReadJSON(&JSONstatus)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	for _, p := range status.Players {
+	for _, p := range JSONstatus.Players {
 		p.Direction = Directions[p.StringDirection]
 	}
 	c.Turn++
-	status.Turn = c.Turn
-	return &status, nil
+	JSONstatus.Turn = c.Turn
+	status := JSONStatus.ToStatus(JSONstatus)
+	return status, &JSONstatus, nil
 }
 
 // Close closes the connection

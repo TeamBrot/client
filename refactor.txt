@@ -1,7 +1,7 @@
-1. Player sollte X, Y, speed, direction haben. JSONPlayer mit zusätzlich Active, StringDirection. Filtern aller aktiven Player. Methode CopyPlayer, überall ersetzen
-2. SimPlayer sollte einen Player und zusätzliche Attribute habe.
-3. Konvertiere occupiedCells in Minimax zu map[Coords]struct{}, Parameter für positive / negative Logik in checkCell und possibleMoves. Player statt SimPlayer als Parameter, zusätzlich map[Coords]struct{} und Logikparameter
-4. PrepareMove() benutzen; in player.go auslagern; Duplizierung der Funktionalität in allen Clients entfernen
+1. Player sollte X, Y, speed, direction haben. JSONPlayer mit zusätzlich Active, StringDirection. Filtern aller aktiven Player. Methode CopyPlayer, überall ersetzen DONE (Weiß nicht mehr genau was mit copyPlayer gemeint war)
+2. SimPlayer sollte einen Player und zusätzliche Attribute habe DONE
+3. Konvertiere occupiedCells in Minimax zu map[Coords]struct{}, Parameter für positive / negative Logik in checkCell und possibleMoves. Player statt SimPlayer als Parameter, zusätzlich map[Coords]struct{} und Logikparameter DONE
+4. PrepareMove() benutzen; in player.go auslagern; Duplizierung der Funktionalität in allen Clients entfernen TEILWEISE
 5. Client-Interface so ändern, dass Clients nur time.Duration erhalten; Clients sind selber zuständig, die Deadline einzuhalten. Client sollte auch ohne TIME_URL funktionieren DONE
 6. Return Channels lokal benutzen:
     make(chan ergebnis)
@@ -9,7 +9,8 @@
         ergebnis := funktion(param1, stopChannel)
         ch <- ergebnis
     }
-7. copySimPlayer als Methode
+    DONE
+7. copySimPlayer als Methode DONE
 8. Logs ohne Spaces
 9. Funktion zur Konvertierung von Player zu SimPlayer, benutzen in simulateGame
 10. Field in irgendwas mit Wahrscheinlichkeiten umbenennen

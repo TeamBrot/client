@@ -1,116 +1,112 @@
 package main
 
-import (
-	"testing"
-)
+//func TestNewOccupiedCells(t *testing.T) {
+//status := Status{Width: 5, Height: 10}
+//occupiedCells := newOccupiedCells(&status)
+//if len(occupiedCells) != status.Height {
+//t.Error("height of occupiedCells does not match, got", len(occupiedCells), "expected", status.Height)
+//}
+//for _, m := range occupiedCells {
+//if len(m) != status.Width {
+//t.Error("width of occupiedCells does not match, got", len(m), "expected", status.Width)
+//}
+//for _, n := range m {
+//if n != false {
+//t.Error("true value in occupiedCells after initialization")
+//}
+//}
+//}
+//}
 
-func TestNewOccupiedCells(t *testing.T) {
-	status := Status{Width: 5, Height: 10}
-	occupiedCells := newOccupiedCells(&status)
-	if len(occupiedCells) != status.Height {
-		t.Error("height of occupiedCells does not match, got", len(occupiedCells), "expected", status.Height)
-	}
-	for _, m := range occupiedCells {
-		if len(m) != status.Width {
-			t.Error("width of occupiedCells does not match, got", len(m), "expected", status.Width)
-		}
-		for _, n := range m {
-			if n != false {
-				t.Error("true value in occupiedCells after initialization")
-			}
-		}
-	}
-}
+//func TestPossibleMoves(t *testing.T) {
+//type TableEntry struct {
+//X             int
+//Y             int
+//Cells         [][]int
+//OccupiedCells [][]bool
+//Direction     Direction
+//Speed         int
+//Moves         []Action
+//Turn          int
+//}
 
-func TestPossibleMoves(t *testing.T) {
-	type TableEntry struct {
-		X             int
-		Y             int
-		Cells         [][]int
-		OccupiedCells [][]bool
-		Direction     Direction
-		Speed         int
-		Moves         []Action
-		Turn          int
-	}
+//cells := [][]int{
+//{0, 0, 0, 0, 0},
+//{0, 0, 0, 0, 0},
+//{0, 0, 0, 0, 0},
+//{0, 0, 0, 0, 0},
+//{0, 0, 0, 0, 0},
+//}
 
-	cells := [][]int{
-		{0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0},
-	}
+//cells2 := [][]int{
+//{0, 2, 0, 0, 0},
+//{0, 2, 2, 0, 0},
+//{0, 0, 2, 0, 0},
+//{0, 0, 2, 0, 0},
+//{0, 0, 0, 0, 0},
+//}
 
-	cells2 := [][]int{
-		{0, 2, 0, 0, 0},
-		{0, 2, 2, 0, 0},
-		{0, 0, 2, 0, 0},
-		{0, 0, 2, 0, 0},
-		{0, 0, 0, 0, 0},
-	}
+//occupiedCells := [][]bool{
+//{false, true, false, false, false},
+//{false, false, false, false, false},
+//{false, false, false, false, false},
+//{false, false, false, false, false},
+//{false, false, false, false, false},
+//}
 
-	occupiedCells := [][]bool{
-		{false, true, false, false, false},
-		{false, false, false, false, false},
-		{false, false, false, false, false},
-		{false, false, false, false, false},
-		{false, false, false, false, false},
-	}
+//table := []TableEntry{
+//{X: 0, Y: 0, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Right, Speed: 1, Moves: []Action{SpeedUp, TurnRight, ChangeNothing}},
+//{X: 0, Y: 1, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Right, Speed: 1, Moves: []Action{SpeedUp, TurnRight, ChangeNothing, TurnLeft}},
+//{X: 0, Y: 0, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Right, Speed: 2, Moves: []Action{SpeedUp, TurnRight, ChangeNothing, SlowDown}},
+//{X: 0, Y: 1, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Right, Speed: 2, Moves: []Action{SpeedUp, TurnRight, ChangeNothing, SlowDown}},
+//{X: 0, Y: 0, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Up, Speed: 1, Moves: []Action{TurnRight}},
+//{X: 0, Y: 0, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Left, Speed: 1, Moves: []Action{TurnLeft}},
+//{X: 0, Y: 0, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Up, Speed: 2, Moves: []Action{TurnRight}},
+//{X: 0, Y: 0, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Left, Speed: 2, Moves: []Action{TurnLeft}},
+//{X: 4, Y: 4, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Right, Speed: 2, Moves: []Action{TurnLeft}},
+//{X: 4, Y: 4, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Down, Speed: 2, Moves: []Action{TurnRight}},
+//{X: 4, Y: 4, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Right, Speed: 2, Moves: []Action{TurnLeft}},
+//{X: 0, Y: 0, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Right, Speed: 6, Moves: []Action{}},
+//{X: 0, Y: 0, Turn: 1, Cells: cells2, OccupiedCells: nil, Direction: Right, Speed: 1, Moves: []Action{TurnRight}},
+//{X: 2, Y: 0, Turn: 1, Cells: cells2, OccupiedCells: nil, Direction: Left, Speed: 1, Moves: []Action{}},
+//{X: 0, Y: 1, Turn: 6, Cells: cells2, OccupiedCells: nil, Direction: Right, Speed: 3, Moves: []Action{TurnRight}},
+//{X: 0, Y: 2, Turn: 6, Cells: cells2, OccupiedCells: nil, Direction: Right, Speed: 3, Moves: []Action{ChangeNothing, SpeedUp}},
+//{X: 0, Y: 0, Turn: 1, Cells: cells2, OccupiedCells: nil, Direction: Right, Speed: 1, Moves: []Action{TurnRight}},
+//{X: 0, Y: 0, Turn: 1, Cells: cells2, OccupiedCells: occupiedCells, Direction: Right, Speed: 1, Moves: []Action{ChangeNothing, SpeedUp, TurnRight}},
+//{X: 0, Y: 0, Turn: 1, Cells: cells2, OccupiedCells: occupiedCells, Direction: Right, Speed: 3, Moves: []Action{ChangeNothing, SlowDown, SpeedUp, TurnRight}},
+//{X: 0, Y: 1, Turn: 1, Cells: cells2, OccupiedCells: occupiedCells, Direction: Right, Speed: 3, Moves: []Action{TurnRight}},
+//}
+//players := map[int]*Player{
+//1: {Active: true},
+//}
+//status := Status{Width: 5, Height: 5, Running: true, Turn: 1, Players: players}
 
-	table := []TableEntry{
-		{X: 0, Y: 0, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Right, Speed: 1, Moves: []Action{SpeedUp, TurnRight, ChangeNothing}},
-		{X: 0, Y: 1, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Right, Speed: 1, Moves: []Action{SpeedUp, TurnRight, ChangeNothing, TurnLeft}},
-		{X: 0, Y: 0, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Right, Speed: 2, Moves: []Action{SpeedUp, TurnRight, ChangeNothing, SlowDown}},
-		{X: 0, Y: 1, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Right, Speed: 2, Moves: []Action{SpeedUp, TurnRight, ChangeNothing, SlowDown}},
-		{X: 0, Y: 0, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Up, Speed: 1, Moves: []Action{TurnRight}},
-		{X: 0, Y: 0, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Left, Speed: 1, Moves: []Action{TurnLeft}},
-		{X: 0, Y: 0, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Up, Speed: 2, Moves: []Action{TurnRight}},
-		{X: 0, Y: 0, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Left, Speed: 2, Moves: []Action{TurnLeft}},
-		{X: 4, Y: 4, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Right, Speed: 2, Moves: []Action{TurnLeft}},
-		{X: 4, Y: 4, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Down, Speed: 2, Moves: []Action{TurnRight}},
-		{X: 4, Y: 4, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Right, Speed: 2, Moves: []Action{TurnLeft}},
-		{X: 0, Y: 0, Turn: 1, Cells: cells, OccupiedCells: nil, Direction: Right, Speed: 6, Moves: []Action{}},
-		{X: 0, Y: 0, Turn: 1, Cells: cells2, OccupiedCells: nil, Direction: Right, Speed: 1, Moves: []Action{TurnRight}},
-		{X: 2, Y: 0, Turn: 1, Cells: cells2, OccupiedCells: nil, Direction: Left, Speed: 1, Moves: []Action{}},
-		{X: 0, Y: 1, Turn: 6, Cells: cells2, OccupiedCells: nil, Direction: Right, Speed: 3, Moves: []Action{TurnRight}},
-		{X: 0, Y: 2, Turn: 6, Cells: cells2, OccupiedCells: nil, Direction: Right, Speed: 3, Moves: []Action{ChangeNothing, SpeedUp}},
-		{X: 0, Y: 0, Turn: 1, Cells: cells2, OccupiedCells: nil, Direction: Right, Speed: 1, Moves: []Action{TurnRight}},
-		{X: 0, Y: 0, Turn: 1, Cells: cells2, OccupiedCells: occupiedCells, Direction: Right, Speed: 1, Moves: []Action{ChangeNothing, SpeedUp, TurnRight}},
-		{X: 0, Y: 0, Turn: 1, Cells: cells2, OccupiedCells: occupiedCells, Direction: Right, Speed: 3, Moves: []Action{ChangeNothing, SlowDown, SpeedUp, TurnRight}},
-		{X: 0, Y: 1, Turn: 1, Cells: cells2, OccupiedCells: occupiedCells, Direction: Right, Speed: 3, Moves: []Action{TurnRight}},
-	}
-	players := map[int]*Player{
-		1: {Active: true},
-	}
-	status := Status{Width: 5, Height: 5, Running: true, Turn: 1, Players: players}
+//for _, entry := range table {
+//players[1].X = entry.X
+//players[1].Y = entry.Y
+//players[1].Direction = entry.Direction
+//players[1].Speed = entry.Speed
+//status.Cells = entry.Cells
+//status.Turn = entry.Turn
+//moves := Moves(&status, players[1], entry.OccupiedCells)
 
-	for _, entry := range table {
-		players[1].X = entry.X
-		players[1].Y = entry.Y
-		players[1].Direction = entry.Direction
-		players[1].Speed = entry.Speed
-		status.Cells = entry.Cells
-		status.Turn = entry.Turn
-		moves := Moves(&status, players[1], entry.OccupiedCells)
-
-		if len(moves) != len(entry.Moves) {
-			t.Error("wrong moves, expected", entry.Moves, "got", moves)
-			continue
-		}
-		for _, m1 := range entry.Moves {
-			contains := false
-			for _, m2 := range moves {
-				if m1 == m2 {
-					contains = true
-				}
-			}
-			if !contains {
-				t.Error("wrong moves, expected", entry.Moves, "got", moves)
-			}
-		}
-	}
-}
+//if len(moves) != len(entry.Moves) {
+//t.Error("wrong moves, expected", entry.Moves, "got", moves)
+//continue
+//}
+//for _, m1 := range entry.Moves {
+//contains := false
+//for _, m2 := range moves {
+//if m1 == m2 {
+//contains = true
+//}
+//}
+//if !contains {
+//t.Error("wrong moves, expected", entry.Moves, "got", moves)
+//}
+//}
+//}
+//}
 
 // func TestDoMove(t *testing.T) {
 
