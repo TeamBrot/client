@@ -8,10 +8,10 @@ import (
 
 // Config represents a server and client configuration
 type Config struct {
-	gameURL string
-	timeURL string
-	apiKey  string
-	client  Client
+	GameURL string
+	TimeURL string
+	APIKey  string
+	Client  Client
 }
 
 func getenvDefault(key string, def string) string {
@@ -49,18 +49,18 @@ func getClient() (Client, error) {
 // GetConfig creates a config from the environment variables
 func GetConfig() (Config, error) {
 	var config Config
-	config.gameURL = getenvDefault("URL", "ws://localhost:8080/spe_ed")
-	config.timeURL = getenvDefault("TIME_URL", "http://localhost:8080/spe_ed_time")
-	config.apiKey = getenvDefault(os.Getenv("KEY"), "")
+	config.GameURL = getenvDefault("URL", "ws://localhost:8080/spe_ed")
+	config.TimeURL = getenvDefault("TIME_URL", "http://localhost:8080/spe_ed_time")
+	config.APIKey = getenvDefault("KEY", "")
 	client, err := getClient()
-	config.client = client
+	config.Client = client
 	return config, err
 }
 
 // GetWSURL builds the websocket url using the server url and the api key
 func (c *Config) GetWSURL() string {
-	if c.apiKey == "" {
-		return c.gameURL
+	if c.APIKey == "" {
+		return c.GameURL
 	}
-	return fmt.Sprintf("%s?key=%s", c.gameURL, c.apiKey)
+	return fmt.Sprintf("%s?key=%s", c.GameURL, c.APIKey)
 }

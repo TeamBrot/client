@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -78,22 +79,24 @@ const (
 
 // Connection represents a connection to a game server
 type Connection struct {
-	conn *websocket.Conn
-	turn int
+	Conn *websocket.Conn
+	Turn int
 }
 
 // NewConnection creates a new connection with the specified configuration
 func NewConnection(config Config) (Connection, error) {
+	log.Println("Trying to connect to: ", config.GameURL)
 	c, _, err := websocket.DefaultDialer.Dial(config.GetWSURL(), nil)
 	if err != nil {
 		return Connection{nil, 0}, err
 	}
+	log.Println("Connect successfull")
 	return Connection{c, 0}, nil
 }
 
 // WriteAction writes the specified action to the game server
 func (c *Connection) WriteAction(action Action) error {
-	err := c.conn.WriteJSON(&Input{action})
+	err := c.Conn.WriteJSON(&Input{action})
 	if err != nil {
 		return err
 	}
@@ -103,19 +106,19 @@ func (c *Connection) WriteAction(action Action) error {
 // ReadStatus reads the status from the connection
 func (c *Connection) ReadStatus() (*Status, error) {
 	var status Status
-	err := c.conn.ReadJSON(&status)
+	err := c.Conn.ReadJSON(&status)
 	if err != nil {
 		return nil, err
 	}
 	for _, p := range status.Players {
 		p.Direction = Directions[p.StringDirection]
 	}
-	c.turn++
-	status.Turn = c.turn
+	c.Turn++
+	status.Turn = c.Turn
 	return &status, nil
 }
 
 // Close closes the connection
 func (c *Connection) Close() error {
-	return c.conn.Close()
+	return c.Conn.Close()
 }

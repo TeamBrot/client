@@ -94,12 +94,12 @@ func main() {
 		clientLogger.Println("deadline", status.Deadline)
 
 		timingChannel = make(chan time.Time)
-		err = getTime(config.timeURL, &serverTime, httpClient)
+		err = getTime(config.TimeURL, &serverTime, httpClient)
 		if err != nil {
 			clientLogger.Fatalln("error receiving time from server")
 		}
 		go calculateTiming(status.Deadline, serverTime, timingChannel)
-		action := config.client.GetAction(*status.Players[status.You], status, timingChannel)
+		action := config.Client.GetAction(*status.Players[status.You], status, timingChannel)
 		err = conn.WriteAction(action)
 		if err != nil {
 			clientLogger.Fatalln("error sending action:", err)
