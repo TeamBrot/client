@@ -8,11 +8,6 @@ import (
 	"time"
 )
 
-type MiniMaxResult struct {
-	Actions []Action
-	Error   error
-}
-
 func checkCell(status *Status, direction Direction, y int, x int, fields int, occupiedCells [][]bool) bool {
 	if direction == Up {
 		y -= fields
@@ -297,7 +292,7 @@ func findClosestPlayer(status *Status) int {
 // bestActionsMinimax returns the best actions according to the minimax algorithm.
 // it stops execution when a signal is received on the specified channel.
 // in this case, the return value should not be used.
-func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth int, stopChannel <-chan time.Time, returnChannel chan<- MiniMaxResult) ([]Action, error) {
+func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth int, stopChannel <-chan time.Time) ([]Action, error) {
 	bestScore := -100
 	bestActions := make([]Action, 0)
 	possibleMoves := Moves(status, status.Players[maximizerID], nil)
@@ -306,9 +301,6 @@ func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth 
 		sCopy := copyStatus(status)
 		score, err := simulate(maximizerID, minimizerID, true, sCopy, action, depth, -200, 200, nil, stopChannel)
 		if err != nil {
-			if returnChannel != nil {
-				returnChannel <- MiniMaxResult{Error: err, Actions: []Action{}}
-			}
 			return []Action{}, err
 		}
 		if score >= bestScore {
@@ -318,41 +310,36 @@ func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth 
 	}
 	if len(bestActions) == 0 {
 		log.Println("no best actions, using possible moves", possibleMoves)
-		if returnChannel != nil {
-			returnChannel <- MiniMaxResult{Error: nil, Actions: possibleMoves}
-		}
+		log.Println("There are", len(possibleMoves))
 		return possibleMoves, nil
 	}
 	log.Println("best actions are", bestActions, "with score", bestScore)
-	if returnChannel != nil {
-		returnChannel <- MiniMaxResult{Error: nil, Actions: bestActions}
-	}
 	return bestActions, nil
 }
 
-func bestActionsMinimaxTimed(maximizerID int, minimizerID int, status *Status, timingChannel <-chan time.Time, resultChannel chan<- []Action) []Action {
+func bestActionsMinimaxTimed(maximizerID int, minimizerID int, status *Status, timingChannel <-chan time.Time) []Action {
 	var actions []Action
+	var depth int
 	startDepth := 4
-	maxDepth := 8
-	returnChannels := make(map[int]chan MiniMaxResult, 0)
-	for depth := startDepth; depth <= maxDepth; depth++ {
-		returnChannels[depth] = make(chan MiniMaxResult, 1)
-		log.Println("Starting MiniMax with Depth ", depth)
-		go bestActionsMinimax(maximizerID, minimizerID, status, depth, timingChannel, returnChannels[depth])
-	}
-
-	for reachedDepth, ch := range returnChannels {
-		result := <-ch
-		if result.Error != nil {
-			break
-		} else {
-			log.Println("Got valid Result for MiniMax with Depth", reachedDepth)
-			actions = result.Actions
+	depth += startDepth
+	for {
+		//Backup in Case we can not finish in time with startDepth
+		actions = Moves(status, status.Players[status.You], nil)
+		if len(actions) == 0 {
+			return []Action{ChangeNothing}
+		} else if len(actions) == 1 {
+			return []Action{actions[0]}
 		}
+		actionsTemp, err := bestActionsMinimax(maximizerID, minimizerID, status, depth, timingChannel)
+		if err == nil {
+			log.Println("minimax with depth ", depth, " actions ", actionsTemp, " No Error")
+			actions = actionsTemp
+		} else {
+			log.Println("Couldn't finish calculation for depth ", depth)
+			return actions
+		}
+		depth++
 	}
-	resultChannel <- actions
-	return actions
-
 }
 
 // MinimaxClient is a client implementation that uses Minimax to decide what to do next
@@ -362,9 +349,7 @@ type MinimaxClient struct{}
 func (c MinimaxClient) GetAction(player Player, status *Status, timingChannel <-chan time.Time) Action {
 	otherPlayerID := findClosestPlayer(status)
 	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
-	resultChannel := make(chan []Action)
-	go bestActionsMinimaxTimed(status.You, otherPlayerID, status, timingChannel, resultChannel)
-	actions := <-resultChannel
+	actions := bestActionsMinimaxTimed(status.You, otherPlayerID, status, timingChannel)
 	if len(actions) == 0 {
 		log.Println("no best action, using change_nothing")
 		return ChangeNothing

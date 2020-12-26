@@ -29,7 +29,7 @@ func expansion(node *MCTSNode) {
 		nextActions[newStatus.You] = action
 		for id, p := range newStatus.Players {
 			if p.Active && p != newStatus.Players[newStatus.You] {
-				actions, _ := bestActionsMinimax(id, newStatus.You, newStatus, 4, nil, nil)
+				actions, _ := bestActionsMinimax(id, newStatus.You, newStatus, 4, nil)
 				if len(actions) == 0 {
 					nextActions[id] = ChangeNothing
 				} else {
