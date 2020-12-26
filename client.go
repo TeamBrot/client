@@ -16,7 +16,7 @@ type ServerTime struct {
 
 // Client represents a handler that decides what the specific player should do next
 type Client interface {
-	GetAction(player Player, status *Status, timingChannel <-chan time.Time) Action
+	GetAction(player Player, status *Status, calculationTime time.Duration) Action
 }
 
 func setupLogging() *log.Logger {
@@ -28,7 +28,8 @@ func setupLogging() *log.Logger {
 }
 
 //gets the current server Time via the specified API
-func getTime(url string, target interface{}, httpClient *http.Client) error {
+func getTime(url string, target interface{}) error {
+	httpClient := &http.Client{Timeout: 500 * time.Millisecond}
 	r, err := httpClient.Get(url)
 	if err != nil {
 		return err
@@ -39,27 +40,17 @@ func getTime(url string, target interface{}, httpClient *http.Client) error {
 }
 
 //Sends Signals to the Client after a specified amount of time has passed
-func calculateTiming(deadline time.Time, serverTime ServerTime, timingChannel chan<- time.Time) {
+func computeCalculationTime(deadline time.Time, config Config) (time.Duration, error) {
+	var serverTime ServerTime
+	err := getTime(config.TimeURL, &serverTime)
+	if err != nil {
+		log.Fatalln("couldn't reach timing api")
+		return time.Duration(5 * time.Second), err
+	}
 	calculationTime := deadline.Sub(serverTime.Time)
 	calculationTime = time.Duration((calculationTime.Milliseconds() - int64(serverTime.Milliseconds) - 150) * 1000000)
 	log.Println("The scheduled calculation Time is :", calculationTime)
-	//send First Singal(Calculations that need time to finish are interrupted)
-	time.Sleep(time.Duration(0.4 * float64(calculationTime.Nanoseconds())))
-	if timingChannel != nil {
-		timingChannel <- time.Now()
-	} else {
-		return
-	}
-	//send Second Signal (All Calculations are interripted, the results are interpreted)
-	time.Sleep(time.Duration(0.4 * float64(calculationTime)))
-	if timingChannel != nil {
-		timingChannel <- time.Now()
-	}
-	time.Sleep(time.Duration(0.1 * float64(calculationTime)))
-	if timingChannel != nil {
-		timingChannel <- time.Now()
-	}
-	close(timingChannel)
+	return calculationTime, nil
 }
 
 func main() {
@@ -70,7 +61,6 @@ func main() {
 		return
 	}
 	clientLogger := setupLogging()
-	httpClient := &http.Client{Timeout: 2 * time.Second}
 
 	gui := &Gui{nil}
 	if config.APIKey != "" {
@@ -84,9 +74,6 @@ func main() {
 	}
 	defer conn.Close()
 
-	var serverTime ServerTime
-	var timingChannel chan time.Time
-
 	status, err := conn.ReadStatus()
 	if err != nil {
 		clientLogger.Fatalln("error on first status read:", err)
@@ -99,13 +86,11 @@ func main() {
 		clientLogger.Println("turn", status.Turn)
 		clientLogger.Println("deadline", status.Deadline)
 
-		timingChannel = make(chan time.Time)
-		err = getTime(config.TimeURL, &serverTime, httpClient)
+		calculationTime, err := computeCalculationTime(status.Deadline, config)
 		if err != nil {
 			clientLogger.Fatalln("error receiving time from server")
 		}
-		go calculateTiming(status.Deadline, serverTime, timingChannel)
-		action := config.Client.GetAction(*status.Players[status.You], status, timingChannel)
+		action := config.Client.GetAction(*status.Players[status.You], status, calculationTime)
 		err = conn.WriteAction(action)
 		if err != nil {
 			clientLogger.Fatalln("error sending action:", err)

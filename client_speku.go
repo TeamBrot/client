@@ -739,12 +739,22 @@ func analyzeBoard(status *Status) []*Player {
 	return playerSimulation
 }
 
+func spekuTiming(calculationTime time.Duration, timingChannel chan<- time.Time) {
+	time.Sleep(time.Duration(0.4 * float64(calculationTime.Nanoseconds())))
+	timingChannel <- time.Now()
+	time.Sleep(time.Duration(0.4 * float64(calculationTime.Nanoseconds())))
+	close(timingChannel)
+}
+
 // SpekuClient is a client implementation that uses speculation to decide what to do next
 type SpekuClient struct{}
 
 // GetAction implements the Client interface
-func (c SpekuClient) GetAction(player Player, status *Status, timingChannel <-chan time.Time) Action {
+func (c SpekuClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
 	start := time.Now()
+	timingChannel := make(chan time.Time)
+
+	go spekuTiming(calculationTime, timingChannel)
 	var bestAction Action
 	possibleActions := Moves(status, &player, nil)
 	//handle trivial cases (zero or one possible Action)
@@ -787,6 +797,7 @@ func (c SpekuClient) GetAction(player Player, status *Status, timingChannel <-ch
 			allFields[z] = makeEmptyField(status.Height, status.Width)
 		}
 	}
+
 	_ = <-timingChannel
 	if len(activePlayersInRange) > 1 {
 		log.Println("Sending stop Signal to simulate Game...")

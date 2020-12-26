@@ -2,7 +2,7 @@
 2. SimPlayer sollte einen Player und zusätzliche Attribute habe.
 3. Konvertiere occupiedCells in Minimax zu map[Coords]struct{}, Parameter für positive / negative Logik in checkCell und possibleMoves. Player statt SimPlayer als Parameter, zusätzlich map[Coords]struct{} und Logikparameter
 4. PrepareMove() benutzen; in player.go auslagern; Duplizierung der Funktionalität in allen Clients entfernen
-5. Client-Interface so ändern, dass Clients nur time.Duration erhalten; Clients sind selber zuständig, die Deadline einzuhalten. Client sollte auch ohne TIME_URL funktionieren
+5. Client-Interface so ändern, dass Clients nur time.Duration erhalten; Clients sind selber zuständig, die Deadline einzuhalten. Client sollte auch ohne TIME_URL funktionieren DONE
 6. Return Channels lokal benutzen:
     make(chan ergebnis)
     go func() {

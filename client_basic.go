@@ -9,7 +9,7 @@ import (
 type SmartClient struct{}
 
 // GetAction Implementation for SmartClient
-func (c SmartClient) GetAction(player Player, status *Status, timingChannel <-chan time.Time) Action {
+func (c SmartClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
 	var bestAction Action
 	board := status.Cells
 	switch player.Direction {

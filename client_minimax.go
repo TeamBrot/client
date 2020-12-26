@@ -289,6 +289,11 @@ func findClosestPlayer(status *Status) int {
 	return nearestPlayer
 }
 
+func minimaxTiming(calculationTime time.Duration, timingChannel chan<- time.Time) {
+	time.Sleep(time.Duration(0.9 * float64(calculationTime.Nanoseconds())))
+	close(timingChannel)
+}
+
 // bestActionsMinimax returns the best actions according to the minimax algorithm.
 // it stops execution when a signal is received on the specified channel.
 // in this case, the return value should not be used.
@@ -296,7 +301,6 @@ func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth 
 	bestScore := -100
 	bestActions := make([]Action, 0)
 	possibleMoves := Moves(status, status.Players[maximizerID], nil)
-
 	for _, action := range possibleMoves {
 		sCopy := copyStatus(status)
 		score, err := simulate(maximizerID, minimizerID, true, sCopy, action, depth, -200, 200, nil, stopChannel)
@@ -345,10 +349,12 @@ func bestActionsMinimaxTimed(maximizerID int, minimizerID int, status *Status, t
 type MinimaxClient struct{}
 
 // GetAction implements the Client interface
-func (c MinimaxClient) GetAction(player Player, status *Status, timingChannel <-chan time.Time) Action {
+func (c MinimaxClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
+	stopChannel := make(chan time.Time)
+	go minimaxTiming(calculationTime, stopChannel)
 	otherPlayerID := findClosestPlayer(status)
 	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
-	actions := bestActionsMinimaxTimed(status.You, otherPlayerID, status, timingChannel)
+	actions := bestActionsMinimaxTimed(status.You, otherPlayerID, status, stopChannel)
 	if len(actions) == 0 {
 		log.Println("no best action, using change_nothing")
 		return ChangeNothing
