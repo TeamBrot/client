@@ -403,11 +403,14 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 	for _, path := range paths {
 		score := 0.0
 		newPlayer := player.copyPlayer()
-		for i := 0; i < simDepth; i++ {
+		for i := 0; i < simDepth-1; i++ {
 			if i != len(path) {
 				score += evaluateAction(newPlayer, allFields[i], path[i], turn+uint16(i))
-				score /= float64(simDepth)
+				newerPlayer := newPlayer.copyPlayer()
+				score += 1.0 - evaluateAction(newerPlayer, allFields[i+1], path[i+1], turn+uint16(i+1))
+				score /= 2.0
 			} else {
+				score /= float64(simDepth)
 				break
 			}
 		}
@@ -418,7 +421,7 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 		scores[path[0]] += score
 	}
 	//computes how many times a Action was the first Action of path
-	counter := [5]int{1,1,1,1,1}
+	counter := [5]int{1, 1, 1, 1, 1}
 	for _, path := range paths {
 		counter[path[0]]++
 	}
@@ -432,7 +435,7 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 	minimum := math.Inf(0)
 	action := ChangeNothing
 	for i, v := range values {
-		if possible[i] && v < minimum {
+		if possible[i] && v > minimum {
 			minimum = v
 			action = Action(i)
 		}
@@ -537,7 +540,7 @@ func (c SpekuClient) GetAction(player Player, status *Status, calculationTime ti
 	log.Println("simulating", len(activePlayersInRange), "players")
 	var maxSimDepth int
 	//if Your Computer is really beefy it might be a good idea to set this higher (else it is not and your computer will crash!!)
-	maxSimDepth = 12
+	maxSimDepth = 7
 	//If this channel is closed, it will try to end simulate game
 
 	//This channel is used to recieve an array of all calculated Fields from simulate game
