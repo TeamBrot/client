@@ -197,11 +197,11 @@ type MinimaxClient struct{}
 
 // GetAction implements the Client interface
 func (c MinimaxClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
-	stopChannel := make(chan time.Time)
-	go minimaxTiming(calculationTime, stopChannel)
+	stopChannel := time.After((calculationTime / 10) * 9)
 	otherPlayerID, err := status.FindClosestPlayerTo(status.You)
 	if err != nil {
-		log.Fatalln("could not find closest player:", err)
+		log.Println("could not find closest player:", err)
+		return ChangeNothing
 	}
 	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
 	actions := bestActionsMinimaxTimed(status.You, otherPlayerID, status, stopChannel)
