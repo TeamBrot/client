@@ -27,24 +27,26 @@ func setupLogging() *log.Logger {
 	return logger
 }
 
+var httpClient http.Client = http.Client{Timeout: 500 * time.Millisecond}
+
 //gets the current server Time via the specified API
-func getTime(url string, target interface{}) error {
-	httpClient := &http.Client{Timeout: 500 * time.Millisecond}
+func getTime(url string) (ServerTime, error) {
+	var time ServerTime
 	r, err := httpClient.Get(url)
 	if err != nil {
-		return err
+		return time, err
 	}
 	defer r.Body.Close()
 
-	return json.NewDecoder(r.Body).Decode(target)
+	json.NewDecoder(r.Body).Decode(&time)
+	return time, nil
 }
 
 //Sends Signals to the Client after a specified amount of time has passed
 func computeCalculationTime(deadline time.Time, config Config) (time.Duration, error) {
-	var serverTime ServerTime
-	err := getTime(config.TimeURL, &serverTime)
+	serverTime, err := getTime(config.TimeURL)
 	if err != nil {
-		log.Fatalln("couldn't reach timing api")
+		log.Println("couldn't reach timing api, using 5s timeout")
 		return time.Duration(5 * time.Second), err
 	}
 	calculationTime := deadline.Sub(serverTime.Time)
