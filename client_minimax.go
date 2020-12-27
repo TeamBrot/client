@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"log"
-	"math"
 	"math/rand"
 	"time"
 )
@@ -38,7 +37,7 @@ func doMove(status *Status, playerID uint8, action Action, occupiedCells map[Coo
 			}
 			return false
 		} else {
-			log.Println("tried to access", player.Y, player.X, "but field has value", status.Cells[player.Y][player.X])
+			log.Println("tried to access", player.Y, player.X, "but field is already true")
 			panic("this field should always be false")
 		}
 
@@ -130,15 +129,6 @@ func simulate(you uint8, minimizer uint8, isMaximizer bool, status *Status, acti
 		status.Turn = turn
 	}
 	return bestScore, nil
-}
-
-func distanceToPlayer(player1 *Player, player2 *Player) float64 {
-	return math.Sqrt(math.Pow(float64(player1.X-player2.X), 2) + math.Pow(float64(player1.Y-player2.Y), 2))
-}
-
-func minimaxTiming(calculationTime time.Duration, timingChannel chan<- time.Time) {
-	time.Sleep(time.Duration(0.9 * float64(calculationTime.Nanoseconds())))
-	close(timingChannel)
 }
 
 // bestActionsMinimax returns the best actions according to the minimax algorithm.

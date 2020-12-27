@@ -1,5 +1,9 @@
 package main
 
+import (
+	"math"
+)
+
 // Player contains information on a specific player used by the API
 type Player struct {
 	X         uint16
@@ -171,6 +175,9 @@ func (player *Player) PossibleMoves(cells [][]bool, turn uint16, extraCellInfo m
 	return possibleMoves
 }
 
+func (p *Player) DistanceTo(p2 *Player) float64 {
+	return math.Sqrt(math.Pow(float64(p.X-p2.X), 2) + math.Pow(float64(p.Y-p2.Y), 2))
+}
 
 // ConvertToPlayer converts a JSONPlayer to a Player
 func (JSONPlayer *JSONPlayer) ConvertToPlayer() *Player {

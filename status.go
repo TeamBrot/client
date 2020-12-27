@@ -52,7 +52,7 @@ func (status *Status) FindClosestPlayerTo(originPlayer uint8) (uint8, error) {
 	var nearestPlayer uint8
 	nearestPlayerDistance := 0.0
 	for playerID, player := range status.Players {
-		distance := distanceToPlayer(player, ourPlayer) //math.Sqrt(math.Pow(float64(player.X-ourPlayer.X), 2) + math.Pow(float64(player.Y-ourPlayer.Y), 2))
+		distance := ourPlayer.DistanceTo(player)
 		if playerID != originPlayer && (nearestPlayer == 0 || distance < nearestPlayerDistance) {
 			nearestPlayer = playerID
 			nearestPlayerDistance = distance
