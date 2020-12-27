@@ -10,13 +10,13 @@ import (
 
 // Result :
 type Result struct {
-	Visits [][]int
+	Visits [][]uint8
 	Player []*SimPlayer
 }
 
 //Coords store the coordinates of a player
 type Coords struct {
-	Y, X int
+	Y, X uint16
 }
 
 //SimPlayer to add a new array of visited cells
@@ -28,7 +28,7 @@ type SimPlayer struct {
 }
 
 //Checks if it is legal for a SimPlayer to use a Cell
-func checkCell(cells [][]bool, direction Direction, y int, x int, fields int, visitedCells map[Coords]struct{}, miniMaxSwitch bool) bool {
+func checkCell(cells [][]bool, direction Direction, y uint16, x uint16, fields uint16, visitedCells map[Coords]struct{}, miniMaxSwitch bool) bool {
 	var isPossible bool
 	if direction == Up {
 		y -= fields
@@ -39,7 +39,7 @@ func checkCell(cells [][]bool, direction Direction, y int, x int, fields int, vi
 	} else {
 		x += fields
 	}
-	if x >= len(cells[0]) || y >= len(cells) || x < 0 || y < 0 {
+	if x >= uint16(len(cells[0])) || y >= uint16(len(cells)) || x < 0 || y < 0 {
 		return false
 	}
 	isPossible = !cells[y][x]
@@ -56,7 +56,7 @@ func checkCell(cells [][]bool, direction Direction, y int, x int, fields int, vi
 }
 
 // Returns possible actions for a given situation for a SimPlayer
-func possibleMoves(player *Player, cells [][]bool, turn int, visitedFields map[Coords]struct{}, miniMaxSwitch bool) []Action {
+func possibleMoves(player *Player, cells [][]bool, turn uint16, visitedFields map[Coords]struct{}, miniMaxSwitch bool) []Action {
 	changeNothing := true
 	turnRight := true
 	turnLeft := true
@@ -65,20 +65,20 @@ func possibleMoves(player *Player, cells [][]bool, turn int, visitedFields map[C
 	direction := player.Direction
 	y := player.Y
 	x := player.X
-	for i := 1; i <= player.Speed; i++ {
-		checkJump := turn%6 == 0 && i > 1 && i < player.Speed
-		checkJumpSlowDown := turn%6 == 0 && i > 1 && i < player.Speed-1
-		checkJumpSpeedUp := turn%6 == 0 && i > 1 && i <= player.Speed
+	for i := uint16(1); i <= uint16(player.Speed); i++ {
+		checkJump := turn%6 == 0 && i > 1 && i < uint16(player.Speed)
+		checkJumpSlowDown := turn%6 == 0 && i > 1 && i < uint16(player.Speed)-1
+		checkJumpSpeedUp := turn%6 == 0 && i > 1 && i <= uint16(player.Speed)
 
 		turnLeft = turnLeft && (checkJump || checkCell(cells, (direction+1)%4, y, x, i, visitedFields, miniMaxSwitch))
 		changeNothing = changeNothing && (checkJump || checkCell(cells, direction, y, x, i, visitedFields, miniMaxSwitch))
 		turnRight = turnRight && (checkJump || checkCell(cells, (direction+3)%4, y, x, i, visitedFields, miniMaxSwitch))
-		if i != player.Speed {
+		if i != uint16(player.Speed) {
 			slowDown = slowDown && (checkJumpSlowDown || checkCell(cells, direction, y, x, i, visitedFields, miniMaxSwitch))
 		}
 		speedUp = speedUp && (checkJumpSpeedUp || checkCell(cells, direction, y, x, i, visitedFields, miniMaxSwitch))
 	}
-	speedUp = speedUp && checkCell(cells, direction, y, x, player.Speed+1, visitedFields, miniMaxSwitch)
+	speedUp = speedUp && checkCell(cells, direction, y, x, uint16(player.Speed+1), visitedFields, miniMaxSwitch)
 
 	possibleMoves := make([]Action, 0, 5)
 
@@ -101,14 +101,14 @@ func possibleMoves(player *Player, cells [][]bool, turn int, visitedFields map[C
 }
 
 //Simulates a Action and for a simPlayer and a board. Raises the score of every visited cell at the board and adds the Coords to allVisitedCells and lastMoveVisitedCells
-func simulateMove(boardPointer *[][]int, parentPlayer *SimPlayer, action Action, turn int, simField [][]float64) (*SimPlayer, float64) {
+func simulateMove(boardPointer *[][]uint8, parentPlayer *SimPlayer, action Action, turn uint16, simField [][]float64) (*SimPlayer, float64) {
 	board := *boardPointer
 	childPlayer := parentPlayer.copySimPlayer()
 	player := childPlayer.player
 	score := 0.0
 	player.prepareAction(action)
 	jump := turn%6 == 0
-	for i := 1; i <= player.Speed; i++ {
+	for i := uint8(1); i <= player.Speed; i++ {
 		if player.Direction == Up {
 			player.Y--
 		} else if player.Direction == Down {
@@ -172,7 +172,7 @@ func rolloutMove(status *Status, action Action, player *Player) {
 	turn := status.Turn
 	player.prepareAction(action)
 	jump := turn%6 == 0
-	for i := 1; i <= player.Speed; i++ {
+	for i := uint8(1); i <= player.Speed; i++ {
 		if player.Direction == Up {
 			player.Y--
 		} else if player.Direction == Down {
@@ -331,8 +331,8 @@ func simulateGame(status *Status, stopSimulateGameChan <-chan time.Time, simDept
 }
 
 //After every turn the given results are evaluated and fields are computed on basis of them
-func visitsToProbabilities(me int, results []*Result, width int, height int, fieldChannels map[int]chan [][]float64) [][]float64 {
-	accumulatedVisits := make([][][]int, len(results))
+func visitsToProbabilities(me int, results []*Result, width uint16, height uint16, fieldChannels map[int]chan [][]float64) [][]float64 {
+	accumulatedVisits := make([][][]uint8, len(results))
 	for u := 0; u < len(results); u++ {
 		accumulatedVisits[u] = makeEmptyVisits(height, width)
 	}
@@ -390,15 +390,15 @@ func visitsToProbabilities(me int, results []*Result, width int, height int, fie
 }
 
 // simulate all possible moves for a given simPlayer and a given status until numberOfTurns is reached
-func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns int, elapsedTurns int, resultChannel chan<- *Result, boardChannel <-chan [][]float64, stopChannel <-chan time.Time) {
+func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns int, elapsedTurns uint16, resultChannel chan<- *Result, boardChannel <-chan [][]float64, stopChannel <-chan time.Time) {
 	var fieldAfterTurn [][]float64
 	currentPlayers := make([]*SimPlayer, 1)
 	currentPlayers[0] = simPlayer
 	for i := 0; i < numberOfTurns; i++ {
 		turn := i + 1
-		writeField := make([][]int, status.Height)
+		writeField := make([][]uint8, status.Height)
 		for r := range writeField {
-			writeField[r] = make([]int, status.Width)
+			writeField[r] = make([]uint8, status.Width)
 		}
 		if i != 0 {
 			select {
@@ -424,9 +424,9 @@ func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns 
 				resultChannel <- nil
 				return
 			default:
-				possibleActions := possibleMoves(player.player, status.Cells, elapsedTurns+turn, player.AllVisitedCells, false)
+				possibleActions := possibleMoves(player.player, status.Cells, elapsedTurns+uint16(turn), player.AllVisitedCells, false)
 				for _, action := range possibleActions {
-					child, score := simulateMove(&writeField, player, action, elapsedTurns+turn, fieldAfterTurn)
+					child, score := simulateMove(&writeField, player, action, elapsedTurns+uint16(turn), fieldAfterTurn)
 					child.Probability *= 1.0/float64(len(possibleActions)) - (score / float64(len(child.LastMoveVisitedCells)))
 					if child.Probability < 0 {
 						continue
@@ -464,7 +464,7 @@ func addFields(field1 *[][]float64, field2 [][]float64) {
 }
 
 //Adds second visit table to first visit table. First board has to be a pointer an is going to be changed!
-func addVisits(field1 *[][]int, field2 [][]int) {
+func addVisits(field1 *[][]uint8, field2 [][]uint8) {
 	field := *field1
 	for i := 0; i < len(field); i++ {
 		for j := 0; j < len(field[i]); j++ {
@@ -475,15 +475,15 @@ func addVisits(field1 *[][]int, field2 [][]int) {
 }
 
 // returns an empty field
-func makeEmptyVisits(height int, width int) [][]int {
-	field := make([][]int, height)
+func makeEmptyVisits(height uint16, width uint16) [][]uint8 {
+	field := make([][]uint8, height)
 	for r := range field {
-		field[r] = make([]int, width)
+		field[r] = make([]uint8, width)
 	}
 	return field
 }
 
-func makeProbabilityTable(height int, width int) [][]float64 {
+func makeProbabilityTable(height uint16, width uint16) [][]float64 {
 	field := make([][]float64, height)
 	for r := range field {
 		field[r] = make([]float64, width)
@@ -492,11 +492,11 @@ func makeProbabilityTable(height int, width int) [][]float64 {
 }
 
 //This functions executes a action and returns the average score of every visited Cell
-func evaluateAction(player *Player, field [][]float64, action Action, turn int) float64 {
+func evaluateAction(player *Player, field [][]float64, action Action, turn uint16) float64 {
 	score := 0.0
 	player.prepareAction(action)
 	jump := turn%6 == 0
-	for i := 1; i <= player.Speed; i++ {
+	for i := uint8(1); i <= player.Speed; i++ {
 		if player.Direction == Up {
 			player.Y--
 		} else if player.Direction == Down {
@@ -525,7 +525,7 @@ func (oldPlayer *Player) copyPlayer() *Player {
 }
 
 //Simulates the moves of all Longest Paths until simDepth is reached. Computes a score for every possible Action and returns the Action with the lowes score
-func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, turn int, simDepth int, possibleActions []Action) Action {
+func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, turn uint16, simDepth int, possibleActions []Action) Action {
 	var scoreNothing float64
 	var scoreLeft float64
 	var scoreRight float64
@@ -558,7 +558,7 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 		newPlayer := player.copyPlayer()
 		for i := 0; i < simDepth; i++ {
 			if i != len(path) {
-				score += evaluateAction(newPlayer, allFields[i], path[i], turn+i)
+				score += evaluateAction(newPlayer, allFields[i], path[i], turn+uint16(i))
 				score /= float64(simDepth)
 			} else {
 				break
@@ -646,18 +646,19 @@ func analyzeBoard(status *Status) []*Player {
 	influenceWidhtOfPlayer := make(map[*Player]int, 0)
 
 	for _, player := range status.Players {
-		influenceWidth := (player.Speed - int(math.Round(9*boardCoverage)) + 4) * 8
+		influenceWidth := (player.Speed - uint8(math.Round(9*boardCoverage)) + 4) * 8
 		log.Println(influenceWidth)
-		influenceWidhtOfPlayer[player] = influenceWidth
+		influenceWidhtOfPlayer[player] = int(influenceWidth)
 	}
 	me := status.Players[status.You]
 	for _, player := range status.Players {
 		if player == me {
 			continue
 		}
-		if distanceToPlayer(me, player) < float64(influenceWidhtOfPlayer[player]+influenceWidhtOfPlayer[me]) {
-			playerSimulation = append(playerSimulation, player)
-		}
+		//
+		//if distanceToPlayer(me, player) < float64(influenceWidhtOfPlayer[player]+influenceWidhtOfPlayer[me]) {
+		playerSimulation = append(playerSimulation, player)
+		//}
 	}
 	playerSimulation = append(playerSimulation, me)
 	return playerSimulation
@@ -719,7 +720,7 @@ func (c SpekuClient) GetAction(player Player, status *Status, calculationTime ti
 	log.Println("Simulating ", len(activePlayersInRange), " Players")
 	var maxSimDepth int
 	//if Your Computer is really beefy it might be a good idea to set this higher (else it is not and your computer will crash!!)
-	maxSimDepth = 10
+	maxSimDepth = 12
 	//If this channel is closed, it will try to end simulate game
 
 	//This channel is used to recieve an array of all calculated Fields from simulate game

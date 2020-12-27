@@ -15,7 +15,7 @@ func (c SmartClient) GetAction(player Player, status *Status, calculationTime ti
 	switch player.Direction {
 	case Up:
 		if player.Y == 0 {
-			if player.X+1 >= len(board[0]) {
+			if player.X+1 >= uint16(len(board[0])) {
 				bestAction = TurnLeft
 			} else if player.X == 0 {
 				bestAction = TurnRight
@@ -25,7 +25,7 @@ func (c SmartClient) GetAction(player Player, status *Status, calculationTime ti
 				bestAction = TurnLeft
 			}
 		} else if board[player.Y-1][player.X] {
-			if player.X+1 >= len(board[0]) {
+			if player.X+1 >= uint16(len(board[0])) {
 				bestAction = TurnLeft
 			} else if player.X == 0 {
 				bestAction = TurnRight
@@ -38,10 +38,10 @@ func (c SmartClient) GetAction(player Player, status *Status, calculationTime ti
 			bestAction = ChangeNothing
 		}
 	case Down:
-		if player.Y+1 >= len(board) {
+		if player.Y+1 >= uint16(len(board)) {
 			if player.X == 0 {
 				bestAction = TurnLeft
-			} else if player.X+1 >= len(board[0]) {
+			} else if player.X+1 >= uint16(len(board[0])) {
 				bestAction = TurnRight
 			} else if !board[player.Y][player.X+1] {
 				bestAction = TurnLeft
@@ -51,7 +51,7 @@ func (c SmartClient) GetAction(player Player, status *Status, calculationTime ti
 		} else if board[player.Y+1][player.X] {
 			if player.X == 0 {
 				bestAction = TurnLeft
-			} else if player.X+1 >= len(board[0]) {
+			} else if player.X+1 >= uint16(len(board[0])) {
 				bestAction = TurnRight
 			} else if !board[player.Y][player.X+1] {
 				bestAction = TurnLeft
@@ -65,7 +65,7 @@ func (c SmartClient) GetAction(player Player, status *Status, calculationTime ti
 		if player.X == 0 {
 			if player.Y == 0 {
 				bestAction = TurnLeft
-			} else if player.Y+1 >= len(board) {
+			} else if player.Y+1 >= uint16(len(board)) {
 				bestAction = TurnRight
 			} else if !board[player.Y+1][player.X] {
 				bestAction = TurnLeft
@@ -75,7 +75,7 @@ func (c SmartClient) GetAction(player Player, status *Status, calculationTime ti
 		} else if board[player.Y][player.X-1] {
 			if player.Y == 0 {
 				bestAction = TurnLeft
-			} else if player.Y+1 >= len(board) {
+			} else if player.Y+1 >= uint16(len(board)) {
 				bestAction = TurnRight
 			} else if !board[player.Y+1][player.X] {
 				bestAction = TurnLeft
@@ -86,10 +86,10 @@ func (c SmartClient) GetAction(player Player, status *Status, calculationTime ti
 			bestAction = ChangeNothing
 		}
 	case Right:
-		if player.X+1 >= len(board[0]) {
+		if player.X+1 >= uint16(len(board[0])) {
 			if player.Y == 0 {
 				bestAction = TurnRight
-			} else if player.Y+1 >= len(board) {
+			} else if player.Y+1 >= uint16(len(board)) {
 				bestAction = TurnLeft
 			} else if !board[player.Y+1][player.X] {
 				bestAction = TurnRight
@@ -99,7 +99,7 @@ func (c SmartClient) GetAction(player Player, status *Status, calculationTime ti
 		} else if board[player.Y][player.X+1] {
 			if player.Y == 0 {
 				bestAction = TurnRight
-			} else if player.Y+1 >= len(board) {
+			} else if player.Y+1 >= uint16(len(board)) {
 				bestAction = TurnLeft
 			} else if !board[player.Y+1][player.X] {
 				bestAction = TurnRight

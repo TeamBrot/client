@@ -8,12 +8,12 @@ import (
 )
 
 type Status struct {
-	Width   int
-	Height  int
+	Width   uint16
+	Height  uint16
 	Cells   [][]bool
-	Players map[int]*Player
-	You     int
-	Turn    int
+	Players map[uint8]*Player
+	You     uint8
+	Turn    uint16
 }
 
 // Status contains all information on the current game status
@@ -29,10 +29,10 @@ type JSONStatus struct {
 }
 
 type Player struct {
-	X         int
-	Y         int
+	X         uint16
+	Y         uint16
 	Direction Direction
-	Speed     int
+	Speed     uint8
 }
 
 // Player contains information on a specific player. It is provided by the server,
@@ -79,7 +79,7 @@ var Directions = map[string]Direction{
 }
 
 // Direction contains the direction the player is facing
-type Direction int
+type Direction uint8
 
 // turning left is equivalent to +1(mod 4) and turning right to (+3)(mod 4)
 const (
@@ -112,9 +112,9 @@ func NewConnection(config Config) (Connection, error) {
 
 func (JSONPlayer *JSONPlayer) ToPlayer() *Player {
 	var player Player
-	player.X = JSONPlayer.X
-	player.Y = JSONPlayer.Y
-	player.Speed = JSONPlayer.Speed
+	player.X = uint16(JSONPlayer.X)
+	player.Y = uint16(JSONPlayer.Y)
+	player.Speed = uint8(JSONPlayer.Speed)
 	player.Direction = JSONPlayer.Direction
 	return &player
 }
@@ -122,13 +122,13 @@ func (JSONPlayer *JSONPlayer) ToPlayer() *Player {
 //
 func (js JSONStatus) ToStatus() *Status {
 	var status Status
-	status.Height = js.Height
-	status.Turn = js.Turn
-	status.Width = js.Width
-	status.You = js.You
-	status.Players = make(map[int]*Player, 0)
+	status.Height = uint16(js.Height)
+	status.Turn = uint16(js.Turn)
+	status.Width = uint16(js.Width)
+	status.You = uint8(js.You)
+	status.Players = make(map[uint8]*Player, 0)
 	for z, JSONPlayer := range js.Players {
-		status.Players[z] = JSONPlayer.ToPlayer()
+		status.Players[uint8(z)] = JSONPlayer.ToPlayer()
 	}
 	status.Cells = make([][]bool, status.Height)
 	for y := range status.Cells {

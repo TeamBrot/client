@@ -17,12 +17,12 @@ func score(status *Status, player *Player) int {
 // In this case, a function return value of false indicates that the specified action is valid but would lead to another player dying (the one that created occupiedCells)
 // Also, every field newly entered is written into occupiedCells
 // The function panics when an illegal move was selected
-func doMove(status *Status, playerID int, action Action, occupiedCells map[Coords]struct{}, writeOccupiedCells bool) bool {
+func doMove(status *Status, playerID uint8, action Action, occupiedCells map[Coords]struct{}, writeOccupiedCells bool) bool {
 	player := status.Players[playerID]
 	// log.Println("doMove start: ", player.X, player.Y, player.Direction, player.Speed)
 	player.prepareAction(action)
 	jump := status.Turn%6 == 0
-	for i := 1; i <= player.Speed; i++ {
+	for i := 1; i <= int(player.Speed); i++ {
 		if player.Direction == Up {
 			player.Y--
 		} else if player.Direction == Down {
@@ -33,7 +33,7 @@ func doMove(status *Status, playerID int, action Action, occupiedCells map[Coord
 			player.X--
 		}
 		_, isIn := occupiedCells[Coords{player.Y, player.X}]
-		if !jump || i == 1 || i == player.Speed {
+		if !jump || i == 1 || i == int(player.Speed) {
 			if !status.Cells[player.Y][player.X] {
 				status.Cells[player.Y][player.X] = true
 				if writeOccupiedCells {
@@ -56,7 +56,7 @@ func doMove(status *Status, playerID int, action Action, occupiedCells map[Coord
 
 }
 
-func simulate(you int, minimizer int, isMaximizer bool, status *Status, action Action, depth int, alpha int, beta int, occupiedCells map[Coords]struct{}, stopChannel <-chan time.Time) (int, error) {
+func simulate(you uint8, minimizer uint8, isMaximizer bool, status *Status, action Action, depth int, alpha int, beta int, occupiedCells map[Coords]struct{}, stopChannel <-chan time.Time) (int, error) {
 	// log.Println("Simulate: ", you, minimizer, action, depth)
 	select {
 	case <-stopChannel:
@@ -64,7 +64,7 @@ func simulate(you int, minimizer int, isMaximizer bool, status *Status, action A
 	default:
 	}
 
-	var playerID int
+	var playerID uint8
 	var bestScore int
 	if isMaximizer {
 		playerID = you
@@ -153,7 +153,7 @@ func (status *Status) copyStatus() *Status {
 			s.Cells[i][j] = status.Cells[i][j]
 		}
 	}
-	s.Players = make(map[int]*Player)
+	s.Players = make(map[uint8]*Player)
 	for id, player := range status.Players {
 		s.Players[id] = player.copyPlayer()
 	}
@@ -164,9 +164,9 @@ func distanceToPlayer(player1 *Player, player2 *Player) float64 {
 	return math.Sqrt(math.Pow(float64(player1.X-player2.X), 2) + math.Pow(float64(player1.Y-player2.Y), 2))
 }
 
-func findClosestPlayer(status *Status) int {
+func findClosestPlayer(status *Status) uint8 {
 	ourPlayer := status.Players[status.You]
-	nearestPlayer := 0
+	var nearestPlayer uint8
 	nearestPlayerDistance := 0.0
 	for playerID, player := range status.Players {
 		distance := distanceToPlayer(player, ourPlayer) //math.Sqrt(math.Pow(float64(player.X-ourPlayer.X), 2) + math.Pow(float64(player.Y-ourPlayer.Y), 2))
@@ -189,7 +189,7 @@ func minimaxTiming(calculationTime time.Duration, timingChannel chan<- time.Time
 // bestActionsMinimax returns the best actions according to the minimax algorithm.
 // it stops execution when a signal is received on the specified channel.
 // in this case, the return value should not be used.
-func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth int, stopChannel <-chan time.Time) ([]Action, error) {
+func bestActionsMinimax(maximizerID uint8, minimizerID uint8, status *Status, depth int, stopChannel <-chan time.Time) ([]Action, error) {
 	bestScore := -100
 	bestActions := make([]Action, 0)
 	possibleMoves := possibleMoves(status.Players[maximizerID], status.Cells, status.Turn, nil, true)
@@ -212,7 +212,7 @@ func bestActionsMinimax(maximizerID int, minimizerID int, status *Status, depth 
 	return bestActions, nil
 }
 
-func bestActionsMinimaxTimed(maximizerID int, minimizerID int, status *Status, timingChannel <-chan time.Time) []Action {
+func bestActionsMinimaxTimed(maximizerID uint8, minimizerID uint8, status *Status, timingChannel <-chan time.Time) []Action {
 	var actions []Action
 	var depth int
 	startDepth := 1
