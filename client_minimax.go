@@ -32,7 +32,6 @@ func doMove(status *Status, playerID uint8, action Action, occupiedCells map[Coo
 			if writeOccupiedCells {
 				occupiedCells[*coords] = struct{}{}
 			}
-			// defer func() { status.Cells[player.Y][player.X] = 0 }()
 		} else if isIn {
 			if playerID == status.You {
 				panic("you should never be here")

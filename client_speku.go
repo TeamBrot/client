@@ -316,6 +316,9 @@ func simulateGame(status *Status, stopSimulateGameChan <-chan time.Time, simDept
 				}
 			}
 		}
+		if len(results) == 0 {
+			break
+		}
 		log.Println("Starting calculating field for turn: ", z)
 		probabilityTable := visitsToProbabilities(me, results, status.Width, status.Height, visitedCellsChannels)
 		allProbabilityTables = append(allProbabilityTables, probabilityTable)
@@ -328,6 +331,10 @@ func simulateGame(status *Status, stopSimulateGameChan <-chan time.Time, simDept
 
 //After every turn the given results are evaluated and fields are computed on basis of them
 func visitsToProbabilities(me int, results []*Result, width uint16, height uint16, fieldChannels map[int]chan [][]float64) [][]float64 {
+	if len(results) == 0 {
+		log.Println(results)
+		panic("Can't calculate probability Table without results")
+	}
 	accumulatedVisits := make([][][]uint8, len(results))
 	for u := 0; u < len(results); u++ {
 		accumulatedVisits[u] = makeEmptyVisits(height, width)
@@ -377,8 +384,8 @@ func visitsToProbabilities(me int, results []*Result, width uint16, height uint1
 		}
 	}
 
-	for o, ch := range fieldChannels {
-		ch <- playerProbabilityTables[o]
+	for o, probabilityTable := range playerProbabilityTables {
+		fieldChannels[o] <- probabilityTable
 	}
 	runtime.GC()
 	return playerProbabilityTables[me]
