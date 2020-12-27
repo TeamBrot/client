@@ -124,7 +124,7 @@ func simulateRollouts(status *Status, limit int, filterValue float64, stopSimula
 			}
 		}
 	}
-	log.Println("Could perfom ", maxNumberofRollouts, " Rollouts, which is the maximum possible")
+	log.Println("could perfom", maxNumberofRollouts, "rollouts, which is the maximum possible")
 	return longestPaths
 }
 
@@ -178,7 +178,7 @@ func simulateGame(status *Status, stopSimulateGameChan <-chan time.Time, simDept
 		for _, ch := range resultChannels {
 			select {
 			case <-stopSimulateGameChan:
-				log.Println("Ended Simulate Game. Returning field")
+				log.Println("ended simulateGame, returning field")
 				return allProbabilityTables
 			case val := <-ch:
 				if val != nil {
@@ -191,7 +191,7 @@ func simulateGame(status *Status, stopSimulateGameChan <-chan time.Time, simDept
 		if len(results) == 0 {
 			break
 		}
-		log.Println("Starting calculating field for turn: ", z)
+		log.Println("starting to calculate field for turn", z)
 		probabilityTable := visitsToProbabilities(me, results, status.Width, status.Height, visitedCellsChannels)
 		allProbabilityTables = append(allProbabilityTables, probabilityTable)
 		if z != 0 {
@@ -293,7 +293,7 @@ func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns 
 		for _, player := range currentPlayers {
 			select {
 			case <-stopChannel:
-				log.Println("Ended Simulation for player ", id)
+				log.Println("ended Simulation for player", id)
 				currentPlayers = nil
 				children = nil
 				resultChannel <- nil
@@ -322,7 +322,7 @@ func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns 
 		}
 		runtime.GC()
 	}
-	log.Println("Finished Calculation for player: ", id)
+	log.Println("finished calculation for player", id)
 	close(resultChannel)
 	return
 }
@@ -431,7 +431,7 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 			}
 		}
 		if len(path) == 0 {
-			log.Println("All other players are going to die in the next turn")
+			log.Println("all other players are going to die in the next turn")
 			return possibleActions[0]
 		}
 		switch path[0] {
@@ -559,10 +559,10 @@ func (c SpekuClient) GetAction(player Player, status *Status, calculationTime ti
 	possibleActions := player.PossibleMoves(status.Cells, status.Turn, nil, false)
 	//handle trivial cases (zero or one possible Action)
 	if len(possibleActions) == 1 {
-		log.Println("Only possible Action: ", possibleActions[0])
+		log.Println("only possible action: ", possibleActions[0])
 		return possibleActions[0]
 	} else if len(possibleActions) == 0 {
-		log.Println("I'll die... choosing change nothing as last action")
+		log.Println("going to die... choosing change_nothing as last action")
 		return ChangeNothing
 	}
 
@@ -574,7 +574,7 @@ func (c SpekuClient) GetAction(player Player, status *Status, calculationTime ti
 	miniMaxChannel := make(chan []Action, 1)
 	stopMiniMaxChannel := make(chan time.Time)
 	go func() {
-		miniMaxActions := bestActionsMinimaxTimed(status.You, otherPlayerID, status, stopMiniMaxChannel)
+		miniMaxActions := MinimaxBestActionsTimed(status.You, otherPlayerID, status, stopMiniMaxChannel)
 		miniMaxChannel <- miniMaxActions
 	}()
 	stopRolloutChan := make(chan time.Time)
@@ -586,7 +586,7 @@ func (c SpekuClient) GetAction(player Player, status *Status, calculationTime ti
 
 	//calculate which players are simulated TODO: Move this code to an external function and improve it
 	activePlayersInRange := analyzeBoard(status)
-	log.Println("Simulating ", len(activePlayersInRange), " Players")
+	log.Println("simulating", len(activePlayersInRange), "players")
 	var maxSimDepth int
 	//if Your Computer is really beefy it might be a good idea to set this higher (else it is not and your computer will crash!!)
 	maxSimDepth = 12
@@ -612,11 +612,11 @@ func (c SpekuClient) GetAction(player Player, status *Status, calculationTime ti
 
 	_ = <-timingChannel
 	if len(activePlayersInRange) > 1 {
-		log.Println("Sending stop Signal to simulate Game...")
+		log.Println("sending stop signal to simulateGame...")
 		close(stopSimulateGameChan)
 	}
 	_ = <-timingChannel
-	log.Println("Sending stop signal to Simulate Rollouts and MiniMax...")
+	log.Println("sending stop signal to simulateRollouts and minimax...")
 	close(stopRolloutChan)
 	close(stopMiniMaxChannel)
 	possibleActions = <-miniMaxChannel
@@ -625,16 +625,16 @@ func (c SpekuClient) GetAction(player Player, status *Status, calculationTime ti
 	}
 	bestPaths := <-rolloutChan
 
-	log.Println("Found ", len(bestPaths), " Paths that should be evaluated")
-	log.Println("Could calculate ", len(allProbabilityTables), " Turns")
+	log.Println("found", len(bestPaths), "paths that should be evaluated")
+	log.Println("could calculate", len(allProbabilityTables), "turns")
 	//This is only for debugging purposes and combines the last field with the status
 	log.Println(allProbabilityTables[len(allProbabilityTables)-1])
 	//Log Timing
-	log.Println("Time till Calculations are finished and Evaluation can start: ", time.Since(start))
+	log.Println("time until calculations are finished and evaluation can start: ", time.Since(start))
 	//Evaluate the paths with the given field and return the best Action based on this TODO: Needs improvement in case of naming
 	bestAction = evaluatePaths(player, allProbabilityTables, bestPaths, status.Turn, len(allProbabilityTables)-1, possibleActions)
 	//Log Timing
-	log.Println("The Processing in total took: ", time.Since(start))
-	log.Println("Choose as best action: ", bestAction)
+	log.Println("total processing took", time.Since(start))
+	log.Println("chose best action", bestAction)
 	return bestAction
 }

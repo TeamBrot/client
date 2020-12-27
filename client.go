@@ -51,7 +51,7 @@ func computeCalculationTime(deadline time.Time, config Config) (time.Duration, e
 	}
 	calculationTime := deadline.Sub(serverTime.Time)
 	calculationTime = time.Duration((calculationTime.Milliseconds() - int64(serverTime.Milliseconds) - 150) * 1000000)
-	log.Println("The scheduled calculation Time is :", calculationTime)
+	log.Println("the scheduled calculation Time is", calculationTime)
 	return calculationTime, nil
 }
 
