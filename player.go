@@ -49,9 +49,13 @@ var Directions = map[string]Direction{
 // ProcessAction moves the player according to action and turn. Returns visited coordinates
 func (player *Player) ProcessAction(action Action, turn uint16) []*Coords {
 	if action == SpeedUp {
-		player.Speed++
+		if player.Speed != 10 {
+			player.Speed++
+		}
 	} else if action == SlowDown {
-		player.Speed--
+		if player.Speed != 1 {
+			player.Speed--
+		}
 	} else if action == TurnLeft {
 		player.Direction = (player.Direction + 1) % 4
 	} else if action == TurnRight {
@@ -78,7 +82,6 @@ func (player *Player) ProcessAction(action Action, turn uint16) []*Coords {
 
 // checkCell checks if it is legal for a player to go from a position a certain number of fields
 func checkCell(cells [][]bool, direction Direction, y uint16, x uint16, fields uint16, extraCellInfo map[Coords]struct{}, extraCellAllowed bool) bool {
-	var isPossible bool
 	if direction == Up {
 		y -= fields
 	} else if direction == Down {
@@ -91,10 +94,9 @@ func checkCell(cells [][]bool, direction Direction, y uint16, x uint16, fields u
 	if x >= uint16(len(cells[0])) || y >= uint16(len(cells)) || x < 0 || y < 0 {
 		return false
 	}
-	isPossible = !cells[y][x]
+	isPossible := !cells[y][x]
 	if extraCellInfo != nil {
-		coordsNow := Coords{y, x}
-		_, fieldVisited := extraCellInfo[coordsNow]
+		_, fieldVisited := extraCellInfo[Coords{y,x}]
 		if extraCellAllowed {
 			return isPossible || fieldVisited
 		}
@@ -105,7 +107,7 @@ func checkCell(cells [][]bool, direction Direction, y uint16, x uint16, fields u
 }
 
 // PossibleMoves returns possible actions for a given situation for a player
-func (player *Player) PossibleMoves(cells [][]bool, turn uint16, extraCellInfo map[Coords]struct{}, miniMaxSwitch bool) []Action {
+func (player *Player) PossibleMoves(cells [][]bool, turn uint16, extraCellInfo map[Coords]struct{}, extraCellAllowed bool) []Action {
 	changeNothing := true
 	turnRight := true
 	turnLeft := true
@@ -119,15 +121,15 @@ func (player *Player) PossibleMoves(cells [][]bool, turn uint16, extraCellInfo m
 		checkJumpSlowDown := turn%6 == 0 && i > 1 && i < uint16(player.Speed)-1
 		checkJumpSpeedUp := turn%6 == 0 && i > 1 && i <= uint16(player.Speed)
 
-		turnLeft = turnLeft && (checkJump || checkCell(cells, (direction+1)%4, y, x, i, extraCellInfo, miniMaxSwitch))
-		changeNothing = changeNothing && (checkJump || checkCell(cells, direction, y, x, i, extraCellInfo, miniMaxSwitch))
-		turnRight = turnRight && (checkJump || checkCell(cells, (direction+3)%4, y, x, i, extraCellInfo, miniMaxSwitch))
+		turnLeft = turnLeft && (checkJump || checkCell(cells, (direction+1)%4, y, x, i, extraCellInfo, extraCellAllowed))
+		changeNothing = changeNothing && (checkJump || checkCell(cells, direction, y, x, i, extraCellInfo, extraCellAllowed))
+		turnRight = turnRight && (checkJump || checkCell(cells, (direction+3)%4, y, x, i, extraCellInfo, extraCellAllowed))
 		if i != uint16(player.Speed) {
-			slowDown = slowDown && (checkJumpSlowDown || checkCell(cells, direction, y, x, i, extraCellInfo, miniMaxSwitch))
+			slowDown = slowDown && (checkJumpSlowDown || checkCell(cells, direction, y, x, i, extraCellInfo, extraCellAllowed))
 		}
-		speedUp = speedUp && (checkJumpSpeedUp || checkCell(cells, direction, y, x, i, extraCellInfo, miniMaxSwitch))
+		speedUp = speedUp && (checkJumpSpeedUp || checkCell(cells, direction, y, x, i, extraCellInfo, extraCellAllowed))
 	}
-	speedUp = speedUp && checkCell(cells, direction, y, x, uint16(player.Speed+1), extraCellInfo, miniMaxSwitch)
+	speedUp = speedUp && checkCell(cells, direction, y, x, uint16(player.Speed+1), extraCellInfo, extraCellAllowed)
 
 	possibleMoves := make([]Action, 0, 5)
 
