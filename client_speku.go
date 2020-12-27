@@ -70,35 +70,37 @@ func simulateRollouts(status *Status, limit int, filterValue float64, stopSimula
 		default:
 			rolloutStatus := status.Copy()
 			path := make([]Action, 0)
-			for i := 0; i < limit; i++ {
+			counter := 0
+			for {
 				me := rolloutStatus.Players[status.You]
-				countLivingPlayers := 0
+				//countLivingPlayers := 0
 				rolloutStatus.Turn++
 				//Process one random move for every other player besides me
-				for _, player := range rolloutStatus.Players {
-					if player != me && player != nil {
-						possibleMoves := player.PossibleMoves(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
-						if len(possibleMoves) == 0 {
-							player = nil
-							continue
-						}
-						randomAction := possibleMoves[rand.Intn(len(possibleMoves))]
-						rolloutMove(rolloutStatus, randomAction, player)
-						countLivingPlayers++
-					}
-				}
+				//for _, player := range rolloutStatus.Players {
+				//if player != me && player != nil {
+				//possibleMoves := player.PossibleMoves(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
+				//if len(possibleMoves) == 0 {
+				//player = nil
+				//continue
+				//}
+				//randomAction := possibleMoves[rand.Intn(len(possibleMoves))]
+				//rolloutMove(rolloutStatus, randomAction, player)
+				//countLivingPlayers++
+				//}
+				//}
 				//All other players Died
-				if countLivingPlayers == 0 {
-					break
-				}
+				//if countLivingPlayers == 0 {
+				//	break
+				//}
 				possibleMoves := me.PossibleMoves(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
 				if len(possibleMoves) == 0 {
 					break
 				}
 				var randomAction Action
 				//This should distribute the first Action taken equally
-				if i == 0 {
+				if counter == 0 {
 					randomAction = possibleMoves[j%len(possibleMoves)]
+					counter++
 				} else {
 					randomAction = possibleMoves[rand.Intn(len(possibleMoves))]
 				}
@@ -403,14 +405,17 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 	for _, path := range paths {
 		score := 0.0
 		minPlayer := player.copyPlayer()
-		maxPlayer := player.copyPlayer()
-		for i := 0; i < simDepth-1; i++ {
+		//maxPlayer := player.copyPlayer()
+		for i := 0; i < len(path); i++ {
 			if i != len(path) {
-				score += evaluateAction(minPlayer, allFields[i], path[i], turn+uint16(i))
-				score += 1.0 - evaluateAction(maxPlayer, allFields[i+1], path[i], turn+uint16(i))
-				score /= 2.0
+				if i < simDepth {
+					score += evaluateAction(minPlayer, allFields[i], path[i], turn+uint16(i))
+					//score += 1.0 - evaluateAction(maxPlayer, allFields[i+1], path[i], turn+uint16(i))
+					//score /= 2.0
+				} else {
+					score += evaluateAction(minPlayer, allFields[simDepth-1], path[i], turn+uint16(i))
+				}
 			} else {
-				score /= float64(simDepth)
 				break
 			}
 		}
@@ -418,6 +423,7 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 			log.Println("all other players are going to die in the next turn")
 			return possibleActions[0]
 		}
+		score /= float64(len(path))
 		scores[path[0]] += score
 	}
 	//computes how many times a Action was the first Action of path
@@ -531,7 +537,7 @@ func (c SpekuClient) GetAction(player Player, status *Status, calculationTime ti
 	stopRolloutChan := make(chan time.Time)
 	rolloutChan := make(chan [][]Action, 1)
 	go func() {
-		rolloutPaths := simulateRollouts(status, 140, 0.7, stopRolloutChan)
+		rolloutPaths := simulateRollouts(status, 300, 0.75, stopRolloutChan)
 		rolloutChan <- rolloutPaths
 	}()
 
@@ -579,7 +585,7 @@ func (c SpekuClient) GetAction(player Player, status *Status, calculationTime ti
 	log.Println("found", len(bestPaths), "paths that should be evaluated")
 	log.Println("could calculate", len(allProbabilityTables), "turns")
 	//This is only for debugging purposes and combines the last field with the status
-	log.Println(allProbabilityTables[len(allProbabilityTables)-1])
+	//log.Println(allProbabilityTables[len(allProbabilityTables)-1])
 	//Log Timing
 	log.Println("time until calculations are finished and evaluation can start: ", time.Since(start))
 	//Evaluate the paths with the given field and return the best Action based on this TODO: Needs improvement in case of naming
