@@ -178,7 +178,7 @@ func MinimaxBestActionsTimed(maximizerID uint8, minimizerID uint8, status *Statu
 			log.Println("minimax with depth", depth, "actions", actionsTemp, "no error")
 			actions = actionsTemp
 		} else {
-			log.Println("couldn't finish calculation for depth", depth)
+			log.Println("couldn't finish calculation for depth", depth, "returning", actions)
 			return actions
 		}
 		depth++
