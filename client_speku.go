@@ -101,35 +101,24 @@ func possibleMoves(player *Player, cells [][]bool, turn uint16, visitedFields ma
 }
 
 //Simulates a Action and for a simPlayer and a board. Raises the score of every visited cell at the board and adds the Coords to allVisitedCells and lastMoveVisitedCells
-func simulateMove(boardPointer *[][]uint8, parentPlayer *SimPlayer, action Action, turn uint16, simField [][]float64) (*SimPlayer, float64) {
-	board := *boardPointer
+func simulateMove(board [][]uint8, parentPlayer *SimPlayer, action Action, turn uint16, simField [][]float64) (*SimPlayer, float64) {
 	childPlayer := parentPlayer.copySimPlayer()
 	player := childPlayer.player
 	score := 0.0
-	player.prepareAction(action)
-	jump := turn%6 == 0
-	for i := uint8(1); i <= player.Speed; i++ {
-		if player.Direction == Up {
-			player.Y--
-		} else if player.Direction == Down {
-			player.Y++
-		} else if player.Direction == Right {
-			player.X++
-		} else if player.Direction == Left {
-			player.X--
+	visitedCoords := player.processAction(action, turn)
+	for _, coord := range visitedCoords {
+		if coord == nil {
+			continue
 		}
-		if !jump || i == 1 || i == player.Speed {
-			board[player.Y][player.X]++
-			coordsNow := Coords{player.Y, player.X}
-			childPlayer.AllVisitedCells[coordsNow] = struct{}{}
-			childPlayer.LastMoveVisitedCells[coordsNow] = struct{}{}
-			score += simField[player.Y][player.X]
-		}
+		board[coord.Y][coord.X]++
+		childPlayer.AllVisitedCells[*coord] = struct{}{}
+		childPlayer.LastMoveVisitedCells[*coord] = struct{}{}
+		score += simField[coord.Y][coord.X]
 	}
 	return childPlayer, score
 }
 
-func (player *Player) prepareAction(action Action) {
+func (player *Player) processAction(action Action, turn uint16) []*Coords {
 	if action == SpeedUp {
 		player.Speed++
 	} else if action == SlowDown {
@@ -165,12 +154,7 @@ func (player *Player) prepareAction(action Action) {
 			break
 		}
 	}
-}
-
-//implements the doMove function for the rollout function
-func rolloutMove(status *Status, action Action, player *Player) {
-	turn := status.Turn
-	player.prepareAction(action)
+	visitedCoords := make([]*Coords, player.Speed+1)
 	jump := turn%6 == 0
 	for i := uint8(1); i <= player.Speed; i++ {
 		if player.Direction == Up {
@@ -183,8 +167,20 @@ func rolloutMove(status *Status, action Action, player *Player) {
 			player.X--
 		}
 		if !jump || i == 1 || i == player.Speed {
-			status.Cells[player.Y][player.X] = true
+			visitedCoords[i] = &Coords{player.Y, player.X}
 		}
+	}
+	return visitedCoords
+}
+
+//implements the doMove function for the rollout function
+func rolloutMove(status *Status, action Action, player *Player) {
+	visitedCoords := player.processAction(action, status.Turn)
+	for _, coords := range visitedCoords {
+		if coords == nil {
+			continue
+		}
+		status.Cells[coords.Y][coords.X] = true
 	}
 
 }
@@ -426,7 +422,7 @@ func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns 
 			default:
 				possibleActions := possibleMoves(player.player, status.Cells, elapsedTurns+uint16(turn), player.AllVisitedCells, false)
 				for _, action := range possibleActions {
-					child, score := simulateMove(&writeField, player, action, elapsedTurns+uint16(turn), fieldAfterTurn)
+					child, score := simulateMove(writeField, player, action, elapsedTurns+uint16(turn), fieldAfterTurn)
 					child.Probability *= 1.0/float64(len(possibleActions)) - (score / float64(len(child.LastMoveVisitedCells)))
 					if child.Probability < 0 {
 						continue
@@ -494,22 +490,13 @@ func makeProbabilityTable(height uint16, width uint16) [][]float64 {
 //This functions executes a action and returns the average score of every visited Cell
 func evaluateAction(player *Player, field [][]float64, action Action, turn uint16) float64 {
 	score := 0.0
-	player.prepareAction(action)
-	jump := turn%6 == 0
-	for i := uint8(1); i <= player.Speed; i++ {
-		if player.Direction == Up {
-			player.Y--
-		} else if player.Direction == Down {
-			player.Y++
-		} else if player.Direction == Right {
-			player.X++
-		} else if player.Direction == Left {
-			player.X--
+	visitedCoords := player.processAction(action, turn)
+	for _, coords := range visitedCoords {
+		if coords == nil {
+			continue
 		}
+		score += field[coords.Y][coords.X]
 
-		if !jump || i == 1 || i == player.Speed {
-			score += field[player.Y][player.X]
-		}
 	}
 	return score / float64(player.Speed)
 }

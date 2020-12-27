@@ -20,36 +20,29 @@ func score(status *Status, player *Player) int {
 func doMove(status *Status, playerID uint8, action Action, occupiedCells map[Coords]struct{}, writeOccupiedCells bool) bool {
 	player := status.Players[playerID]
 	// log.Println("doMove start: ", player.X, player.Y, player.Direction, player.Speed)
-	player.prepareAction(action)
-	jump := status.Turn%6 == 0
-	for i := 1; i <= int(player.Speed); i++ {
-		if player.Direction == Up {
-			player.Y--
-		} else if player.Direction == Down {
-			player.Y++
-		} else if player.Direction == Right {
-			player.X++
-		} else if player.Direction == Left {
-			player.X--
+	visitedCoords := player.processAction(action, status.Turn)
+	for _, coords := range visitedCoords {
+		if coords == nil {
+			continue
 		}
-		_, isIn := occupiedCells[Coords{player.Y, player.X}]
-		if !jump || i == 1 || i == int(player.Speed) {
-			if !status.Cells[player.Y][player.X] {
-				status.Cells[player.Y][player.X] = true
-				if writeOccupiedCells {
-					occupiedCells[Coords{player.Y, player.X}] = struct{}{}
-				}
-				// defer func() { status.Cells[player.Y][player.X] = 0 }()
-			} else if isIn {
-				if playerID == status.You {
-					panic("you should never be here")
-				}
-				return false
-			} else {
-				log.Println("tried to access", player.Y, player.X, "but field has value", status.Cells[player.Y][player.X])
-				panic("this field should always be false")
+		_, isIn := occupiedCells[*coords]
+
+		if !status.Cells[coords.Y][coords.X] {
+			status.Cells[coords.Y][coords.X] = true
+			if writeOccupiedCells {
+				occupiedCells[*coords] = struct{}{}
 			}
+			// defer func() { status.Cells[player.Y][player.X] = 0 }()
+		} else if isIn {
+			if playerID == status.You {
+				panic("you should never be here")
+			}
+			return false
+		} else {
+			log.Println("tried to access", player.Y, player.X, "but field has value", status.Cells[player.Y][player.X])
+			panic("this field should always be false")
 		}
+
 	}
 	// log.Println("doMove end: ", player.X, player.Y, player.Direction, player.Speed)
 	return true
