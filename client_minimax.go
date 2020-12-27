@@ -165,20 +165,21 @@ func MinimaxBestActionsTimed(maximizerID uint8, minimizerID uint8, status *Statu
 	var depth int
 	startDepth := 1
 	depth += startDepth
+
+	actions = status.Players[status.You].PossibleMoves(status.Cells, status.Turn, nil, true)
+	if len(actions) == 0 {
+		return []Action{ChangeNothing}
+	} else if len(actions) == 1 {
+		return actions
+	}
 	for {
-		//Backup in Case we can not finish in time with startDepth
-		actions = status.Players[status.You].PossibleMoves(status.Cells, status.Turn, nil, true)
-		if len(actions) == 0 {
-			return []Action{ChangeNothing}
-		} else if len(actions) == 1 {
-			return actions
-		}
-		actionsTemp, err := MinimaxBestActions(maximizerID, minimizerID, status, depth, timingChannel)
+		sCopy := status.Copy()
+		actionsTemp, err := MinimaxBestActions(maximizerID, minimizerID, sCopy, depth, timingChannel)
 		if err == nil {
 			log.Println("minimax with depth", depth, "actions", actionsTemp, "no error")
 			actions = actionsTemp
 		} else {
-			log.Println("couldn't finish calculation for depth", depth)
+			log.Println("couldn't finish calculation for depth", depth, "returning", actions)
 			return actions
 		}
 		depth++
