@@ -87,7 +87,7 @@ func simulate(you uint8, minimizer uint8, isMaximizer bool, status *Status, acti
 			m := possibleMoves(status.Players[minimizer], status.Cells, status.Turn, occupiedCells, true)
 			// log.Println(depth, "moves for", minimizer, m, depth)
 			for _, action := range m {
-				sCopy := status.copyStatus()
+				sCopy := status.Copy()
 				score, err := simulate(you, minimizer, false, sCopy, action, depth, alpha, beta, occupiedCells, stopChannel)
 				if err != nil {
 					return 0, err
@@ -109,7 +109,7 @@ func simulate(you uint8, minimizer uint8, isMaximizer bool, status *Status, acti
 			m := possibleMoves(status.Players[you], status.Cells, status.Turn, occupiedCells, true)
 			// log.Println(depth, "moves for", you, m, depth)
 			for _, action := range m {
-				sCopy := status.copyStatus()
+				sCopy := status.Copy()
 				score, err := simulate(you, minimizer, true, sCopy, action, depth-1, alpha, beta, nil, stopChannel)
 				if err != nil {
 					return 0, err
@@ -132,45 +132,8 @@ func simulate(you uint8, minimizer uint8, isMaximizer bool, status *Status, acti
 	return bestScore, nil
 }
 
-func (status *Status) copyStatus() *Status {
-	var s Status
-	s.Width = status.Width
-	s.Height = status.Height
-	s.Turn = status.Turn
-	s.You = status.You
-	s.Cells = make([][]bool, s.Height)
-	for i := range s.Cells {
-		s.Cells[i] = make([]bool, status.Width)
-		for j := range s.Cells[i] {
-			s.Cells[i][j] = status.Cells[i][j]
-		}
-	}
-	s.Players = make(map[uint8]*Player)
-	for id, player := range status.Players {
-		s.Players[id] = player.copyPlayer()
-	}
-	return &s
-}
-
 func distanceToPlayer(player1 *Player, player2 *Player) float64 {
 	return math.Sqrt(math.Pow(float64(player1.X-player2.X), 2) + math.Pow(float64(player1.Y-player2.Y), 2))
-}
-
-func findClosestPlayer(status *Status) uint8 {
-	ourPlayer := status.Players[status.You]
-	var nearestPlayer uint8
-	nearestPlayerDistance := 0.0
-	for playerID, player := range status.Players {
-		distance := distanceToPlayer(player, ourPlayer) //math.Sqrt(math.Pow(float64(player.X-ourPlayer.X), 2) + math.Pow(float64(player.Y-ourPlayer.Y), 2))
-		if playerID != status.You && (nearestPlayer == 0 || distance < nearestPlayerDistance) {
-			nearestPlayer = playerID
-			nearestPlayerDistance = distance
-		}
-	}
-	if nearestPlayer == 0 {
-		log.Fatalln("no non-dead player found")
-	}
-	return nearestPlayer
 }
 
 func minimaxTiming(calculationTime time.Duration, timingChannel chan<- time.Time) {
@@ -186,7 +149,7 @@ func bestActionsMinimax(maximizerID uint8, minimizerID uint8, status *Status, de
 	bestActions := make([]Action, 0)
 	possibleMoves := possibleMoves(status.Players[maximizerID], status.Cells, status.Turn, nil, true)
 	for _, action := range possibleMoves {
-		sCopy := status.copyStatus()
+		sCopy := status.Copy()
 		score, err := simulate(maximizerID, minimizerID, true, sCopy, action, depth, -200, 200, nil, stopChannel)
 		if err != nil {
 			return []Action{}, err
@@ -236,7 +199,10 @@ type MinimaxClient struct{}
 func (c MinimaxClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
 	stopChannel := make(chan time.Time)
 	go minimaxTiming(calculationTime, stopChannel)
-	otherPlayerID := findClosestPlayer(status)
+	otherPlayerID, err := status.FindClosestPlayerTo(status.You)
+	if err != nil {
+		log.Fatalln("could not find closest player:", err)
+	}
 	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
 	actions := bestActionsMinimaxTimed(status.You, otherPlayerID, status, stopChannel)
 	if len(actions) == 0 {

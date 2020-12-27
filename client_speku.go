@@ -196,7 +196,7 @@ func simulateRollouts(status *Status, limit int, filterValue float64, stopSimula
 			log.Println("could perfom", j, "rollouts")
 			return longestPaths
 		default:
-			rolloutStatus := status.copyStatus()
+			rolloutStatus := status.Copy()
 			path := make([]Action, 0)
 			for i := 0; i < limit; i++ {
 				me := rolloutStatus.Players[status.You]
@@ -694,7 +694,10 @@ func (c SpekuClient) GetAction(player Player, status *Status, calculationTime ti
 		return ChangeNothing
 	}
 
-	otherPlayerID := findClosestPlayer(status)
+	otherPlayerID, err := status.FindClosestPlayerTo(status.You)
+	if err != nil {
+		log.Fatalln("could not find closest player:", err)
+	}
 	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
 	miniMaxChannel := make(chan []Action, 1)
 	stopMiniMaxChannel := make(chan time.Time)
