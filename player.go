@@ -29,13 +29,13 @@ type Direction uint8
 // turning left is equivalent to +1(mod 4) and turning right to (+3)(mod 4)
 const (
 	// Up makes the player face up
-	Up Direction = 0
+	Up Direction = iota
 	// Left makes the player face left
-	Left = 1
+	Left
 	// Down makes the player face down
-	Down = 2
+	Down
 	// Right makes the player face right
-	Right = 3
+	Right
 )
 
 // Directions maps string direction representation to int representation
