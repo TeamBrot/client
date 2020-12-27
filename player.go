@@ -42,8 +42,137 @@ var Directions = map[string]Direction{
 	"left":  Left,
 }
 
+// ProcessAction moves the player according to action and turn. Returns visited coordinates
+func (player *Player) ProcessAction(action Action, turn uint16) []*Coords {
+	if action == SpeedUp {
+		player.Speed++
+	} else if action == SlowDown {
+		player.Speed--
+	} else if action == TurnLeft {
+		switch player.Direction {
+		case Left:
+			player.Direction = Down
+			break
+		case Down:
+			player.Direction = Right
+			break
+		case Right:
+			player.Direction = Up
+			break
+		case Up:
+			player.Direction = Left
+			break
+		}
+	} else if action == TurnRight {
+		switch player.Direction {
+		case Left:
+			player.Direction = Up
+			break
+		case Down:
+			player.Direction = Left
+			break
+		case Right:
+			player.Direction = Down
+			break
+		case Up:
+			player.Direction = Right
+			break
+		}
+	}
+	visitedCoords := make([]*Coords, player.Speed+1)
+	jump := turn%6 == 0
+	for i := uint8(1); i <= player.Speed; i++ {
+		if player.Direction == Up {
+			player.Y--
+		} else if player.Direction == Down {
+			player.Y++
+		} else if player.Direction == Right {
+			player.X++
+		} else if player.Direction == Left {
+			player.X--
+		}
+		if !jump || i == 1 || i == player.Speed {
+			visitedCoords[i] = &Coords{player.Y, player.X}
+		}
+	}
+	return visitedCoords
+}
 
-// Convert a JSONPlayer to a Player
+// checkCell checks if it is legal for a player to go from a position a certain number of fields
+func checkCell(cells [][]bool, direction Direction, y uint16, x uint16, fields uint16, extraCellInfo map[Coords]struct{}, extraCellAllowed bool) bool {
+	var isPossible bool
+	if direction == Up {
+		y -= fields
+	} else if direction == Down {
+		y += fields
+	} else if direction == Left {
+		x -= fields
+	} else {
+		x += fields
+	}
+	if x >= uint16(len(cells[0])) || y >= uint16(len(cells)) || x < 0 || y < 0 {
+		return false
+	}
+	isPossible = !cells[y][x]
+	if extraCellInfo != nil {
+		coordsNow := Coords{y, x}
+		_, fieldVisited := extraCellInfo[coordsNow]
+		if extraCellAllowed {
+			return isPossible || fieldVisited
+		}
+		return isPossible && !fieldVisited
+
+	}
+	return isPossible
+}
+
+// PossibleMoves returns possible actions for a given situation for a player
+func (player *Player) PossibleMoves(cells [][]bool, turn uint16, extraCellInfo map[Coords]struct{}, miniMaxSwitch bool) []Action {
+	changeNothing := true
+	turnRight := true
+	turnLeft := true
+	slowDown := player.Speed != 1
+	speedUp := player.Speed != 10
+	direction := player.Direction
+	y := player.Y
+	x := player.X
+	for i := uint16(1); i <= uint16(player.Speed); i++ {
+		checkJump := turn%6 == 0 && i > 1 && i < uint16(player.Speed)
+		checkJumpSlowDown := turn%6 == 0 && i > 1 && i < uint16(player.Speed)-1
+		checkJumpSpeedUp := turn%6 == 0 && i > 1 && i <= uint16(player.Speed)
+
+		turnLeft = turnLeft && (checkJump || checkCell(cells, (direction+1)%4, y, x, i, extraCellInfo, miniMaxSwitch))
+		changeNothing = changeNothing && (checkJump || checkCell(cells, direction, y, x, i, extraCellInfo, miniMaxSwitch))
+		turnRight = turnRight && (checkJump || checkCell(cells, (direction+3)%4, y, x, i, extraCellInfo, miniMaxSwitch))
+		if i != uint16(player.Speed) {
+			slowDown = slowDown && (checkJumpSlowDown || checkCell(cells, direction, y, x, i, extraCellInfo, miniMaxSwitch))
+		}
+		speedUp = speedUp && (checkJumpSpeedUp || checkCell(cells, direction, y, x, i, extraCellInfo, miniMaxSwitch))
+	}
+	speedUp = speedUp && checkCell(cells, direction, y, x, uint16(player.Speed+1), extraCellInfo, miniMaxSwitch)
+
+	possibleMoves := make([]Action, 0, 5)
+
+	if slowDown {
+		possibleMoves = append(possibleMoves, SlowDown)
+	}
+	if changeNothing {
+		possibleMoves = append(possibleMoves, ChangeNothing)
+	}
+	if speedUp {
+		possibleMoves = append(possibleMoves, SpeedUp)
+	}
+	if turnLeft {
+		possibleMoves = append(possibleMoves, TurnLeft)
+	}
+	if turnRight {
+		possibleMoves = append(possibleMoves, TurnRight)
+	}
+	return possibleMoves
+}
+
+
+// ConvertToPlayer converts a JSONPlayer to a Player
 func (JSONPlayer *JSONPlayer) ConvertToPlayer() *Player {
 	var player Player
 	player.X = uint16(JSONPlayer.X)

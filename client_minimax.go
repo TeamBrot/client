@@ -9,7 +9,7 @@ import (
 )
 
 func score(status *Status, player *Player) int {
-	return len(possibleMoves(player, status.Cells, status.Turn, nil, false))
+	return len(player.PossibleMoves(status.Cells, status.Turn, nil, false))
 }
 
 // doMove makes the specified player do the specified action, using the specified status.
@@ -20,7 +20,7 @@ func score(status *Status, player *Player) int {
 func doMove(status *Status, playerID uint8, action Action, occupiedCells map[Coords]struct{}, writeOccupiedCells bool) bool {
 	player := status.Players[playerID]
 	// log.Println("doMove start: ", player.X, player.Y, player.Direction, player.Speed)
-	visitedCoords := player.processAction(action, status.Turn)
+	visitedCoords := player.ProcessAction(action, status.Turn)
 	for _, coords := range visitedCoords {
 		if coords == nil {
 			continue
@@ -84,7 +84,7 @@ func simulate(you uint8, minimizer uint8, isMaximizer bool, status *Status, acti
 	} else {
 		turn := status.Turn
 		if isMaximizer {
-			m := possibleMoves(status.Players[minimizer], status.Cells, status.Turn, occupiedCells, true)
+			m := status.Players[minimizer].PossibleMoves(status.Cells, status.Turn, occupiedCells, true)
 			// log.Println(depth, "moves for", minimizer, m, depth)
 			for _, action := range m {
 				sCopy := status.Copy()
@@ -106,7 +106,7 @@ func simulate(you uint8, minimizer uint8, isMaximizer bool, status *Status, acti
 			}
 		} else {
 			status.Turn++
-			m := possibleMoves(status.Players[you], status.Cells, status.Turn, occupiedCells, true)
+			m := status.Players[you].PossibleMoves(status.Cells, status.Turn, occupiedCells, true)
 			// log.Println(depth, "moves for", you, m, depth)
 			for _, action := range m {
 				sCopy := status.Copy()
@@ -147,7 +147,7 @@ func minimaxTiming(calculationTime time.Duration, timingChannel chan<- time.Time
 func bestActionsMinimax(maximizerID uint8, minimizerID uint8, status *Status, depth int, stopChannel <-chan time.Time) ([]Action, error) {
 	bestScore := -100
 	bestActions := make([]Action, 0)
-	possibleMoves := possibleMoves(status.Players[maximizerID], status.Cells, status.Turn, nil, true)
+	possibleMoves := status.Players[maximizerID].PossibleMoves(status.Cells, status.Turn, nil, true)
 	for _, action := range possibleMoves {
 		sCopy := status.Copy()
 		score, err := simulate(maximizerID, minimizerID, true, sCopy, action, depth, -200, 200, nil, stopChannel)
@@ -174,7 +174,7 @@ func bestActionsMinimaxTimed(maximizerID uint8, minimizerID uint8, status *Statu
 	depth += startDepth
 	for {
 		//Backup in Case we can not finish in time with startDepth
-		actions = possibleMoves(status.Players[status.You], status.Cells, status.Turn, nil, true)
+		actions = status.Players[status.You].PossibleMoves(status.Cells, status.Turn, nil, true)
 		if len(actions) == 0 {
 			return []Action{ChangeNothing}
 		} else if len(actions) == 1 {

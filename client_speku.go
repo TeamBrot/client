@@ -27,85 +27,12 @@ type SimPlayer struct {
 	LastMoveVisitedCells map[Coords]struct{}
 }
 
-//Checks if it is legal for a SimPlayer to use a Cell
-func checkCell(cells [][]bool, direction Direction, y uint16, x uint16, fields uint16, visitedCells map[Coords]struct{}, miniMaxSwitch bool) bool {
-	var isPossible bool
-	if direction == Up {
-		y -= fields
-	} else if direction == Down {
-		y += fields
-	} else if direction == Left {
-		x -= fields
-	} else {
-		x += fields
-	}
-	if x >= uint16(len(cells[0])) || y >= uint16(len(cells)) || x < 0 || y < 0 {
-		return false
-	}
-	isPossible = !cells[y][x]
-	if visitedCells != nil {
-		coordsNow := Coords{y, x}
-		_, fieldVisited := visitedCells[coordsNow]
-		if miniMaxSwitch {
-			return isPossible || fieldVisited
-		}
-		return isPossible && !fieldVisited
-
-	}
-	return isPossible
-}
-
-// Returns possible actions for a given situation for a SimPlayer
-func possibleMoves(player *Player, cells [][]bool, turn uint16, visitedFields map[Coords]struct{}, miniMaxSwitch bool) []Action {
-	changeNothing := true
-	turnRight := true
-	turnLeft := true
-	slowDown := player.Speed != 1
-	speedUp := player.Speed != 10
-	direction := player.Direction
-	y := player.Y
-	x := player.X
-	for i := uint16(1); i <= uint16(player.Speed); i++ {
-		checkJump := turn%6 == 0 && i > 1 && i < uint16(player.Speed)
-		checkJumpSlowDown := turn%6 == 0 && i > 1 && i < uint16(player.Speed)-1
-		checkJumpSpeedUp := turn%6 == 0 && i > 1 && i <= uint16(player.Speed)
-
-		turnLeft = turnLeft && (checkJump || checkCell(cells, (direction+1)%4, y, x, i, visitedFields, miniMaxSwitch))
-		changeNothing = changeNothing && (checkJump || checkCell(cells, direction, y, x, i, visitedFields, miniMaxSwitch))
-		turnRight = turnRight && (checkJump || checkCell(cells, (direction+3)%4, y, x, i, visitedFields, miniMaxSwitch))
-		if i != uint16(player.Speed) {
-			slowDown = slowDown && (checkJumpSlowDown || checkCell(cells, direction, y, x, i, visitedFields, miniMaxSwitch))
-		}
-		speedUp = speedUp && (checkJumpSpeedUp || checkCell(cells, direction, y, x, i, visitedFields, miniMaxSwitch))
-	}
-	speedUp = speedUp && checkCell(cells, direction, y, x, uint16(player.Speed+1), visitedFields, miniMaxSwitch)
-
-	possibleMoves := make([]Action, 0, 5)
-
-	if slowDown {
-		possibleMoves = append(possibleMoves, SlowDown)
-	}
-	if changeNothing {
-		possibleMoves = append(possibleMoves, ChangeNothing)
-	}
-	if speedUp {
-		possibleMoves = append(possibleMoves, SpeedUp)
-	}
-	if turnLeft {
-		possibleMoves = append(possibleMoves, TurnLeft)
-	}
-	if turnRight {
-		possibleMoves = append(possibleMoves, TurnRight)
-	}
-	return possibleMoves
-}
-
 //Simulates a Action and for a simPlayer and a board. Raises the score of every visited cell at the board and adds the Coords to allVisitedCells and lastMoveVisitedCells
 func simulateMove(board [][]uint16, parentPlayer *SimPlayer, action Action, turn uint16, simField [][]float64) (*SimPlayer, float64) {
 	childPlayer := parentPlayer.copySimPlayer()
 	player := childPlayer.player
 	score := 0.0
-	visitedCoords := player.processAction(action, turn)
+	visitedCoords := player.ProcessAction(action, turn)
 	for _, coord := range visitedCoords {
 		if coord == nil {
 			continue
@@ -118,64 +45,9 @@ func simulateMove(board [][]uint16, parentPlayer *SimPlayer, action Action, turn
 	return childPlayer, score
 }
 
-func (player *Player) processAction(action Action, turn uint16) []*Coords {
-	if action == SpeedUp {
-		player.Speed++
-	} else if action == SlowDown {
-		player.Speed--
-	} else if action == TurnLeft {
-		switch player.Direction {
-		case Left:
-			player.Direction = Down
-			break
-		case Down:
-			player.Direction = Right
-			break
-		case Right:
-			player.Direction = Up
-			break
-		case Up:
-			player.Direction = Left
-			break
-		}
-	} else if action == TurnRight {
-		switch player.Direction {
-		case Left:
-			player.Direction = Up
-			break
-		case Down:
-			player.Direction = Left
-			break
-		case Right:
-			player.Direction = Down
-			break
-		case Up:
-			player.Direction = Right
-			break
-		}
-	}
-	visitedCoords := make([]*Coords, player.Speed+1)
-	jump := turn%6 == 0
-	for i := uint8(1); i <= player.Speed; i++ {
-		if player.Direction == Up {
-			player.Y--
-		} else if player.Direction == Down {
-			player.Y++
-		} else if player.Direction == Right {
-			player.X++
-		} else if player.Direction == Left {
-			player.X--
-		}
-		if !jump || i == 1 || i == player.Speed {
-			visitedCoords[i] = &Coords{player.Y, player.X}
-		}
-	}
-	return visitedCoords
-}
-
 //implements the doMove function for the rollout function
 func rolloutMove(status *Status, action Action, player *Player) {
-	visitedCoords := player.processAction(action, status.Turn)
+	visitedCoords := player.ProcessAction(action, status.Turn)
 	for _, coords := range visitedCoords {
 		if coords == nil {
 			continue
@@ -205,7 +77,7 @@ func simulateRollouts(status *Status, limit int, filterValue float64, stopSimula
 				//Process one random move for every other player besides me
 				for _, player := range rolloutStatus.Players {
 					if player != me && player != nil {
-						possibleMoves := possibleMoves(player, rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
+						possibleMoves := player.PossibleMoves(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
 						if len(possibleMoves) == 0 {
 							player = nil
 							continue
@@ -219,7 +91,7 @@ func simulateRollouts(status *Status, limit int, filterValue float64, stopSimula
 				if countLivingPlayers == 0 {
 					break
 				}
-				possibleMoves := possibleMoves(me, rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
+				possibleMoves := me.PossibleMoves(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
 				if len(possibleMoves) == 0 {
 					break
 				}
@@ -427,7 +299,7 @@ func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns 
 				resultChannel <- nil
 				return
 			default:
-				possibleActions := possibleMoves(player.player, status.Cells, elapsedTurns+uint16(turn), player.AllVisitedCells, false)
+				possibleActions := player.player.PossibleMoves(status.Cells, elapsedTurns+uint16(turn), player.AllVisitedCells, false)
 				for _, action := range possibleActions {
 					child, score := simulateMove(writeField, player, action, elapsedTurns+uint16(turn), fieldAfterTurn)
 					child.Probability *= 1.0/float64(len(possibleActions)) - (score / float64(len(child.LastMoveVisitedCells)))
@@ -497,7 +369,7 @@ func makeProbabilityTable(height uint16, width uint16) [][]float64 {
 //This functions executes a action and returns the average score of every visited Cell
 func evaluateAction(player *Player, field [][]float64, action Action, turn uint16) float64 {
 	score := 0.0
-	visitedCoords := player.processAction(action, turn)
+	visitedCoords := player.ProcessAction(action, turn)
 	for _, coords := range visitedCoords {
 		if coords == nil {
 			continue
@@ -684,7 +556,7 @@ func (c SpekuClient) GetAction(player Player, status *Status, calculationTime ti
 
 	go spekuTiming(calculationTime, timingChannel)
 	var bestAction Action
-	possibleActions := possibleMoves(&player, status.Cells, status.Turn, nil, false)
+	possibleActions := player.PossibleMoves(status.Cells, status.Turn, nil, false)
 	//handle trivial cases (zero or one possible Action)
 	if len(possibleActions) == 1 {
 		log.Println("Only possible Action: ", possibleActions[0])
