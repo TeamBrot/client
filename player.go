@@ -53,35 +53,9 @@ func (player *Player) ProcessAction(action Action, turn uint16) []*Coords {
 	} else if action == SlowDown {
 		player.Speed--
 	} else if action == TurnLeft {
-		switch player.Direction {
-		case Left:
-			player.Direction = Down
-			break
-		case Down:
-			player.Direction = Right
-			break
-		case Right:
-			player.Direction = Up
-			break
-		case Up:
-			player.Direction = Left
-			break
-		}
+		player.Direction = (player.Direction + 1) % 4
 	} else if action == TurnRight {
-		switch player.Direction {
-		case Left:
-			player.Direction = Up
-			break
-		case Down:
-			player.Direction = Left
-			break
-		case Right:
-			player.Direction = Down
-			break
-		case Up:
-			player.Direction = Right
-			break
-		}
+		player.Direction = (player.Direction + 3) % 4
 	}
 	visitedCoords := make([]*Coords, player.Speed+1)
 	jump := turn%6 == 0
@@ -175,6 +149,7 @@ func (player *Player) PossibleMoves(cells [][]bool, turn uint16, extraCellInfo m
 	return possibleMoves
 }
 
+//Returns the distance between to players as float64
 func (p *Player) DistanceTo(p2 *Player) float64 {
 	return math.Sqrt(math.Pow(float64(p.X-p2.X), 2) + math.Pow(float64(p.Y-p2.Y), 2))
 }
@@ -188,4 +163,3 @@ func (JSONPlayer *JSONPlayer) ConvertToPlayer() *Player {
 	player.Direction = JSONPlayer.Direction
 	return &player
 }
-

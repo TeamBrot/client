@@ -418,7 +418,7 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 		scores[path[0]] += score
 	}
 	//computes how many times a Action was the first Action of path
-	counter := [5]int{1,1,1,1,1}
+	counter := [5]int{1, 1, 1, 1, 1}
 	for _, path := range paths {
 		counter[path[0]]++
 	}
