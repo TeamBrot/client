@@ -10,7 +10,7 @@ import (
 
 // Result :
 type Result struct {
-	Visits [][]uint8
+	Visits [][]uint16
 	Player []*SimPlayer
 }
 
@@ -101,7 +101,7 @@ func possibleMoves(player *Player, cells [][]bool, turn uint16, visitedFields ma
 }
 
 //Simulates a Action and for a simPlayer and a board. Raises the score of every visited cell at the board and adds the Coords to allVisitedCells and lastMoveVisitedCells
-func simulateMove(board [][]uint8, parentPlayer *SimPlayer, action Action, turn uint16, simField [][]float64) (*SimPlayer, float64) {
+func simulateMove(board [][]uint16, parentPlayer *SimPlayer, action Action, turn uint16, simField [][]float64) (*SimPlayer, float64) {
 	childPlayer := parentPlayer.copySimPlayer()
 	player := childPlayer.player
 	score := 0.0
@@ -335,7 +335,7 @@ func visitsToProbabilities(me int, results []*Result, width uint16, height uint1
 		log.Println(results)
 		panic("Can't calculate probability Table without results")
 	}
-	accumulatedVisits := make([][][]uint8, len(results))
+	accumulatedVisits := make([][][]uint16, len(results))
 	for u := 0; u < len(results); u++ {
 		accumulatedVisits[u] = makeEmptyVisits(height, width)
 	}
@@ -399,9 +399,9 @@ func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns 
 	currentPlayers[0] = simPlayer
 	for i := 0; i < numberOfTurns; i++ {
 		turn := i + 1
-		writeField := make([][]uint8, status.Height)
+		writeField := make([][]uint16, status.Height)
 		for r := range writeField {
-			writeField[r] = make([]uint8, status.Width)
+			writeField[r] = make([]uint16, status.Width)
 		}
 		if i != 0 {
 			select {
@@ -467,7 +467,7 @@ func addFields(field1 *[][]float64, field2 [][]float64) {
 }
 
 //Adds second visit table to first visit table. First board has to be a pointer an is going to be changed!
-func addVisits(field1 *[][]uint8, field2 [][]uint8) {
+func addVisits(field1 *[][]uint16, field2 [][]uint16) {
 	field := *field1
 	for i := 0; i < len(field); i++ {
 		for j := 0; j < len(field[i]); j++ {
@@ -478,10 +478,10 @@ func addVisits(field1 *[][]uint8, field2 [][]uint8) {
 }
 
 // returns an empty field
-func makeEmptyVisits(height uint16, width uint16) [][]uint8 {
-	field := make([][]uint8, height)
+func makeEmptyVisits(height uint16, width uint16) [][]uint16 {
+	field := make([][]uint16, height)
 	for r := range field {
-		field[r] = make([]uint8, width)
+		field[r] = make([]uint16, width)
 	}
 	return field
 }
