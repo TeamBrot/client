@@ -15,12 +15,10 @@
 9. Funktion zur Konvertierung von Player zu SimPlayer, benutzen in simulateGame DONE
 10. Field in irgendwas mit Wahrscheinlichkeiten umbenennen
 11. Board in etwas mit Besuchshäufigkeiten umbenennen
-12. type ProbabilityTable [][]float64
-13. type VisitTable [][]int
-Anmerkung: Würde doch keine neuen Types einführen, da GO für jeden Type speicherpadding betreibt heißt mehr speicher nutzt als eigentlich notwendig wäre
 
-14. evaluateAction -> ProbabilityTable.evaluateAction
-15. Konvertiere Action zu int, in evaluatePaths verwenden: Schleifen statt viel switch
+
+14. evaluateAction -> ProbabilityTable.evaluateAction 
+15. Konvertiere Action zu int, in evaluatePaths verwenden: Schleifen statt viel switch DONE
 16. time.After() statt custom Funktionen?
 
 FIX: Minimax Endlosschleife
