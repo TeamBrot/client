@@ -21,5 +21,6 @@ Anmerkung: Würde doch keine neuen Types einführen, da GO für jeden Type speic
 
 14. evaluateAction -> ProbabilityTable.evaluateAction
 15. Konvertiere Action zu int, in evaluatePaths verwenden: Schleifen statt viel switch
+16. time.After() statt custom Funktionen?
 
 FIX: Minimax Endlosschleife
