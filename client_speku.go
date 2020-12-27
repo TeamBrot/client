@@ -392,30 +392,11 @@ func (oldPlayer *Player) copyPlayer() *Player {
 
 //Simulates the moves of all Longest Paths until simDepth is reached. Computes a score for every possible Action and returns the Action with the lowes score
 func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, turn uint16, simDepth int, possibleActions []Action) Action {
-	var scoreNothing float64
-	var scoreLeft float64
-	var scoreRight float64
-	var scoreSlow float64
-	var scoreSpeed float64
-	possibleNothing := false
-	possibleLeft := false
-	possibleRight := false
-	possibleUp := false
-	possibleDown := false
+	var scores [5]float64
+	var possible [5]bool
 	//Computes if a action is possible based on the possibleActions Array
 	for _, action := range possibleActions {
-		switch action {
-		case ChangeNothing:
-			possibleNothing = true
-		case TurnLeft:
-			possibleLeft = true
-		case TurnRight:
-			possibleRight = true
-		case SpeedUp:
-			possibleUp = true
-		case SlowDown:
-			possibleDown = true
-		}
+		possible[action] = true
 	}
 	turn++
 	//computes the score for every path
@@ -434,62 +415,29 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 			log.Println("all other players are going to die in the next turn")
 			return possibleActions[0]
 		}
-		switch path[0] {
-		case ChangeNothing:
-			scoreNothing += score
-		case TurnLeft:
-			scoreLeft += score
-		case TurnRight:
-			scoreRight += score
-		case SpeedUp:
-			scoreSpeed += score
-		case SlowDown:
-			scoreSlow += score
-		}
+		scores[path[0]] += score
 	}
 	//computes how many times a Action was the first Action of path
-	counterNothing := 1
-	counterLeft := 1
-	counterRight := 1
-	counterUp := 1
-	counterDown := 1
+	counter := [5]int{1,1,1,1,1}
 	for _, path := range paths {
-		switch path[0] {
-		case ChangeNothing:
-			counterNothing++
-		case TurnLeft:
-			counterLeft++
-		case TurnRight:
-			counterRight++
-		case SpeedUp:
-			counterUp++
-		case SlowDown:
-			counterDown++
-		}
+		counter[path[0]]++
+	}
+	var values [5]float64
+	for i := 0; i < 5; i++ {
+		values[i] = (scores[i] / float64(counter[i])) + (1.0 - (float64(counter[i]) / float64(len(paths))))
 	}
 	//computes Value based on the score of a Action an
-	valueNothing := (scoreNothing / float64(counterNothing)) + (1.0 - (float64(counterNothing) / float64(len(paths))))
-	valueLeft := (scoreLeft / float64(counterLeft)) + (1.0 - (float64(counterLeft) / float64(len(paths))))
-	valueRight := (scoreRight / float64(counterRight)) + (1.0 - (float64(counterRight) / float64(len(paths))))
-	valueUp := (scoreSpeed / float64(counterUp)) + (1.0 - (float64(counterUp) / float64(len(paths))))
-	valueDown := (scoreSlow / float64(counterDown)) + (1.0 - (float64(counterDown) / float64(len(paths))))
-	log.Println("Calculated Scores")
-	log.Println("Change Nothing: ", valueNothing)
-	log.Println("Turn Left: ", valueLeft)
-	log.Println("TurnRight: ", valueRight)
-	log.Println("Speed Up: ", valueUp)
-	log.Println("Slow Down: ", valueDown)
-	if possibleNothing && (valueNothing < valueLeft || !possibleLeft) && (!possibleRight || valueNothing < valueRight) && (valueNothing < valueUp || !possibleUp) && (valueNothing < valueDown || !possibleDown) {
-		return ChangeNothing
-	} else if possibleLeft && (valueLeft < valueRight || !possibleRight) && (valueLeft < valueUp || !possibleUp) && (valueLeft < valueDown || !possibleDown) {
-		return TurnLeft
-	} else if possibleRight && (valueRight < valueUp || !possibleUp) && (valueRight < valueDown || !possibleDown) {
-		return TurnRight
-	} else if possibleUp && (valueUp < valueDown || !possibleDown) {
-		return SpeedUp
-	} else {
-		return SlowDown
+	log.Println("calculated values", values)
+
+	minimum := math.Inf(0)
+	action := ChangeNothing
+	for i, v := range values {
+		if possible[i] && v < minimum {
+			minimum = v
+			action = Action(i)
+		}
 	}
+	return action
 }
 
 //This Method is work in progress and does basically nothing

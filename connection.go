@@ -8,27 +8,9 @@ import (
 
 // Input contains the action taken by the player and is sent as JSON to the server
 type Input struct {
-	Action Action `json:"action"`
+	Action string `json:"action"`
 }
 
-// Action contains an action that the player could take
-type Action string
-
-const (
-	// ChangeNothing goes straight
-	ChangeNothing Action = "change_nothing"
-	// TurnLeft turns left
-	TurnLeft = "turn_left"
-	// TurnRight turns right
-	TurnRight = "turn_right"
-	// SpeedUp increases the player speed
-	SpeedUp = "speed_up"
-	// SlowDown decreases the player speed
-	SlowDown = "slow_down"
-)
-
-// Actions contains all actions that could be taken
-var Actions = []Action{ChangeNothing, SpeedUp, SlowDown, TurnLeft, TurnRight}
 // Connection represents a connection to a game server
 type Connection struct {
 	Conn *websocket.Conn
@@ -48,7 +30,7 @@ func NewConnection(config Config) (Connection, error) {
 
 // WriteAction writes the specified action to the game server
 func (c *Connection) WriteAction(action Action) error {
-	err := c.Conn.WriteJSON(&Input{action})
+	err := c.Conn.WriteJSON(&Input{action.String()})
 	if err != nil {
 		return err
 	}
