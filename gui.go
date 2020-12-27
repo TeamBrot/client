@@ -34,7 +34,7 @@ func StartGui(logger *log.Logger) *Gui {
 	return gui
 }
 
-func (g *Gui) WriteStatus(status *Status) error {
+func (g *Gui) WriteStatus(status *JSONStatus) error {
 	if g.conn != nil {
 		return g.conn.WriteJSON(status)
 	}

@@ -101,7 +101,7 @@ func main() {
 			clientLogger.Fatalln("error reading status:", err)
 		}
 
-		err = gui.WriteStatus(status)
+		err = gui.WriteStatus(JSONStatus)
 		if err != nil {
 			clientLogger.Println("could not write status to gui:", err)
 		}
