@@ -402,12 +402,12 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 	//computes the score for every path
 	for _, path := range paths {
 		score := 0.0
-		newPlayer := player.copyPlayer()
+		minPlayer := player.copyPlayer()
+		maxPlayer := player.copyPlayer()
 		for i := 0; i < simDepth-1; i++ {
 			if i != len(path) {
-				score += evaluateAction(newPlayer, allFields[i], path[i], turn+uint16(i))
-				newerPlayer := newPlayer.copyPlayer()
-				score += 1.0 - evaluateAction(newerPlayer, allFields[i+1], path[i+1], turn+uint16(i+1))
+				score += evaluateAction(minPlayer, allFields[i], path[i], turn+uint16(i))
+				score += 1.0 - evaluateAction(maxPlayer, allFields[i+1], path[i], turn+uint16(i))
 				score /= 2.0
 			} else {
 				score /= float64(simDepth)
@@ -435,7 +435,7 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 	minimum := math.Inf(0)
 	action := ChangeNothing
 	for i, v := range values {
-		if possible[i] && v > minimum {
+		if possible[i] && v < minimum {
 			minimum = v
 			action = Action(i)
 		}
