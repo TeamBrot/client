@@ -39,18 +39,18 @@ func (c *Connection) WriteAction(action Action) error {
 
 // ReadStatus reads the status from the connection
 func (c *Connection) ReadStatus() (*Status, *JSONStatus, error) {
-	var JSONstatus JSONStatus
-	err := c.Conn.ReadJSON(&JSONstatus)
+	var jsonStatus JSONStatus
+	err := c.Conn.ReadJSON(&jsonStatus)
 	if err != nil {
 		return nil, nil, err
 	}
-	for _, p := range JSONstatus.Players {
+	for _, p := range jsonStatus.Players {
 		p.Direction = Directions[p.StringDirection]
 	}
 	c.Turn++
-	JSONstatus.Turn = c.Turn
-	status := JSONStatus.ConvertToStatus(JSONstatus)
-	return status, &JSONstatus, nil
+	jsonStatus.Turn = c.Turn
+	status := jsonStatus.ConvertToStatus()
+	return status, &jsonStatus, nil
 }
 
 // Close closes the connection
