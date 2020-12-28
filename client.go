@@ -132,6 +132,7 @@ func main() {
 			clientLogger.Println("active players:", counter)
 			if !JSONStatus.Players[JSONStatus.You].Active {
 				clientLogger.Println("lost")
+				fileLogger.Println("lost")
 			}
 		} else if counter == 1 {
 			if JSONStatus.Players[JSONStatus.You].Active {
