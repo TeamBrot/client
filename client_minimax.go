@@ -189,6 +189,8 @@ func MinimaxBestActionsTimed(maximizerID uint8, minimizerID uint8, status *Statu
 // MinimaxClient is a client implementation that uses Minimax to decide what to do next
 type MinimaxClient struct{}
 
+var minimaxPreferences []Action = []Action{ChangeNothing, TurnLeft, TurnRight, SpeedUp, SlowDown}
+
 // GetAction implements the Client interface
 func (c MinimaxClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
 	stopChannel := time.After((calculationTime / 10) * 9)
@@ -199,11 +201,14 @@ func (c MinimaxClient) GetAction(player Player, status *Status, calculationTime 
 	}
 	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
 	actions := MinimaxBestActionsTimed(status.You, otherPlayerID, status, stopChannel)
-	if len(actions) == 0 {
-		log.Println("no best action, using change_nothing")
-		return ChangeNothing
+	for action := range minimaxPreferences {
+		for bestAction := range actions {
+			if action == bestAction {
+				log.Println("multiple best actions, using", action)
+				return Action(action)
+			}
+		}
 	}
-	action := actions[rand.Intn(len(actions))]
-	log.Println("multiple best actions, using", action)
-	return action
+	log.Println("no best action, using change_nothing")
+	return ChangeNothing
 }
