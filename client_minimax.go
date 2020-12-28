@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"log"
-	"math/rand"
 	"time"
 )
 
@@ -47,11 +46,11 @@ func doMove(status *Status, playerID uint8, action Action, occupiedCells map[Coo
 
 }
 
-func getActionScore(you uint8, minimizer uint8, isMaximizer bool, status *Status, action Action, depth int, alpha int, beta int, occupiedCells map[Coords]struct{}, stopChannel <-chan time.Time) (int, error) {
+func getActionScore(you uint8, minimizer uint8, isMaximizer bool, status *Status, action Action, depth int, alpha int, beta int, occupiedCells map[Coords]struct{}, stopChannel <-chan time.Time) (int, int, error) {
 	// log.Println("Simulate: ", you, minimizer, action, depth)
 	select {
 	case <-stopChannel:
-		return 0, errors.New("stopped in computation")
+		return 0, 0, errors.New("stopped in computation")
 	default:
 	}
 
@@ -76,8 +75,9 @@ func getActionScore(you uint8, minimizer uint8, isMaximizer bool, status *Status
 	// log.Println(depth, "doing move", action, "with speed", status.Players[playerID].Speed, "from", status.Players[playerID].X, status.Players[playerID].Y)
 	youSurvived := doMove(status, playerID, action, occupiedCells, isMaximizer)
 	if !youSurvived {
-		return bestScore, nil
+		return bestScore, 0, nil
 	}
+	maxDepth := 0
 	if depth == 0 && !isMaximizer {
 		bestScore = score(status, status.Players[you])
 	} else {
@@ -87,13 +87,16 @@ func getActionScore(you uint8, minimizer uint8, isMaximizer bool, status *Status
 			// log.Println(depth, "moves for", minimizer, m, depth)
 			for _, action := range m {
 				sCopy := status.Copy()
-				score, err := getActionScore(you, minimizer, false, sCopy, action, depth, alpha, beta, occupiedCells, stopChannel)
+				score, d, err := getActionScore(you, minimizer, false, sCopy, action, depth, alpha, beta, occupiedCells, stopChannel)
 				if err != nil {
-					return 0, err
+					return 0, d, err
 				}
 
 				if score < bestScore {
 					bestScore = score
+				}
+				if d > maxDepth {
+					maxDepth = d
 				}
 				if bestScore < beta {
 					beta = bestScore
@@ -109,13 +112,16 @@ func getActionScore(you uint8, minimizer uint8, isMaximizer bool, status *Status
 			// log.Println(depth, "moves for", you, m, depth)
 			for _, action := range m {
 				sCopy := status.Copy()
-				score, err := getActionScore(you, minimizer, true, sCopy, action, depth-1, alpha, beta, nil, stopChannel)
+				score, d, err := getActionScore(you, minimizer, true, sCopy, action, depth-1, alpha, beta, nil, stopChannel)
 				if err != nil {
-					return 0, err
+					return 0, d + 1, err
 				}
 
 				if score > bestScore {
 					bestScore = score
+				}
+				if d + 1 > maxDepth {
+					maxDepth = d + 1
 				}
 				if bestScore > alpha {
 					alpha = bestScore
@@ -128,21 +134,25 @@ func getActionScore(you uint8, minimizer uint8, isMaximizer bool, status *Status
 		}
 		status.Turn = turn
 	}
-	return bestScore, nil
+	return bestScore, maxDepth, nil
 }
 
 // MinimaxBestActions returns the best actions according to the minimax algorithm, with given depth.
 // It stops execution when a signal is received on the specified channel.
 // In this case, the return value should not be used.
-func MinimaxBestActions(maximizerID uint8, minimizerID uint8, status *Status, depth int, stopChannel <-chan time.Time) ([]Action, error) {
+func MinimaxBestActions(maximizerID uint8, minimizerID uint8, status *Status, depth int, stopChannel <-chan time.Time) ([]Action, int, error) {
 	bestScore := -100
 	bestActions := make([]Action, 0)
 	possibleMoves := status.Players[maximizerID].PossibleMoves(status.Cells, status.Turn, nil, true)
+	maxDepth := 0
 	for _, action := range possibleMoves {
 		sCopy := status.Copy()
-		score, err := getActionScore(maximizerID, minimizerID, true, sCopy, action, depth, -200, 200, nil, stopChannel)
+		score, depth, err := getActionScore(maximizerID, minimizerID, true, sCopy, action, depth, -200, 200, nil, stopChannel)
 		if err != nil {
-			return []Action{}, err
+			return []Action{}, maxDepth, err
+		}
+		if depth > maxDepth {
+			maxDepth = depth
 		}
 		if score >= bestScore {
 			bestActions = append(bestActions, action)
@@ -151,10 +161,10 @@ func MinimaxBestActions(maximizerID uint8, minimizerID uint8, status *Status, de
 	}
 	if len(bestActions) == 0 {
 		log.Println("no best actions, using possible moves", possibleMoves)
-		return possibleMoves, nil
+		return possibleMoves, maxDepth, nil
 	}
 	log.Println("best actions are", bestActions, "with score", bestScore)
-	return bestActions, nil
+	return bestActions, maxDepth, nil
 }
 
 // MinimaxBestActionsTimed returns the best actions according to the minimax algorithm.
@@ -174,12 +184,16 @@ func MinimaxBestActionsTimed(maximizerID uint8, minimizerID uint8, status *Statu
 	}
 	for {
 		sCopy := status.Copy()
-		actionsTemp, err := MinimaxBestActions(maximizerID, minimizerID, sCopy, depth, timingChannel)
+		actionsTemp, maxDepth, err := MinimaxBestActions(maximizerID, minimizerID, sCopy, depth, timingChannel)
 		if err == nil {
-			log.Println("minimax with depth", depth, "actions", actionsTemp, "no error")
+			log.Println("minimax with depth", depth, "actions", actionsTemp)
 			actions = actionsTemp
-		} else {
+		}  else {
 			log.Println("couldn't finish calculation for depth", depth, "returning", actions)
+			return actions
+		}
+		if depth > maxDepth {
+			log.Println("maximum depth was", maxDepth, "returning", actionsTemp)
 			return actions
 		}
 		depth++
@@ -188,6 +202,8 @@ func MinimaxBestActionsTimed(maximizerID uint8, minimizerID uint8, status *Statu
 
 // MinimaxClient is a client implementation that uses Minimax to decide what to do next
 type MinimaxClient struct{}
+
+var minimaxPreferences []Action = []Action{ChangeNothing, TurnLeft, TurnRight, SpeedUp, SlowDown}
 
 // GetAction implements the Client interface
 func (c MinimaxClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
@@ -199,11 +215,14 @@ func (c MinimaxClient) GetAction(player Player, status *Status, calculationTime 
 	}
 	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
 	actions := MinimaxBestActionsTimed(status.You, otherPlayerID, status, stopChannel)
-	if len(actions) == 0 {
-		log.Println("no best action, using change_nothing")
-		return ChangeNothing
+	for _, action := range minimaxPreferences {
+		for _, bestAction := range actions {
+			if action == bestAction {
+				log.Println("multiple best actions, using", action)
+				return action
+			}
+		}
 	}
-	action := actions[rand.Intn(len(actions))]
-	log.Println("multiple best actions, using", action)
-	return action
+	log.Println("no best action, using change_nothing")
+	return ChangeNothing
 }

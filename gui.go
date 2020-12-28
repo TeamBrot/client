@@ -29,7 +29,7 @@ func StartGui(logger *log.Logger) *Gui {
 	})
 
 	go func() {
-		logger.Println(http.ListenAndServe("0.0.0.0:8080", nil))
+		logger.Println(http.ListenAndServe("0.0.0.0:8081", nil))
 	}()
 	return gui
 }

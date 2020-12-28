@@ -7,6 +7,7 @@
 
 <body>
     <h1>spe_ed gui</h1>
+    <div id="you" style="margin-bottom: 10px">We are <font id="you__color">███</font></div>
     <canvas id="canvas", width="400", height="400"></canvas>
     <h2>Duration between moves (milliseconds):</h2>
     <div id="currentSpeed">Current speed: 200</div>
@@ -18,16 +19,19 @@
     <button onclick="setSpeed(500)">500</button>
     <button onclick="setSpeed(1000)">1000</button>
     <script type="text/javascript">
-      const URL = "ws://localhost:8080/spe_ed/gui"
+      const URL = "ws://" + window.location.host + "/spe_ed/gui";
       const SCALING = 16;
       const colors = ["#dddddd", "#ff0000", "#00ff00", "#0000ff", "#00ffff", "#ffff00", "#ff00ff"];
       const canvas = document.getElementById("canvas");
+      const youSpan = document.getElementById("you");
+      const colorFont = document.getElementById("you__color");
+
+      const currentSpeedDiv = document.getElementById("currentSpeed");
       let ctx = canvas.getContext("2d");
       ctx.fillStyle = colors[0]
       let webSocket = new WebSocket(URL);
       let width, height;
       let speed = 200;
-      const currentSpeedDiv = document.getElementById("currentSpeed");
       webSocket.onopen = function (event) {
         console.log("socket is open");
         setSpeed(speed);
@@ -67,6 +71,15 @@
         currentSpeedDiv.innerText = "Current speed: " + speed
       }
 
+      function setYou(s) {
+          if (s.you === undefined) {
+              youSpan.style.display = "none";
+          } else {
+              youSpan.style.display = "visible";
+              colorFont.style.color = colors[s.you];
+          }
+      }
+
       webSocket.onmessage = function(event) {
         const status = JSON.parse(event.data);
         console.log(status)
@@ -84,6 +97,7 @@
         for (const player of Object.values(status.players)) {
           drawPlayer(player)
         }
+        setYou(status);
       };
     </script>
 </body>
