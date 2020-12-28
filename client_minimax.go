@@ -61,7 +61,7 @@ func getActionScore(you uint8, minimizer uint8, isMaximizer bool, status *Status
 		bestScore = 5
 	} else {
 		playerID = minimizer
-		bestScore = -100 - depth
+		bestScore = -1 - depth
 	}
 	//log.Println("Player: ", player)
 	if isMaximizer {
@@ -120,7 +120,7 @@ func getActionScore(you uint8, minimizer uint8, isMaximizer bool, status *Status
 				if score > bestScore {
 					bestScore = score
 				}
-				if d + 1 > maxDepth {
+				if d+1 > maxDepth {
 					maxDepth = d + 1
 				}
 				if bestScore > alpha {
@@ -137,33 +137,51 @@ func getActionScore(you uint8, minimizer uint8, isMaximizer bool, status *Status
 	return bestScore, maxDepth, nil
 }
 
-// MinimaxBestActions returns the best actions according to the minimax algorithm, with given depth.
+// MinimaxScoreMap returns a map that contains the score of every possible move, given a certain depth.
+// It could also be empty, indicating that there are no possible moves.
 // It stops execution when a signal is received on the specified channel.
 // In this case, the return value should not be used.
-func MinimaxBestActions(maximizerID uint8, minimizerID uint8, status *Status, depth int, stopChannel <-chan time.Time) ([]Action, int, error) {
-	bestScore := -100
-	bestActions := make([]Action, 0)
+func MinimaxScoreMap(maximizerID uint8, minimizerID uint8, status *Status, depth int, stopChannel <-chan time.Time) (map[Action]int, int, error) {
+	scoreMap := map[Action]int{}
 	possibleMoves := status.Players[maximizerID].PossibleMoves(status.Cells, status.Turn, nil, true)
 	maxDepth := 0
 	for _, action := range possibleMoves {
 		sCopy := status.Copy()
 		score, depth, err := getActionScore(maximizerID, minimizerID, true, sCopy, action, depth, -200, 200, nil, stopChannel)
 		if err != nil {
-			return []Action{}, maxDepth, err
+			return map[Action]int{}, maxDepth, err
 		}
 		if depth > maxDepth {
 			maxDepth = depth
 		}
-		if score >= bestScore {
+		scoreMap[action] = score
+	}
+	return scoreMap, maxDepth, nil
+}
+
+// MinimaxBestActions returns the best actions according to the minimax algorithm, with given depth.
+// It stops execution when a signal is received on the specified channel.
+// In this case, the return value should not be used.
+func MinimaxBestActions(maximizerID uint8, minimizerID uint8, status *Status, depth int, stopChannel <-chan time.Time) ([]Action, int, error) {
+	scoreMap, maxDepth, err := MinimaxScoreMap(maximizerID, minimizerID, status, depth, stopChannel)
+	if err != nil {
+		return []Action{}, maxDepth, err
+	}
+	if len(scoreMap) == 0 {
+		log.Println("no possible moves, using change_nothing")
+		return []Action{ChangeNothing}, maxDepth, nil
+	}
+	bestActions := []Action{}
+	bestScore := -1000
+	for action, score := range scoreMap {
+		if score == bestScore {
 			bestActions = append(bestActions, action)
+		} else if score > bestScore {
+			bestActions = []Action{action}
 			bestScore = score
 		}
 	}
-	if len(bestActions) == 0 {
-		log.Println("no best actions, using possible moves", possibleMoves)
-		return possibleMoves, maxDepth, nil
-	}
-	log.Println("best actions are", bestActions, "with score", bestScore)
+	log.Println("action-score-map", scoreMap)
 	return bestActions, maxDepth, nil
 }
 
@@ -188,7 +206,7 @@ func MinimaxBestActionsTimed(maximizerID uint8, minimizerID uint8, status *Statu
 		if err == nil {
 			log.Println("minimax with depth", depth, "actions", actionsTemp)
 			actions = actionsTemp
-		}  else {
+		} else {
 			log.Println("couldn't finish calculation for depth", depth, "returning", actions)
 			return actions
 		}
