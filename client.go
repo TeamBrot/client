@@ -19,12 +19,26 @@ type Client interface {
 	GetAction(player Player, status *Status, calculationTime time.Duration) Action
 }
 
-func setupLogging() *log.Logger {
+func newClientLogger() *log.Logger {
 	logger := log.New(os.Stdout, "[client] ", log.Lmsgprefix|log.LstdFlags)
 	logger.Println("using client", os.Args[1])
 	log.SetPrefix(fmt.Sprintf("[%s] ", os.Args[1]))
 	log.SetFlags(log.Lmsgprefix | log.LstdFlags)
 	return logger
+}
+
+func newFileLogger(filename string) (*log.Logger, func(), error) {
+	file, err := os.OpenFile("logging.txt", os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return nil, nil, err
+	}
+	logger := log.New(file, "", log.LstdFlags)
+	closeFunc := func() {
+		if err := file.Close(); err != nil {
+			panic(err)
+		}
+	}
+	return logger, closeFunc, nil
 }
 
 var httpClient http.Client = http.Client{Timeout: 500 * time.Millisecond}
@@ -62,7 +76,12 @@ func main() {
 		fmt.Println("could not get configuration:", err)
 		return
 	}
-	clientLogger := setupLogging()
+	clientLogger := newClientLogger()
+	fileLogger, closeFunc, err := newFileLogger("logging.txt")
+	if err != nil {
+		clientLogger.Println("could not create fileLogger:", err)
+	}
+	defer closeFunc()
 
 	gui := &Gui{nil}
 	if config.APIKey != "" {
@@ -122,49 +141,14 @@ func main() {
 		} else if counter == 1 {
 			if JSONStatus.Players[JSONStatus.You].Active {
 				clientLogger.Println("won")
-				// open output file
-				fo, err := os.OpenFile("logging.txt", os.O_APPEND|os.O_WRONLY, 0644)
-				if err != nil {
-					panic(err)
-				}
-				// close fo on exit and check for its returned error
-				defer func() {
-					if err := fo.Close(); err != nil {
-						panic(err)
-					}
-				}()
-
-				fo.WriteString("WON\n")
+				fileLogger.Println("won")
 			} else {
 				clientLogger.Println("lost")
-				// open output file
-				fo, err := os.OpenFile("logging.txt", os.O_APPEND|os.O_WRONLY, 0644)
-				if err != nil {
-					panic(err)
-				}
-				// close fo on exit and check for its returned error
-				defer func() {
-					if err := fo.Close(); err != nil {
-						panic(err)
-					}
-				}()
-
-				fo.WriteString("lost\n")
+				fileLogger.Println("lost")
 			}
 		} else {
 			clientLogger.Println("lost")
-			fo, err := os.OpenFile("logging.txt", os.O_APPEND|os.O_WRONLY, 0644)
-			if err != nil {
-				panic(err)
-			}
-			// close fo on exit and check for its returned error
-			defer func() {
-				if err := fo.Close(); err != nil {
-					panic(err)
-				}
-			}()
-
-			fo.WriteString("lost\n")
+			fileLogger.Println("lost")
 		}
 	}
 	clientLogger.Println("player inactive, disconnecting...")
