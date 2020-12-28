@@ -28,17 +28,12 @@ func newClientLogger() *log.Logger {
 }
 
 func newFileLogger(filename string) (*log.Logger, func(), error) {
-	file, err := os.OpenFile("logging.txt", os.O_APPEND|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return nil, nil, err
 	}
 	logger := log.New(file, "", log.LstdFlags)
-	closeFunc := func() {
-		if err := file.Close(); err != nil {
-			panic(err)
-		}
-	}
-	return logger, closeFunc, nil
+	return logger, func() { file.Close() }, nil
 }
 
 var httpClient http.Client = http.Client{Timeout: 500 * time.Millisecond}
