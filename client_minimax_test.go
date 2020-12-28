@@ -105,4 +105,14 @@ func TestParallelMove(t *testing.T) {
 			t.Error("change_nothing should not be a valid action")
 		}
 	}
+	foundTurnRight := false
+	for _,action := range actions {
+		if action == TurnRight {
+			foundTurnRight = true
+			break
+		}
+	}
+	if !foundTurnRight {
+		t.Error("turn_right should be the best action")
+	}
 }
