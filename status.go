@@ -71,8 +71,10 @@ func (js JSONStatus) ConvertToStatus() *Status {
 	status.Width = uint16(js.Width)
 	status.You = uint8(js.You)
 	status.Players = make(map[uint8]*Player, 0)
-	for z, JSONPlayer := range js.Players {
-		status.Players[uint8(z)] = JSONPlayer.ConvertToPlayer()
+	for z, jsonPlayer := range js.Players {
+		if jsonPlayer.Active {
+			status.Players[uint8(z)] = jsonPlayer.ConvertToPlayer()
+		}
 	}
 	status.Cells = make([][]bool, status.Height)
 	for y := range status.Cells {
