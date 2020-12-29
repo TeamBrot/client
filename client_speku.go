@@ -258,19 +258,19 @@ func visitsToProbabilities(me int, results []*Result, width uint16, height uint1
 
 // simulate all possible moves for a given simPlayer and a given status until numberOfTurns is reached
 func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns int, elapsedTurns uint16, resultChannel chan<- *Result, boardChannel <-chan [][]float64, stopChannel <-chan time.Time) {
-	var fieldAfterTurn [][]float64
+	var currentProbabilityTable [][]float64
 	currentPlayers := make([]*SimPlayer, 1)
 	currentPlayers[0] = simPlayer
 	for i := 0; i < numberOfTurns; i++ {
 		turn := i + 1
-		writeField := make([][]uint16, status.Height)
-		for r := range writeField {
-			writeField[r] = make([]uint16, status.Width)
+		visits := make([][]uint16, status.Height)
+		for r := range visits {
+			visits[r] = make([]uint16, status.Width)
 		}
 		if i != 0 {
 			select {
-			case newField := <-boardChannel:
-				addFields(&fieldAfterTurn, newField)
+			case newProbabilityTable := <-boardChannel:
+				addFields(&currentProbabilityTable, newProbabilityTable)
 			case <-stopChannel:
 				currentPlayers = nil
 				resultChannel <- nil
@@ -278,39 +278,43 @@ func simulatePlayer(simPlayer *SimPlayer, id int, status *Status, numberOfTurns 
 			}
 
 		} else {
-			fieldAfterTurn = makeProbabilityTable(status.Height, status.Width)
+			currentProbabilityTable = makeProbabilityTable(status.Height, status.Width)
 		}
 		children := make([]*SimPlayer, len(currentPlayers)*5)
-		counter := 0
-		for _, player := range currentPlayers {
+		childCounter := 0
+		for playerCounter, player := range currentPlayers {
 			select {
 			case <-stopChannel:
 				log.Println("ended Simulation for player", id)
 				currentPlayers = nil
 				children = nil
+				runtime.GC()
 				resultChannel <- nil
 				return
 			default:
 				possibleActions := player.player.PossibleMoves(status.Cells, elapsedTurns+uint16(turn), player.AllVisitedCells, false)
 				for _, action := range possibleActions {
-					child, score := simulateMove(writeField, player, action, elapsedTurns+uint16(turn), fieldAfterTurn)
+					child, score := simulateMove(visits, player, action, elapsedTurns+uint16(turn), currentProbabilityTable)
 					child.Probability *= 1.0/float64(len(possibleActions)) - (score / float64(len(child.LastMoveVisitedCells)))
 					if child.Probability < 0 {
 						continue
 					}
-					children[counter] = child
-					counter++
+					children[childCounter] = child
+					childCounter++
 				}
-				player.AllVisitedCells = nil
-				player.player = nil
-
+				//set unused parts nil
+				//player.AllVisitedCells = nil
+				player = nil
+				if playerCounter%60000 == 0 {
+					go runtime.GC()
+				}
 			}
 
 		}
-		currentPlayers = children[0:counter]
+		currentPlayers = children[0:childCounter]
 		children = nil
 		if resultChannel != nil {
-			resultChannel <- &Result{Visits: writeField, Player: currentPlayers}
+			resultChannel <- &Result{Visits: visits, Player: currentPlayers}
 		}
 		runtime.GC()
 	}
@@ -448,15 +452,7 @@ func analyzeBoard(status *Status) ([]uint8, []*Player) {
 	//var turn uint16
 	//turn = 0
 	me := status.Players[status.You]
-	if len(status.Players) <= 2 {
-		for i, player := range status.Players {
-			probabilityPlayers = append(probabilityPlayers, player)
-			if player != me {
-				minimaxPlayers = append(minimaxPlayers, i)
-			}
-		}
-		return minimaxPlayers, probabilityPlayers
-	}
+
 	distanceTo := make(map[float64]*Player)
 	for z, player := range status.Players {
 		if player == me {
@@ -478,11 +474,10 @@ func analyzeBoard(status *Status) ([]uint8, []*Player) {
 	sort.Float64s(distances)
 	counter := 0
 	for _, distance := range distances {
-		if counter < 3 || distance < 20 {
+		if counter < 3 || distance < 20.0 {
 			probabilityPlayers = append(probabilityPlayers, distanceTo[distance])
 		}
-		if distance < 12 {
-
+		if distance < 12.0 {
 			minimaxPlayers = append(minimaxPlayers)
 		}
 	}
@@ -491,9 +486,9 @@ func analyzeBoard(status *Status) ([]uint8, []*Player) {
 }
 
 func spekuTiming(calculationTime time.Duration, timingChannel chan<- time.Time) {
-	time.Sleep(time.Duration(0.4 * float64(calculationTime.Nanoseconds())))
+	time.Sleep(time.Duration(0.6 * float64(calculationTime.Nanoseconds())))
 	timingChannel <- time.Now()
-	time.Sleep(time.Duration(0.4 * float64(calculationTime.Nanoseconds())))
+	time.Sleep(time.Duration(0.2 * float64(calculationTime.Nanoseconds())))
 	close(timingChannel)
 }
 
@@ -551,7 +546,7 @@ func (c SpekuClient) GetAction(player Player, status *Status, calculationTime ti
 	}
 	var maxSimDepth int
 	//if Your Computer is really beefy it might be a good idea to set this higher (else it is not and your computer will crash!!)
-	maxSimDepth = 9
+	maxSimDepth = 20
 	//If this channel is closed, it will try to end simulate game
 
 	//This channel is used to recieve an array of all calculated Fields from simulate game
