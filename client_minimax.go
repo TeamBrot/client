@@ -218,6 +218,42 @@ func MinimaxBestActionsTimed(maximizerID uint8, minimizerID uint8, status *Statu
 	}
 }
 
+func miniMaxMultiplePlayers(otherPlayerIDs []uint8, myID uint8, status *Status, stopChannel chan time.Time) []Action {
+	resultChannels := make(map[uint8]chan []Action)
+	for _, otherPlayerID := range otherPlayerIDs {
+		resultChannels[otherPlayerID] = make(chan []Action)
+		go func(otherPlayerID uint8) {
+			bestActionsMinimax := MinimaxBestActionsTimed(status.You, otherPlayerID, status, stopChannel)
+			resultChannels[otherPlayerID] <- bestActionsMinimax
+		}(otherPlayerID)
+	}
+	allMiniMaxActions := make([]map[Action]struct{}, len(otherPlayerIDs))
+	counter := 0
+	for _, channel := range resultChannels {
+		miniMaxActions := <-channel
+		actionStruct := make(map[Action]struct{}, 0)
+		for _, action := range miniMaxActions {
+			actionStruct[action] = struct{}{}
+		}
+		allMiniMaxActions[counter] = actionStruct
+		counter++
+	}
+	bestActionsMinimax := make([]Action, 0)
+	for _, action := range Actions {
+		for z, actionMap := range allMiniMaxActions {
+			_, isIn := actionMap[action]
+			if !isIn {
+				break
+			}
+			if z+1 == len(allMiniMaxActions) {
+				bestActionsMinimax = append(bestActionsMinimax, action)
+			}
+		}
+	}
+	log.Println(bestActionsMinimax)
+	return bestActionsMinimax
+}
+
 // MinimaxClient is a client implementation that uses Minimax to decide what to do next
 type MinimaxClient struct{}
 
