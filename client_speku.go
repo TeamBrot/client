@@ -362,14 +362,19 @@ func makeProbabilityTable(height uint16, width uint16) [][]float64 {
 func evaluateAction(player *Player, field [][]float64, action Action, turn uint16) float64 {
 	score := 0.0
 	visitedCoords := player.ProcessAction(action, turn)
+	counterVisitedCoords := 0
 	for _, coords := range visitedCoords {
 		if coords == nil {
 			continue
 		}
 		score += field[coords.Y][coords.X]
+		counterVisitedCoords++
 
 	}
-	return score / float64(player.Speed)
+	if counterVisitedCoords != 0 {
+		return score / float64(counterVisitedCoords)
+	}
+	return score
 }
 
 //This function copies a struct of type Player
