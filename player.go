@@ -12,6 +12,8 @@ type Player struct {
 	Speed     uint8
 }
 
+//SimPlayer to add a new array of visited cells
+
 // JSONPlayer contains information on a specific player as returned by the server.
 type JSONPlayer struct {
 	X               int `json:"x"`
@@ -96,7 +98,7 @@ func checkCell(cells [][]bool, direction Direction, y uint16, x uint16, fields u
 	}
 	isPossible := !cells[y][x]
 	if extraCellInfo != nil {
-		_, fieldVisited := extraCellInfo[Coords{y,x}]
+		_, fieldVisited := extraCellInfo[Coords{y, x}]
 		if extraCellAllowed {
 			return isPossible || fieldVisited
 		}
@@ -152,8 +154,8 @@ func (player *Player) PossibleMoves(cells [][]bool, turn uint16, extraCellInfo m
 }
 
 //Returns the distance between to players as float64
-func (p *Player) DistanceTo(p2 *Player) float64 {
-	return math.Sqrt(math.Pow(float64(p.X-p2.X), 2) + math.Pow(float64(p.Y-p2.Y), 2))
+func (player *Player) DistanceTo(p2 *Player) float64 {
+	return math.Sqrt(math.Pow(float64(player.X-p2.X), 2) + math.Pow(float64(player.Y-p2.Y), 2))
 }
 
 // ConvertToPlayer converts a JSONPlayer to a Player
@@ -164,4 +166,24 @@ func (JSONPlayer *JSONPlayer) ConvertToPlayer() *Player {
 	player.Speed = uint8(JSONPlayer.Speed)
 	player.Direction = JSONPlayer.Direction
 	return &player
+}
+
+//
+func (player *Player) toSimPlayer(probability float64) *SimPlayer {
+	var simPlayer SimPlayer
+	simPlayer.player = player.copyPlayer()
+	simPlayer.AllVisitedCells = make(map[Coords]struct{}, 0)
+	simPlayer.LastMoveVisitedCells = make(map[Coords]struct{}, 0)
+	simPlayer.Probability = probability
+	return &simPlayer
+}
+
+//This function copies a struct of type Player
+func (player *Player) copyPlayer() *Player {
+	var newPlayer Player
+	newPlayer.Direction = player.Direction
+	newPlayer.Speed = player.Speed
+	newPlayer.X = player.X
+	newPlayer.Y = player.Y
+	return &newPlayer
 }

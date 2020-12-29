@@ -218,10 +218,11 @@ func MinimaxBestActionsTimed(maximizerID uint8, minimizerID uint8, status *Statu
 	}
 }
 
-func miniMaxMultiplePlayers(otherPlayerIDs []uint8, myID uint8, status *Status, stopChannel chan time.Time) []Action {
+func miniMaxBestActionsMultiplePlayers(otherPlayerIDs []uint8, myID uint8, status *Status, stopChannel chan time.Time) []Action {
 	resultChannels := make(map[uint8]chan []Action)
 	for _, otherPlayerID := range otherPlayerIDs {
 		resultChannels[otherPlayerID] = make(chan []Action)
+		log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
 		go func(otherPlayerID uint8) {
 			bestActionsMinimax := MinimaxBestActionsTimed(status.You, otherPlayerID, status, stopChannel)
 			resultChannels[otherPlayerID] <- bestActionsMinimax

@@ -107,11 +107,14 @@ func main() {
 
 		clientLogger.Println("turn", status.Turn)
 		clientLogger.Println("deadline", JSONStatus.Deadline)
-
+		me := status.Players[status.You]
+		clientLogger.Println("Position ", me.Y, "y", me.X, "x")
+		clientLogger.Println("Speed", me.Speed)
 		calculationTime, err := computeCalculationTime(JSONStatus.Deadline, config)
 		if err != nil {
 			clientLogger.Fatalln("error receiving time from server")
 		}
+
 		action := config.Client.GetAction(*status.Players[status.You], status, calculationTime)
 		err = conn.WriteAction(action)
 		if err != nil {
