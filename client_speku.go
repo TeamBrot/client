@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"runtime"
+	"sort"
 	"time"
 )
 
@@ -66,6 +67,7 @@ func simulateRollouts(status *Status, limit int, filterValue float64, stopSimula
 		select {
 		case <-stopSimulateRollouts:
 			log.Println("could perfom", j, "rollouts")
+			log.Println("The longest path was", longest, "Actions long")
 			return longestPaths
 		default:
 			rolloutStatus := status.Copy()
@@ -75,23 +77,6 @@ func simulateRollouts(status *Status, limit int, filterValue float64, stopSimula
 				me := rolloutStatus.Players[status.You]
 				//countLivingPlayers := 0
 				rolloutStatus.Turn++
-				//Process one random move for every other player besides me
-				//for _, player := range rolloutStatus.Players {
-				//if player != me && player != nil {
-				//possibleMoves := player.PossibleMoves(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
-				//if len(possibleMoves) == 0 {
-				//player = nil
-				//continue
-				//}
-				//randomAction := possibleMoves[rand.Intn(len(possibleMoves))]
-				//rolloutMove(rolloutStatus, randomAction, player)
-				//countLivingPlayers++
-				//}
-				//}
-				//All other players Died
-				//if countLivingPlayers == 0 {
-				//	break
-				//}
 				possibleMoves := me.PossibleMoves(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
 				if len(possibleMoves) == 0 {
 					break
@@ -162,8 +147,10 @@ func simulateGame(status *Status, stopSimulateGameChan <-chan time.Time, simDept
 	for d, player := range activePlayersInRange {
 		if player == status.Players[status.You] {
 			me = d
+			allSimPlayer = append(allSimPlayer, player.toSimPlayer(1.2))
+		} else {
+			allSimPlayer = append(allSimPlayer, player.toSimPlayer(1.0))
 		}
-		allSimPlayer = append(allSimPlayer, player.toSimPlayer())
 	}
 	//with those Channels resultsToField can give fields to simulatePlayer to make the calculations more acurate
 	visitedCellsChannels := make(map[int]chan [][]float64, 0)
@@ -176,21 +163,24 @@ func simulateGame(status *Status, stopSimulateGameChan <-chan time.Time, simDept
 	}
 	allProbabilityTables := make([][][]float64, 0)
 	for z := 0; z < simDepth; z++ {
-		results := make([]*Result, 0)
-		for _, ch := range resultChannels {
+		results := make([]*Result, len(resultChannels))
+		valid := true
+		for l, ch := range resultChannels {
 			select {
 			case <-stopSimulateGameChan:
 				log.Println("ended simulateGame, returning field")
 				return allProbabilityTables
 			case val := <-ch:
 				if val != nil {
-					results = append(results, val)
+
+					results[l] = val
 				} else {
+					valid = false
 					break
 				}
 			}
 		}
-		if len(results) == 0 {
+		if !valid {
 			break
 		}
 		log.Println("starting to calculate field for turn", z)
@@ -405,13 +395,10 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 	for _, path := range paths {
 		score := 0.0
 		minPlayer := player.copyPlayer()
-		//maxPlayer := player.copyPlayer()
 		for i := 0; i < len(path); i++ {
 			if i != len(path) {
 				if i < simDepth {
 					score += evaluateAction(minPlayer, allFields[i], path[i], turn+uint16(i))
-					//score += 1.0 - evaluateAction(maxPlayer, allFields[i+1], path[i], turn+uint16(i))
-					//score /= 2.0
 				} else {
 					score += evaluateAction(minPlayer, allFields[simDepth-1], path[i], turn+uint16(i))
 				}
@@ -449,42 +436,53 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 	return action
 }
 
-//This Method is work in progress and does basically nothing
-func analyzeBoard(status *Status) []*Player {
-	var playerSimulation []*Player
-	//var playerRollouts []Player
-	numberOfCells := status.Width * status.Height
-
-	var numberOfOccupiedCells float64
-	for _, row := range status.Cells {
-		for _, cellValue := range row {
-			if cellValue {
-				numberOfOccupiedCells++
+//This Method and tells us which players we should simulate
+func analyzeBoard(status *Status) ([]uint8, []*Player) {
+	var probabilityPlayers []*Player
+	var minimaxPlayers []uint8
+	//var turn uint16
+	//turn = 0
+	me := status.Players[status.You]
+	if len(status.Players) <= 2 {
+		for i, player := range status.Players {
+			probabilityPlayers = append(probabilityPlayers, player)
+			if player != me {
+				minimaxPlayers = append(minimaxPlayers, i)
 			}
 		}
+		return minimaxPlayers, probabilityPlayers
 	}
-	boardCoverage := numberOfOccupiedCells / float64(numberOfCells)
-	log.Println(boardCoverage*100, "% of the board are used")
-
-	influenceWidhtOfPlayer := make(map[*Player]int, 0)
-
-	for _, player := range status.Players {
-		influenceWidth := (player.Speed - uint8(math.Round(9*boardCoverage)) + 4) * 8
-		log.Println(influenceWidth)
-		influenceWidhtOfPlayer[player] = int(influenceWidth)
-	}
-	me := status.Players[status.You]
-	for _, player := range status.Players {
+	distanceTo := make(map[float64]*Player)
+	for z, player := range status.Players {
 		if player == me {
 			continue
 		}
-		//
-		//if distanceToPlayer(me, player) < float64(influenceWidhtOfPlayer[player]+influenceWidhtOfPlayer[me]) {
-		playerSimulation = append(playerSimulation, player)
-		//}
+		distance := player.DistanceTo(me)
+		relativeDistance := distance / float64(player.Speed) / float64(me.Speed)
+		if relativeDistance < 12.0 {
+			minimaxPlayers = append(minimaxPlayers, z)
+		}
+		distanceTo[distance/float64(player.Speed)] = player
 	}
-	playerSimulation = append(playerSimulation, me)
-	return playerSimulation
+	distances := make([]float64, len(distanceTo))
+	i := 0
+	for k := range distanceTo {
+		distances[i] = k
+		i++
+	}
+	sort.Float64s(distances)
+	counter := 0
+	for _, distance := range distances {
+		if counter < 3 || distance < 20 {
+			probabilityPlayers = append(probabilityPlayers, distanceTo[distance])
+		}
+		if distance < 12 {
+
+			minimaxPlayers = append(minimaxPlayers)
+		}
+	}
+	probabilityPlayers = append(probabilityPlayers, status.Players[status.You])
+	return minimaxPlayers, probabilityPlayers
 }
 
 func spekuTiming(calculationTime time.Duration, timingChannel chan<- time.Time) {
@@ -494,12 +492,12 @@ func spekuTiming(calculationTime time.Duration, timingChannel chan<- time.Time) 
 	close(timingChannel)
 }
 
-func (player *Player) toSimPlayer() *SimPlayer {
+func (player *Player) toSimPlayer(probability float64) *SimPlayer {
 	var simPlayer SimPlayer
 	simPlayer.player = player.copyPlayer()
 	simPlayer.AllVisitedCells = make(map[Coords]struct{}, 0)
 	simPlayer.LastMoveVisitedCells = make(map[Coords]struct{}, 0)
-	simPlayer.Probability = 1.0
+	simPlayer.Probability = probability
 	return &simPlayer
 }
 
@@ -522,18 +520,6 @@ func (c SpekuClient) GetAction(player Player, status *Status, calculationTime ti
 		log.Println("going to die... choosing change_nothing as last action")
 		return ChangeNothing
 	}
-
-	otherPlayerID, err := status.FindClosestPlayerTo(status.You)
-	if err != nil {
-		log.Fatalln("could not find closest player:", err)
-	}
-	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
-	miniMaxChannel := make(chan []Action, 1)
-	stopMiniMaxChannel := make(chan time.Time)
-	go func() {
-		miniMaxActions := MinimaxBestActionsTimed(status.You, otherPlayerID, status, stopMiniMaxChannel)
-		miniMaxChannel <- miniMaxActions
-	}()
 	stopRolloutChan := make(chan time.Time)
 	rolloutChan := make(chan [][]Action, 1)
 	go func() {
@@ -542,22 +528,36 @@ func (c SpekuClient) GetAction(player Player, status *Status, calculationTime ti
 	}()
 
 	//calculate which players are simulated TODO: Move this code to an external function and improve it
-	activePlayersInRange := analyzeBoard(status)
-	log.Println("simulating", len(activePlayersInRange), "players")
+	minMaxPlayers, probabilityPlayers := analyzeBoard(status)
+	log.Println("simulating", len(probabilityPlayers), "players")
+
+	miniMaxChannel := make(chan []Action, 1)
+	stopMiniMaxChannel := make(chan time.Time)
+	if len(minMaxPlayers) > 1 {
+		go func() {
+			bestActionsMinimax := miniMaxMultiplePlayers(minMaxPlayers, status.You, status, stopMiniMaxChannel)
+			miniMaxChannel <- bestActionsMinimax
+		}()
+	} else if len(minMaxPlayers) == 1 {
+		go func() {
+			bestActionsMinimax := MinimaxBestActionsTimed(status.You, minMaxPlayers[0], status, stopMiniMaxChannel)
+			miniMaxChannel <- bestActionsMinimax
+		}()
+	}
 	var maxSimDepth int
 	//if Your Computer is really beefy it might be a good idea to set this higher (else it is not and your computer will crash!!)
-	maxSimDepth = 7
+	maxSimDepth = 9
 	//If this channel is closed, it will try to end simulate game
 
 	//This channel is used to recieve an array of all calculated Fields from simulate game
 	var allProbabilityTables [][][]float64
 	var probabilityTablesChan chan [][][]float64
 	var stopSimulateGameChan chan time.Time
-	if len(activePlayersInRange) > 1 {
+	if len(probabilityPlayers) > 1 {
 		stopSimulateGameChan = make(chan time.Time)
 		probabilityTablesChan = make(chan [][][]float64, 1)
 		go func() {
-			probabilityTables := simulateGame(status, stopSimulateGameChan, maxSimDepth, activePlayersInRange)
+			probabilityTables := simulateGame(status, stopSimulateGameChan, maxSimDepth, probabilityPlayers)
 			probabilityTablesChan <- probabilityTables
 		}()
 	} else {
@@ -568,7 +568,7 @@ func (c SpekuClient) GetAction(player Player, status *Status, calculationTime ti
 	}
 
 	_ = <-timingChannel
-	if len(activePlayersInRange) > 1 {
+	if len(probabilityPlayers) > 1 {
 		log.Println("sending stop signal to simulateGame...")
 		close(stopSimulateGameChan)
 	}
@@ -576,8 +576,12 @@ func (c SpekuClient) GetAction(player Player, status *Status, calculationTime ti
 	log.Println("sending stop signal to simulateRollouts and minimax...")
 	close(stopRolloutChan)
 	close(stopMiniMaxChannel)
-	possibleActions = <-miniMaxChannel
-	if len(activePlayersInRange) > 1 {
+	if len(minMaxPlayers) > 0 {
+		possibleActions = <-miniMaxChannel
+	} else {
+		possibleActions = status.Players[status.You].PossibleMoves(status.Cells, status.Turn, nil, false)
+	}
+	if len(probabilityPlayers) > 1 {
 		allProbabilityTables = <-probabilityTablesChan
 	}
 	bestPaths := <-rolloutChan
