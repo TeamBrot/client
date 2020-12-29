@@ -55,8 +55,14 @@ func getTime(url string) (ServerTime, error) {
 func computeCalculationTime(deadline time.Time, config Config) (time.Duration, error) {
 	serverTime, err := getTime(config.TimeURL)
 	if err != nil {
-		log.Println("couldn't reach timing api, using 5s timeout")
-		return time.Duration(5 * time.Second), err
+		log.Println("couldn't reach timing api, try using machine time")
+		calculationTime := deadline.Sub(time.Now().UTC())
+		calculationTime = time.Duration((calculationTime.Milliseconds() - 200) * 1000000000)
+		if calculationTime > 2*time.Minute {
+			return calculationTime, err
+		}
+		log.Println("the scheduled calculation Time is", calculationTime)
+		return calculationTime, nil
 	}
 	calculationTime := deadline.Sub(serverTime.Time)
 	calculationTime = time.Duration((calculationTime.Milliseconds() - int64(serverTime.Milliseconds) - 150) * 1000000)
