@@ -132,18 +132,34 @@ func main() {
 			clientLogger.Println("active players:", counter)
 			if !JSONStatus.Players[JSONStatus.You].Active {
 				clientLogger.Println("lost")
+				fileLogger.Println("At Beginnig there were", len(JSONStatus.Players), "Players")
+				fileLogger.Println("Now are", len(status.Players), "Players still Active")
+				fileLogger.Println("The Game lasted", status.Turn, "Turns")
+				fileLogger.Println("The field hat the dimensions", status.Width, "x", status.Height)
 				fileLogger.Println("lost")
 			}
 		} else if counter == 1 {
 			if JSONStatus.Players[JSONStatus.You].Active {
 				clientLogger.Println("won")
+				fileLogger.Println("At Beginnig there were", len(JSONStatus.Players), "Players")
+				fileLogger.Println("Now are", len(status.Players), "Players still Active")
+				fileLogger.Println("The Game lasted", status.Turn, "Turns")
+				fileLogger.Println("The field hat the dimensions", status.Width, "x", status.Height)
 				fileLogger.Println("won")
 			} else {
 				clientLogger.Println("lost")
+				fileLogger.Println("At Beginnig there were", len(JSONStatus.Players), "Players")
+				fileLogger.Println("Now are", len(status.Players), "Players still Active")
+				fileLogger.Println("The Game lasted", status.Turn, "Turns")
+				fileLogger.Println("The field hat the dimensions", status.Width, "x", status.Height)
 				fileLogger.Println("lost")
 			}
 		} else {
 			clientLogger.Println("lost")
+			fileLogger.Println("At Beginnig there were", len(JSONStatus.Players), "Players")
+			fileLogger.Println("Now are", len(status.Players), "Players still Active")
+			fileLogger.Println("The Game lasted", status.Turn, "Turns")
+			fileLogger.Println("The field hat the dimensions", status.Width, "x", status.Height)
 			fileLogger.Println("lost")
 		}
 	}
