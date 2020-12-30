@@ -6,12 +6,6 @@ import (
 	"time"
 )
 
-//This const defines the maximal number of Turns simulateGame will try to process
-const maxSimDepth = 20
-
-//This const defines after how many processed players simulatePlayer will schedule a garbage Collection cycle. Lowering the value improves memory efficiency but has a performance impact
-const processedPlayersTillGC = 60000
-
 // Result :
 type Result struct {
 	Visits [][]uint16

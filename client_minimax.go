@@ -258,8 +258,6 @@ func miniMaxBestActionsMultiplePlayers(otherPlayerIDs []uint8, myID uint8, statu
 // MinimaxClient is a client implementation that uses Minimax to decide what to do next
 type MinimaxClient struct{}
 
-var minimaxPreferences []Action = []Action{ChangeNothing, TurnLeft, TurnRight, SpeedUp, SlowDown}
-
 // GetAction implements the Client interface
 func (c MinimaxClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
 	stopChannel := time.After((calculationTime / 10) * 9)

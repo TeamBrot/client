@@ -46,8 +46,8 @@ func getClient() (Client, error) {
 // GetConfig creates a config from the environment variables
 func GetConfig() (Config, error) {
 	var config Config
-	config.GameURL = getenvDefault("URL", "ws://localhost:8080/spe_ed")
-	config.TimeURL = getenvDefault("TIME_URL", "http://localhost:8080/spe_ed_time")
+	config.GameURL = getenvDefault("URL", defaultGameURL)
+	config.TimeURL = getenvDefault("TIME_URL", defaultTimeURL)
 	config.APIKey = getenvDefault("KEY", "")
 	client, err := getClient()
 	config.Client = client

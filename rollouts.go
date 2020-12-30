@@ -6,12 +6,6 @@ import (
 	"time"
 )
 
-//This const defines the max number of Rollouts simulateRollouts will perform. Normally there is no good reason to change this value
-const maxNumberofRollouts = 7000000
-
-//This const defines the relation between the longest and the shortest path simulateRollouts gives back
-const filterValue = 0.75
-
 //search for the longest paths a player could reach. Simulates random move for all Players and allways processes as last player
 func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time) [][]Action {
 	longest := 0
@@ -28,6 +22,27 @@ func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time) [][
 			counter := 0
 			for {
 				me := rolloutStatus.Players[status.You]
+				rolloutStatus.Turn++
+				if simulateOtherPlayers == true {
+					countLivingPlayers := 0
+					//Process one random move for every other player besides me
+					for _, player := range rolloutStatus.Players {
+						if player != me && player != nil {
+							possibleMoves := player.PossibleMoves(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
+							if len(possibleMoves) == 0 {
+								player = nil
+								continue
+							}
+							randomAction := possibleMoves[rand.Intn(len(possibleMoves))]
+							rolloutMove(rolloutStatus, randomAction, player)
+							countLivingPlayers++
+						}
+					}
+					//All other players Died
+					if countLivingPlayers == 0 {
+						break
+					}
+				}
 				rolloutStatus.Turn++
 				possibleMoves := me.PossibleMoves(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
 				if len(possibleMoves) == 0 {

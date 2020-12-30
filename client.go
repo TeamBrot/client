@@ -57,15 +57,15 @@ func computeCalculationTime(deadline time.Time, config Config) (time.Duration, e
 	if err != nil {
 		log.Println("couldn't reach timing api, try using machine time")
 		calculationTime := deadline.Sub(time.Now().UTC())
-		calculationTime = time.Duration((calculationTime.Milliseconds() - 200) * 1000000000)
-		if calculationTime > 2*time.Minute {
+		calculationTime = time.Duration((calculationTime.Milliseconds() - calculationTimeOffset) * 1000000000)
+		if calculationTime > maxCalculationTime*time.Minute {
 			return calculationTime, err
 		}
 		log.Println("the scheduled calculation Time is", calculationTime)
 		return calculationTime, nil
 	}
 	calculationTime := deadline.Sub(serverTime.Time)
-	calculationTime = time.Duration((calculationTime.Milliseconds() - int64(serverTime.Milliseconds) - 150) * 1000000)
+	calculationTime = time.Duration((calculationTime.Milliseconds() - int64(serverTime.Milliseconds) - calculationTimeOffset) * 1000000)
 	log.Println("the scheduled calculation Time is", calculationTime)
 	return calculationTime, nil
 }
@@ -78,7 +78,7 @@ func main() {
 		return
 	}
 	clientLogger := newClientLogger()
-	fileLogger, closeFunc, err := newFileLogger("logging.txt")
+	fileLogger, closeFunc, err := newFileLogger(loggingFile)
 	if err != nil {
 		clientLogger.Println("could not create fileLogger:", err)
 	}
