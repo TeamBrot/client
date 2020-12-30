@@ -24,9 +24,6 @@ const maxSpeed = 6
 
 //MINIMAX PARAMETERS
 
-//If minimax evaluates multiple actions equally good he will use this order to choose which one to use
-var minimaxPreferences []Action = []Action{ChangeNothing, TurnLeft, TurnRight, SpeedUp, SlowDown}
-
 //PROBABILITY TABLE PARAMETERS
 
 //Setting this value higher, makes makes us more confident, that we will visit a field and no one other does. Setting it lower does the exact opposite

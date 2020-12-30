@@ -272,14 +272,6 @@ func (c MinimaxClient) GetAction(player Player, status *Status, calculationTime 
 	if len(actions) > 0 {
 		return actions[rand.Intn(len(actions))]
 	}
-	// for _, action := range minimaxPreferences {
-	// 	for _, bestAction := range actions {
-	// 		if action == bestAction {
-	// 			log.Println("multiple best actions, using", action)
-	// 			return action
-	// 		}
-	// 	}
-	// }
 	log.Println("no best action, using change_nothing")
 	return ChangeNothing
 }
