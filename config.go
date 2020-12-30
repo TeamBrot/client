@@ -1,17 +1,27 @@
 package main
 
 import (
-	"errors"
+	"flag"
 	"fmt"
 	"os"
 )
 
+const defaultGameURL = "ws://localhost:8080/spe_ed"
+const defaultTimeURL = "http://localhost:8080/spe_ed_time"
+const defaultLogFile = "logging.txt"
+const defaultGuiHostname = "0.0.0.0"
+const defaultGuiPort = 8081
+
 // Config represents a server and client configuration
 type Config struct {
-	GameURL string
-	TimeURL string
-	APIKey  string
-	Client  Client
+	gameURL string
+	timeURL string
+	apiKey  string
+	guiHostname string
+	guiPort int
+	logfile string
+	clientName string
+	client  Client
 }
 
 func getenvDefault(key string, def string) string {
@@ -22,23 +32,20 @@ func getenvDefault(key string, def string) string {
 	return value
 }
 
-func getClient() (Client, error) {
-	if len(os.Args) <= 1 {
-		return nil, errors.New("no client given")
-	}
+func getClient(name string) (Client, error) {
 	var client Client
-	switch os.Args[1] {
+	switch name {
 	case "minimax":
 		client = MinimaxClient{}
 		break
 	case "smart":
 		client = SmartClient{}
 		break
-	case "speku":
-		client = SpekuClient{}
+	case "combi":
+		client = CombiClient{}
 		break
 	default:
-		return nil, fmt.Errorf("invalid client name: %s", os.Args[1])
+		return nil, fmt.Errorf("invalid client name: %s", name)
 	}
 	return client, nil
 }
@@ -46,18 +53,25 @@ func getClient() (Client, error) {
 // GetConfig creates a config from the environment variables
 func GetConfig() (Config, error) {
 	var config Config
-	config.GameURL = getenvDefault("URL", defaultGameURL)
-	config.TimeURL = getenvDefault("TIME_URL", defaultTimeURL)
-	config.APIKey = getenvDefault("KEY", "")
-	client, err := getClient()
-	config.Client = client
+	config.gameURL = getenvDefault("URL", defaultGameURL)
+	config.timeURL = getenvDefault("TIME_URL", defaultTimeURL)
+	config.apiKey = getenvDefault("KEY", "")
+
+	flag.StringVar(&config.clientName, "client", "combi", "client to run")
+	flag.StringVar(&config.logfile, "logfile", defaultLogFile, "file where game results are logged")
+	flag.StringVar(&config.guiHostname, "guihostname", defaultGuiHostname, "hostname on which the gui server is listening")
+	flag.IntVar(&config.guiPort, "guiport", defaultGuiPort, "port on which the gui server is listening")
+	flag.Parse()
+
+	client, err := getClient(config.clientName)
+	config.client = client
 	return config, err
 }
 
 // GetWSURL builds the websocket url using the server url and the api key
 func (c *Config) GetWSURL() string {
-	if c.APIKey == "" {
-		return c.GameURL
+	if c.apiKey == "" {
+		return c.gameURL
 	}
-	return fmt.Sprintf("%s?key=%s", c.GameURL, c.APIKey)
+	return fmt.Sprintf("%s?key=%s", c.gameURL, c.apiKey)
 }

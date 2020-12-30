@@ -2,22 +2,11 @@ package main
 
 //In this file all parameters for all clients are set
 
-//GENERAL PARAMETERS
-const defaultGameURL = "ws://localhost:8080/spe_ed"
-
-const defaultTimeURL = "http://localhost:8080/spe_ed_time"
-
-//Name of logging file
-const loggingFile = "logging.txt"
-
 //This value is specified in milliseconds and is a reserve in which the actions should be send to the server
 const calculationTimeOffset = 150
 
 //If getting the time from the timing api fails and the calculation time calculated is more than this value in minutes away the program will throw an error
 const maxCalculationTime = 2
-
-//This value specifies under which address you reach the webinterface
-const guiURL = "0.0.0.0:8081"
 
 //This defines the max speed a player can reach in our simulation. To simulate most realistic set it to 10
 const maxSpeed = 6
@@ -32,7 +21,7 @@ const myStartProbability = 1.0
 const othersStartProbability = 1.0
 
 //This const defines the maximal number of Turns simulateGame will try to process
-const maxSimDepth = 20
+const maxSimDepth = 40
 
 //This const defines after how many processed players simulatePlayer will schedule a garbage Collection cycle. Lowering the value improves memory efficiency but has a performance impact
 const processedPlayersTillGC = 60000

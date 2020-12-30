@@ -145,11 +145,11 @@ func combiClientTiming(calculationTime time.Duration, timingChannel chan<- time.
 	close(timingChannel)
 }
 
-// SpekuClient is a client implementation that uses speculation to decide what to do next
-type SpekuClient struct{}
+// CombiClient is a client implementation that uses speculation to decide what to do next
+type CombiClient struct{}
 
 // GetAction implements the Client interface
-func (c SpekuClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
+func (c CombiClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
 	start := time.Now()
 	timingChannel := make(chan time.Time)
 	go combiClientTiming(calculationTime, timingChannel)
