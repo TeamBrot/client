@@ -51,7 +51,7 @@ var Directions = map[string]Direction{
 // ProcessAction moves the player according to action and turn. Returns visited coordinates
 func (player *Player) ProcessAction(action Action, turn uint16) []*Coords {
 	if action == SpeedUp {
-		if player.Speed != maxSpeed {
+		if player.Speed != 10 {
 			player.Speed++
 		}
 	} else if action == SlowDown {
@@ -114,7 +114,7 @@ func (player *Player) PossibleMoves(cells [][]bool, turn uint16, extraCellInfo m
 	turnRight := true
 	turnLeft := true
 	slowDown := player.Speed != 1
-	speedUp := player.Speed != maxSpeed
+	speedUp := player.Speed != 10
 	direction := player.Direction
 	y := player.Y
 	x := player.X
@@ -166,16 +166,6 @@ func (JSONPlayer *JSONPlayer) ConvertToPlayer() *Player {
 	player.Speed = uint8(JSONPlayer.Speed)
 	player.Direction = JSONPlayer.Direction
 	return &player
-}
-
-//
-func (player *Player) toSimPlayer(probability float64) *SimPlayer {
-	var simPlayer SimPlayer
-	simPlayer.player = player.copyPlayer()
-	simPlayer.AllVisitedCells = make(map[Coords]struct{}, 0)
-	simPlayer.LastMoveVisitedCells = make(map[Coords]struct{}, 0)
-	simPlayer.Probability = probability
-	return &simPlayer
 }
 
 //This function copies a struct of type Player

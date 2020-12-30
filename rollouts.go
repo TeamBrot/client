@@ -6,6 +6,15 @@ import (
 	"time"
 )
 
+//If this value is set to true we process in every rollout before we choose our own action a action for every other living player
+const simulateOtherPlayers = false
+
+//This const defines the max number of Rollouts simulateRollouts will perform. Normally there is no good reason to change this value
+const maxNumberofRollouts = 7000000
+
+//This const defines the relation between the longest and the shortest path simulateRollouts gives back
+const filterValue = 0.75
+
 //search for the longest paths a player could reach. Simulates random move for all Players and allways processes as last player
 func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time) [][]Action {
 	longest := 0

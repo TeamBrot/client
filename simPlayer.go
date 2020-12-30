@@ -19,3 +19,12 @@ func (player *SimPlayer) copySimPlayer() *SimPlayer {
 	}
 	return &p
 }
+
+func SimPlayerFromPlayer(player *Player, probability float64) *SimPlayer {
+	var simPlayer SimPlayer
+	simPlayer.player = player.copyPlayer()
+	simPlayer.AllVisitedCells = make(map[Coords]struct{}, 0)
+	simPlayer.LastMoveVisitedCells = make(map[Coords]struct{}, 0)
+	simPlayer.Probability = probability
+	return &simPlayer
+}

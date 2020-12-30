@@ -1,28 +1,21 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"time"
 )
-
-type ServerTime struct {
-	Time         time.Time `json:"time"`
-	Milliseconds int       `json:"milliseconds"`
-}
 
 // Client represents a handler that decides what the specific player should do next
 type Client interface {
 	GetAction(player Player, status *Status, calculationTime time.Duration) Action
 }
 
-func newClientLogger() *log.Logger {
+func newClientLogger(clientName string) *log.Logger {
 	logger := log.New(os.Stdout, "[client] ", log.Lmsgprefix|log.LstdFlags)
-	logger.Println("using client", os.Args[1])
-	log.SetPrefix(fmt.Sprintf("[%s] ", os.Args[1]))
+	logger.Println("using client", clientName)
+	log.SetPrefix(fmt.Sprintf("[%s] ", clientName))
 	log.SetFlags(log.Lmsgprefix | log.LstdFlags)
 	return logger
 }
@@ -35,58 +28,18 @@ func newFileLogger(filename string) (*log.Logger, func(), error) {
 	logger := log.New(file, "", log.LstdFlags)
 	return logger, func() { file.Close() }, nil
 }
-
-var httpClient http.Client = http.Client{Timeout: 500 * time.Millisecond}
-
-//gets the current server Time via the specified API
-func getTime(url string) (ServerTime, error) {
-	var time ServerTime
-	r, err := httpClient.Get(url)
-	if err != nil {
-		return time, err
-	}
-	defer r.Body.Close()
-
-	json.NewDecoder(r.Body).Decode(&time)
-	return time, nil
-}
-
-//Sends Signals to the Client after a specified amount of time has passed
-func computeCalculationTime(deadline time.Time, config Config) (time.Duration, error) {
-	serverTime, err := getTime(config.TimeURL)
-	if err != nil {
-		log.Println("couldn't reach timing api, try using machine time")
-		calculationTime := deadline.Sub(time.Now().UTC())
-		calculationTime = time.Duration((calculationTime.Milliseconds() - calculationTimeOffset) * 1000000000)
-		if calculationTime > maxCalculationTime*time.Minute {
-			return calculationTime, err
-		}
-		log.Println("the scheduled calculation Time is", calculationTime)
-		return calculationTime, nil
-	}
-	calculationTime := deadline.Sub(serverTime.Time)
-	calculationTime = time.Duration((calculationTime.Milliseconds() - int64(serverTime.Milliseconds) - calculationTimeOffset) * 1000000)
-	log.Println("the scheduled calculation Time is", calculationTime)
-	return calculationTime, nil
-}
-
-func main() {
-
-	config, err := GetConfig()
-	if err != nil {
-		fmt.Println("could not get configuration:", err)
-		return
-	}
-	clientLogger := newClientLogger()
-	fileLogger, closeFunc, err := newFileLogger(loggingFile)
+func RunClient(config Config) {
+	clientLogger := newClientLogger(config.clientName)
+	fileLogger, closeFunc, err := newFileLogger(defaultLogFile)
 	if err != nil {
 		clientLogger.Println("could not create fileLogger:", err)
 	}
 	defer closeFunc()
 
 	gui := &Gui{nil}
-	if config.APIKey != "" {
-		gui = StartGui(clientLogger)
+	if config.apiKey != "" {
+		guiUrl := fmt.Sprintf("%s:%d", config.guiHostname, config.guiPort)
+		gui = StartGui(guiUrl, clientLogger)
 	}
 
 	clientLogger.Println("connecting to server")
@@ -115,7 +68,7 @@ func main() {
 			clientLogger.Fatalln("error receiving time from server")
 		}
 
-		action := config.Client.GetAction(*status.Players[status.You], status, calculationTime)
+		action := config.client.GetAction(*status.Players[status.You], status, calculationTime)
 		err = conn.WriteAction(action)
 		if err != nil {
 			clientLogger.Fatalln("error sending action:", err)

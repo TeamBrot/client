@@ -13,7 +13,7 @@ type Gui struct {
 
 var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
 
-func StartGui(logger *log.Logger) *Gui {
+func StartGui(guiURL string, logger *log.Logger) *Gui {
 	gui := &Gui{nil}
 	http.HandleFunc("/spe_ed/gui", func(w http.ResponseWriter, r *http.Request) {
 		c, err := upgrader.Upgrade(w, r, nil)

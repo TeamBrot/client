@@ -9,11 +9,6 @@ import (
 
 var probabilityTableOfLastTurn [][]float64
 
-//Coords store the coordinates of a player
-type Coords struct {
-	Y, X uint16
-}
-
 //This functions executes a action and returns the average score of every visited Cell
 func evaluateAction(player *Player, field [][]float64, action Action, turn uint16) float64 {
 	score := 0.0
@@ -156,11 +151,11 @@ func combiClientTiming(calculationTime time.Duration, timingChannel chan<- time.
 	close(timingChannel)
 }
 
-// SpekuClient is a client implementation that uses speculation to decide what to do next
-type SpekuClient struct{}
+// CombiClient is a client implementation that uses speculation to decide what to do next
+type CombiClient struct{}
 
 // GetAction implements the Client interface
-func (c SpekuClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
+func (c CombiClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
 	start := time.Now()
 	timingChannel := make(chan time.Time)
 	go combiClientTiming(calculationTime, timingChannel)
