@@ -9,15 +9,6 @@
     <h1>spe_ed gui</h1>
     <div id="you" style="margin-bottom: 10px">We are <font id="you__color">███</font></div>
     <canvas id="canvas", width="400", height="400"></canvas>
-    <h2>Duration between moves (milliseconds):</h2>
-    <div id="currentSpeed">Current speed: 200</div>
-    <button onclick="setSpeed(10)">10</button>
-    <button onclick="setSpeed(20)">20</button>
-    <button onclick="setSpeed(50)">50</button>
-    <button onclick="setSpeed(100)">100</button>
-    <button onclick="setSpeed(200)">200</button>
-    <button onclick="setSpeed(500)">500</button>
-    <button onclick="setSpeed(1000)">1000</button>
     <script type="text/javascript">
       const URL = "ws://" + window.location.host + "/spe_ed/gui";
       const SCALING = 16;
@@ -26,7 +17,6 @@
       const youSpan = document.getElementById("you");
       const colorFont = document.getElementById("you__color");
 
-      const currentSpeedDiv = document.getElementById("currentSpeed");
       let ctx = canvas.getContext("2d");
       ctx.fillStyle = colors[0]
       let webSocket = new WebSocket(URL);
@@ -34,7 +24,6 @@
       let speed = 200;
       webSocket.onopen = function (event) {
         console.log("socket is open");
-        setSpeed(speed);
       };
       webSocket.onclose = function(event) {
         console.log("socket was closed");
@@ -61,14 +50,6 @@
         ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = "5";
         ctx.strokeRect(player.x * SCALING, player.y * SCALING, SCALING, SCALING);
-      }
-
-      function setSpeed(s) {
-        speed = s;
-        if (webSocket.readyState === WebSocket.OPEN) {
-          webSocket.send(JSON.stringify({speed}));
-        }
-        currentSpeedDiv.innerText = "Current speed: " + speed
       }
 
       function setYou(s) {
