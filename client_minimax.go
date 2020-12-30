@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"log"
+	"math/rand"
 	"time"
 )
 
@@ -268,14 +269,17 @@ func (c MinimaxClient) GetAction(player Player, status *Status, calculationTime 
 	}
 	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
 	actions := MinimaxBestActionsTimed(status.You, otherPlayerID, status, stopChannel)
-	for _, action := range minimaxPreferences {
-		for _, bestAction := range actions {
-			if action == bestAction {
-				log.Println("multiple best actions, using", action)
-				return action
-			}
-		}
+	if len(actions) > 0 {
+		return actions[rand.Intn(len(actions))]
 	}
+	// for _, action := range minimaxPreferences {
+	// 	for _, bestAction := range actions {
+	// 		if action == bestAction {
+	// 			log.Println("multiple best actions, using", action)
+	// 			return action
+	// 		}
+	// 	}
+	// }
 	log.Println("no best action, using change_nothing")
 	return ChangeNothing
 }

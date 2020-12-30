@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"math"
 	"time"
 )
 
@@ -50,10 +51,10 @@ func (status *Status) Copy() *Status {
 func (status *Status) FindClosestPlayerTo(originPlayer uint8) (uint8, error) {
 	ourPlayer := status.Players[originPlayer]
 	var nearestPlayer uint8
-	nearestPlayerDistance := 0.0
+	nearestPlayerDistance := math.Inf(0)
 	for playerID, player := range status.Players {
 		distance := ourPlayer.DistanceTo(player)
-		if playerID != originPlayer && (nearestPlayer == 0 || distance < nearestPlayerDistance) {
+		if playerID != originPlayer && distance < nearestPlayerDistance {
 			nearestPlayer = playerID
 			nearestPlayerDistance = distance
 		}
