@@ -52,7 +52,6 @@ func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time) [][
 						break
 					}
 				}
-				rolloutStatus.Turn++
 				possibleMoves := me.PossibleMoves(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
 				if len(possibleMoves) == 0 {
 					break
