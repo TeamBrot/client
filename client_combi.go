@@ -9,6 +9,21 @@ import (
 
 var probabilityTableOfLastTurn [][]float64
 
+//this defines the window size from where the player reads the probabilites at the beginnig to analyze the field an knows if he should use miniMax
+const windowSize = 5
+
+//If the sum of all probabilities in the specified window is higher then this, miniMax can be used
+const miniMaxActivationValue = 0.8
+
+//if miniMax can be used a player also has to be nearer than this value to the player so it gets miniMaxed
+const miniMaxDistance = 12.0
+
+//This is the minimal Number of other players we are using to calculate the probability tables (if so many players are living)
+const minimalNumberOfSimPlayers = 2
+
+//If a player is nearer then this distance it will always be used for the calculation of the probability tables
+const simPlayerDistance = 20.0
+
 //This functions executes a action and returns the average score of every visited Cell
 func evaluateAction(player *Player, field [][]float64, action Action, turn uint16) float64 {
 	score := 0.0
@@ -95,9 +110,9 @@ func analyzeBoard(status *Status, probabilityTable [][]float64) ([]uint8, []*Pla
 	me := status.Players[status.You]
 	if probabilityTable != nil {
 		var score float64
-		for y := int(me.Y) - 5; y < int(me.Y)+5; y++ {
+		for y := int(me.Y) - windowSize; y < int(me.Y)+windowSize; y++ {
 			if y >= 0 && y < int(status.Height) {
-				for x := int(me.X) - 5; x < int(me.X)+5; x++ {
+				for x := int(me.X) - windowSize; x < int(me.X)+windowSize; x++ {
 					if x >= 0 && x < int(status.Width) {
 						score += probabilityTable[y][x]
 					}
@@ -106,7 +121,7 @@ func analyzeBoard(status *Status, probabilityTable [][]float64) ([]uint8, []*Pla
 			}
 		}
 		log.Println(score)
-		if score >= 1.0 {
+		if score >= miniMaxActivationValue {
 			playersAreNear = true
 		}
 	} else {
@@ -119,7 +134,7 @@ func analyzeBoard(status *Status, probabilityTable [][]float64) ([]uint8, []*Pla
 		}
 		distance := player.DistanceTo(me)
 		relativeDistance := distance / float64(player.Speed) / float64(me.Speed)
-		if relativeDistance < 12.0 && playersAreNear {
+		if relativeDistance < miniMaxDistance && playersAreNear {
 			minimaxPlayers = append(minimaxPlayers, z)
 		}
 		distanceTo[distance/float64(player.Speed)] = player
@@ -133,11 +148,8 @@ func analyzeBoard(status *Status, probabilityTable [][]float64) ([]uint8, []*Pla
 	sort.Float64s(distances)
 	counter := 0
 	for _, distance := range distances {
-		if counter < 3 || distance < 20.0 {
+		if counter <= minimalNumberOfSimPlayers || distance < simPlayerDistance {
 			probabilityPlayers = append(probabilityPlayers, distanceTo[distance])
-		}
-		if distance < 12.0 {
-			minimaxPlayers = append(minimaxPlayers)
 		}
 	}
 	probabilityPlayers = append(probabilityPlayers, status.Players[status.You])
