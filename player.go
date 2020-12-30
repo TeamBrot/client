@@ -51,7 +51,7 @@ var Directions = map[string]Direction{
 // ProcessAction moves the player according to action and turn. Returns visited coordinates
 func (player *Player) ProcessAction(action Action, turn uint16) []*Coords {
 	if action == SpeedUp {
-		if player.Speed >= maxSpeed {
+		if player.Speed != maxSpeed {
 			player.Speed++
 		}
 	} else if action == SlowDown {
@@ -114,7 +114,7 @@ func (player *Player) PossibleMoves(cells [][]bool, turn uint16, extraCellInfo m
 	turnRight := true
 	turnLeft := true
 	slowDown := player.Speed != 1
-	speedUp := player.Speed != 10
+	speedUp := player.Speed != maxSpeed
 	direction := player.Direction
 	y := player.Y
 	x := player.X
@@ -155,7 +155,7 @@ func (player *Player) PossibleMoves(cells [][]bool, turn uint16, extraCellInfo m
 
 //Returns the distance between to players as float64
 func (player *Player) DistanceTo(p2 *Player) float64 {
-	return math.Sqrt(math.Pow(float64(player.X-p2.X), 2) + math.Pow(float64(player.Y-p2.Y), 2))
+	return math.Sqrt(math.Pow(float64(int(player.X)-int(p2.X)), 2) + math.Pow(float64(int(player.Y)-int(p2.Y)), 2))
 }
 
 // ConvertToPlayer converts a JSONPlayer to a Player
