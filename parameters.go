@@ -29,6 +29,11 @@ var minimaxPreferences []Action = []Action{ChangeNothing, TurnLeft, TurnRight, S
 
 //PROBABILITY TABLE PARAMETERS
 
+//Setting this value higher, makes makes us more confident, that we will visit a field and no one other does. Setting it lower does the exact opposite
+const myStartProbability = 1.0
+
+const othersStartProbability = 1.0
+
 //This const defines the maximal number of Turns simulateGame will try to process
 const maxSimDepth = 20
 
