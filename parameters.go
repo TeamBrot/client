@@ -1,15 +1,5 @@
 package main
 
-//In this file all parameters for all clients are set
-
-//This value is specified in milliseconds and is a reserve in which the actions should be send to the server
-const calculationTimeOffset = 150
-
-//If getting the time from the timing api fails and the calculation time calculated is more than this value in minutes away the program will throw an error
-const maxCalculationTime = 2
-
-//MINIMAX PARAMETERS
-
 //PROBABILITY TABLE PARAMETERS
 
 //Setting this value higher, makes makes us more confident, that we will visit a field and no one other does. Setting it lower does the exact opposite

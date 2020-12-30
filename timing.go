@@ -7,7 +7,11 @@ import (
 	"time"
 )
 
-const timeAPITimeout = 1000 * time.Millisecond
+const timeAPIRequestTimeout = 1000 * time.Millisecond
+// If getting the time from the timing api fails and the calculation time calculated is more than this value in minutes away the program will throw an error
+const maxCalculationTime = 2 * time.Minute
+// This value is specified in milliseconds and is a the expected time which actions take to be sent to the server
+const calculationTimeOffset = 150
 
 type ServerTime struct {
 	Time         time.Time `json:"time"`
@@ -15,7 +19,7 @@ type ServerTime struct {
 }
 
 
-var httpClient http.Client = http.Client{Timeout: timeAPITimeout}
+var httpClient http.Client = http.Client{Timeout: timeAPIRequestTimeout}
 
 //gets the current server Time via the specified API
 func getTime(url string) (ServerTime, error) {
@@ -37,7 +41,7 @@ func computeCalculationTime(deadline time.Time, config Config) (time.Duration, e
 		log.Println("couldn't reach timing api, try using machine time")
 		calculationTime := deadline.Sub(time.Now().UTC())
 		calculationTime = time.Duration((calculationTime.Milliseconds() - calculationTimeOffset) * 1000000000)
-		if calculationTime > maxCalculationTime*time.Minute {
+		if calculationTime > maxCalculationTime {
 			return calculationTime, err
 		}
 		log.Println("the scheduled calculation Time is", calculationTime)
