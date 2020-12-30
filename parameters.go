@@ -8,9 +8,6 @@ const calculationTimeOffset = 150
 //If getting the time from the timing api fails and the calculation time calculated is more than this value in minutes away the program will throw an error
 const maxCalculationTime = 2
 
-//This defines the max speed a player can reach in our simulation. To simulate most realistic set it to 10
-const maxSpeed = 6
-
 //MINIMAX PARAMETERS
 
 //PROBABILITY TABLE PARAMETERS

@@ -51,7 +51,7 @@ var Directions = map[string]Direction{
 // ProcessAction moves the player according to action and turn. Returns visited coordinates
 func (player *Player) ProcessAction(action Action, turn uint16) []*Coords {
 	if action == SpeedUp {
-		if player.Speed >= maxSpeed {
+		if player.Speed != 10 {
 			player.Speed++
 		}
 	} else if action == SlowDown {
