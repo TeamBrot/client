@@ -42,6 +42,7 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 		possible[action] = true
 	}
 	turn++
+	var inPaths [5]bool
 	//computes the score for every path
 	for _, path := range paths {
 		score := 0.0
@@ -62,7 +63,11 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 			return possibleActions[0]
 		}
 		score /= float64(len(path))
+		inPaths[path[0]] = true
 		scores[path[0]] += score
+	}
+	for z, isPossible := range possible {
+		possible[z] = isPossible && inPaths[z]
 	}
 	//computes how many times a Action was the first Action of path
 	counter := [5]int{1, 1, 1, 1, 1}
@@ -95,17 +100,18 @@ func analyzeBoard(status *Status, probabilityTable [][]float64) ([]uint8, []*Pla
 	me := status.Players[status.You]
 	if probabilityTable != nil {
 		var score float64
-		for y := me.Y - 5; y < me.Y+5; y++ {
-			if y >= 0 && y < status.Height {
-				for x := me.X - 5; x < me.X+5; x++ {
-					if x >= 0 && x < status.Width {
+		for y := int(me.Y) - 5; y < int(me.Y)+5; y++ {
+			if y >= 0 && y < int(status.Height) {
+				for x := int(me.X) - 5; x < int(me.X)+5; x++ {
+					if x >= 0 && x < int(status.Width) {
 						score += probabilityTable[y][x]
 					}
 				}
 
 			}
 		}
-		if score > 2 {
+		log.Println(score)
+		if score >= 1.0 {
 			playersAreNear = true
 		}
 	} else {
@@ -183,11 +189,13 @@ func (c SpekuClient) GetAction(player Player, status *Status, calculationTime ti
 	//If there is more than one player we should calculate miniMax for we need minimax for mutliple players
 	if len(minMaxPlayers) > 1 {
 		go func() {
+			log.Println("using minimax wih", len(minMaxPlayers), "opponents")
 			bestActionsMinimax := miniMaxBestActionsMultiplePlayers(minMaxPlayers, status.You, status, stopMiniMaxChannel)
 			miniMaxChannel <- bestActionsMinimax
 		}()
 	} else if len(minMaxPlayers) == 1 {
 		go func() {
+			log.Println("using minimax with one opponent")
 			log.Println("using player", minMaxPlayers[0], "at", status.Players[minMaxPlayers[0]].X, status.Players[minMaxPlayers[0]].Y, "as minimizer")
 			bestActionsMinimax := MinimaxBestActionsTimed(status.You, minMaxPlayers[0], status, stopMiniMaxChannel)
 			miniMaxChannel <- bestActionsMinimax
