@@ -9,11 +9,6 @@ import (
 
 var probabilityTableOfLastTurn [][]float64
 
-//Coords store the coordinates of a player
-type Coords struct {
-	Y, X uint16
-}
-
 //This functions executes a action and returns the average score of every visited Cell
 func evaluateAction(player *Player, field [][]float64, action Action, turn uint16) float64 {
 	score := 0.0

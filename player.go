@@ -168,16 +168,6 @@ func (JSONPlayer *JSONPlayer) ConvertToPlayer() *Player {
 	return &player
 }
 
-//
-func (player *Player) toSimPlayer(probability float64) *SimPlayer {
-	var simPlayer SimPlayer
-	simPlayer.player = player.copyPlayer()
-	simPlayer.AllVisitedCells = make(map[Coords]struct{}, 0)
-	simPlayer.LastMoveVisitedCells = make(map[Coords]struct{}, 0)
-	simPlayer.Probability = probability
-	return &simPlayer
-}
-
 //This function copies a struct of type Player
 func (player *Player) copyPlayer() *Player {
 	var newPlayer Player

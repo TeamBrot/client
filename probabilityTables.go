@@ -38,9 +38,9 @@ func calculateProbabilityTables(status *Status, stopSimulateGameChan <-chan time
 	for d, player := range activePlayersInRange {
 		if player == status.Players[status.You] {
 			me = d
-			allSimPlayer = append(allSimPlayer, player.toSimPlayer(myStartProbability))
+			allSimPlayer = append(allSimPlayer, SimPlayerFromPlayer(player, myStartProbability))
 		} else {
-			allSimPlayer = append(allSimPlayer, player.toSimPlayer(othersStartProbability))
+			allSimPlayer = append(allSimPlayer, SimPlayerFromPlayer(player, othersStartProbability))
 		}
 	}
 	//with those Channels resultsToField can give fields to simulatePlayer to make the calculations more acurate
