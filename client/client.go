@@ -12,7 +12,7 @@ type Client interface {
 
 // RunClient runs a spe_ed client using a specified configuration
 func RunClient(config Config) {
-	clientLogger := NewClientLogger(config.clientName)
+	clientLogger := NewClientLogger(config.ClientName)
 	fileLogger, err := NewFileLogger(config)
 	if err != nil {
 		clientLogger.Println("could not create file logger:", err)
@@ -24,8 +24,8 @@ func RunClient(config Config) {
 	}()
 
 	gui := &Gui{nil}
-	if config.apiKey != "" {
-		guiUrl := fmt.Sprintf("%s:%d", config.guiHostname, config.guiPort)
+	if config.APIKey != "" {
+		guiUrl := fmt.Sprintf("%s:%d", config.GUIHostname, config.GUIPort)
 		gui = StartGui(guiUrl, clientLogger)
 	}
 
@@ -56,7 +56,7 @@ func RunClient(config Config) {
 			clientLogger.Fatalln("error receiving time from server")
 		}
 
-		action := config.client.GetAction(*status.Players[status.You], status, calculationTime)
+		action := config.Client.GetAction(*status.Players[status.You], status, calculationTime)
 		err = conn.WriteAction(action)
 		if err != nil {
 			clientLogger.Fatalln("error sending action:", err)

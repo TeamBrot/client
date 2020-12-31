@@ -36,7 +36,7 @@ func getTime(url string) (ServerTime, error) {
 
 //Sends Signals to the Client after a specified amount of time has passed
 func computeCalculationTime(deadline time.Time, config Config) (time.Duration, error) {
-	serverTime, err := getTime(config.timeURL)
+	serverTime, err := getTime(config.TimeURL)
 	if err != nil {
 		log.Println("couldn't reach timing api, try using machine time")
 		calculationTime := deadline.Sub(time.Now().UTC())

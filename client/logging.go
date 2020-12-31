@@ -12,21 +12,20 @@ import (
 // FileLogger represents all information needed to log a single game to a JSON-encoded file
 type FileLogger struct {
 	filename string
-	Start time.Time    `json:"start"`
-	Url   string       `json:"url"`
-	Bot   string       `json:"bot"`
-	Game  []JSONStatus `json:"game"`
+	Start    time.Time    `json:"start"`
+	Game     []JSONStatus `json:"game"`
+	Config   Config       `json:"config"`
 }
 
 // NewFileLogger creates a FileLogger with a specified client configuration
 func NewFileLogger(config Config) (FileLogger, error) {
-	if _, err := os.Stat(config.logDirectory); os.IsNotExist(err) {
-		os.Mkdir(config.logDirectory, 0755)
+	if _, err := os.Stat(config.LogDirectory); os.IsNotExist(err) {
+		os.Mkdir(config.LogDirectory, 0755)
 	}
 	var filename string
 	startTime := time.Now()
 	for i := 0; ; i++ {
-		filename = fmt.Sprintf("%s%c%d-%s-%d.json", config.logDirectory, os.PathSeparator, int64(startTime.Unix()), config.clientName, i)
+		filename = fmt.Sprintf("%s%c%d-%s-%d.json", config.LogDirectory, os.PathSeparator, int64(startTime.Unix()), config.ClientName, i)
 		_, err := os.Stat(filename)
 		if os.IsNotExist(err) {
 			break
@@ -34,7 +33,7 @@ func NewFileLogger(config Config) (FileLogger, error) {
 			return FileLogger{}, err
 		}
 	}
-	fileLogger := FileLogger{filename: filename, Start: startTime, Url: config.gameURL, Bot: config.clientName, Game: []JSONStatus{}}
+	fileLogger := FileLogger{filename: filename, Start: startTime, Game: []JSONStatus{}, Config: config}
 	return fileLogger, nil
 }
 
