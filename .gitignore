@@ -1,4 +1,4 @@
 client/client
 client/client.exe
-log/
+client/log/
 .vscode

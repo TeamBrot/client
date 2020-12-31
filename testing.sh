@@ -1,5 +1,6 @@
-
+cd client
+go build .
 while true
 do
-    ./client combi
+    ./client
 done
