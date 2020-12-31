@@ -36,21 +36,22 @@ func RunClient(config Config) {
 	}
 	defer conn.Close()
 
-	status, JSONStatus, err := conn.ReadStatus()
+	status, jsonStatus, err := conn.ReadStatus()
 	if err != nil {
 		clientLogger.Fatalln("error on first status read:", err)
 	}
+	fileLogger.Store(jsonStatus)
 	clientLogger.Println("field dimensions:", status.Width, "x", status.Height)
 	clientLogger.Println("number of players:", len(status.Players))
 
-	for JSONStatus.Running && JSONStatus.Players[JSONStatus.You].Active {
+	for jsonStatus.Running && jsonStatus.Players[jsonStatus.You].Active {
 
 		clientLogger.Println("turn", status.Turn)
-		clientLogger.Println("deadline", JSONStatus.Deadline)
+		clientLogger.Println("deadline", jsonStatus.Deadline)
 		me := status.Players[status.You]
 		clientLogger.Println("Position ", me.Y, "y", me.X, "x")
 		clientLogger.Println("Speed", me.Speed)
-		calculationTime, err := computeCalculationTime(JSONStatus.Deadline, config)
+		calculationTime, err := computeCalculationTime(jsonStatus.Deadline, config)
 		if err != nil {
 			clientLogger.Fatalln("error receiving time from server")
 		}
@@ -61,29 +62,30 @@ func RunClient(config Config) {
 			clientLogger.Fatalln("error sending action:", err)
 		}
 
-		status, JSONStatus, err = conn.ReadStatus()
+		status, jsonStatus, err = conn.ReadStatus()
 		if err != nil {
 			clientLogger.Fatalln("error reading status:", err)
 		}
+		fileLogger.Store(jsonStatus)
 
-		err = gui.WriteStatus(JSONStatus)
+		err = gui.WriteStatus(jsonStatus)
 		if err != nil {
 			clientLogger.Println("could not write status to gui:", err)
 		}
 
 		counter := 0
-		for _, player := range JSONStatus.Players {
+		for _, player := range jsonStatus.Players {
 			if player.Active {
 				counter++
 			}
 		}
 		if counter > 1 {
 			clientLogger.Println("active players:", counter)
-			if !JSONStatus.Players[JSONStatus.You].Active {
+			if !jsonStatus.Players[jsonStatus.You].Active {
 				clientLogger.Println("lost")
 			}
 		} else if counter == 1 {
-			if JSONStatus.Players[JSONStatus.You].Active {
+			if jsonStatus.Players[jsonStatus.You].Active {
 				clientLogger.Println("won")
 			} else {
 				clientLogger.Println("lost")

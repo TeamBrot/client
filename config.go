@@ -11,17 +11,18 @@ const defaultTimeURL = "http://localhost:8080/spe_ed_time"
 const defaultLogFile = "logging.txt"
 const defaultGuiHostname = "0.0.0.0"
 const defaultGuiPort = 8081
+const defaultLogDirectory = "log"
 
 // Config represents a server and client configuration
 type Config struct {
-	gameURL     string
-	timeURL     string
-	apiKey      string
-	guiHostname string
-	guiPort     int
-	logfile     string
-	clientName  string
-	client      Client
+	gameURL      string
+	timeURL      string
+	apiKey       string
+	guiHostname  string
+	guiPort      int
+	logDirectory string
+	clientName   string
+	client       Client
 }
 
 func getenvDefault(key string, def string) string {
@@ -64,7 +65,7 @@ func GetConfig() (Config, error) {
 	config.apiKey = getenvDefault("KEY", "")
 
 	flag.StringVar(&config.clientName, "client", "combi", "client to run")
-	flag.StringVar(&config.logfile, "logfile", defaultLogFile, "file where game results are logged")
+	flag.StringVar(&config.logDirectory, "log", defaultLogDirectory, "directory in which game statistics are stored")
 	flag.StringVar(&config.guiHostname, "guihostname", defaultGuiHostname, "hostname on which the gui server is listening")
 	flag.IntVar(&config.guiPort, "guiport", defaultGuiPort, "port on which the gui server is listening")
 	flag.Parse()

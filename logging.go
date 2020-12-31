@@ -15,15 +15,18 @@ type FileLogger struct {
 	Start time.Time    `json:"start"`
 	Url   string       `json:"url"`
 	Bot   string       `json:"bot"`
-	Game  []JSONStatus `json:game`
+	Game  []JSONStatus `json:"game"`
 }
 
 // NewFileLogger creates a FileLogger with a specified client configuration
 func NewFileLogger(config Config) (FileLogger, error) {
+	if _, err := os.Stat(config.logDirectory); os.IsNotExist(err) {
+		os.Mkdir(config.logDirectory, 0755)
+	}
 	var filename string
 	startTime := time.Now()
 	for i := 0; ; i++ {
-		filename = fmt.Sprintf("%d-%s-%d.json", int64(startTime.Unix()), config.clientName, i)
+		filename = fmt.Sprintf("%s%c%d-%s-%d.json", config.logDirectory, os.PathSeparator, int64(startTime.Unix()), config.clientName, i)
 		_, err := os.Stat(filename)
 		if os.IsNotExist(err) {
 			break
@@ -35,8 +38,8 @@ func NewFileLogger(config Config) (FileLogger, error) {
 	return fileLogger, nil
 }
 
-// StoreStatus adds a JSON status to the log data
-func (fileLogger *FileLogger) StoreStatus(jsonStatus *JSONStatus) {
+// Store adds a JSON status to the log data
+func (fileLogger *FileLogger) Store(jsonStatus *JSONStatus) {
 	fileLogger.Game = append(fileLogger.Game, *jsonStatus)
 }
 

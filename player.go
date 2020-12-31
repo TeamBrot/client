@@ -18,7 +18,7 @@ type Player struct {
 type JSONPlayer struct {
 	X               int `json:"x"`
 	Y               int `json:"y"`
-	Direction       Direction
+	Direction       Direction `json:"-"`
 	StringDirection string `json:"direction"`
 	Speed           int    `json:"speed"`
 	Active          bool   `json:"active"`

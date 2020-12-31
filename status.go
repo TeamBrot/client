@@ -25,7 +25,7 @@ type JSONStatus struct {
 	You      int                 `json:"you"`
 	Running  bool                `json:"running"`
 	Deadline time.Time           `json:"deadline"`
-	Turn     int
+	Turn     int                 `json:"turn"`
 }
 
 func (status *Status) Copy() *Status {
