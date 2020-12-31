@@ -2,18 +2,19 @@ package main
 
 import (
 	"log"
+	"math"
 	"math/rand"
 	"time"
 )
 
 //If this value is set to true we process in every rollout before we choose our own action a action for every other living player
-const simulateOtherPlayers = false
+var simulateOtherPlayers = false
 
 //This const defines the max number of Rollouts simulateRollouts will perform. Normally there is no good reason to change this value
-const maxNumberofRollouts = 7000000
+const maxNumberofRollouts = 10000000
 
 //This const defines the relation between the longest and the shortest path simulateRollouts gives back
-const filterValue = 0.75
+const filterValue = 0.85
 
 //search for the longest paths a player could reach. Simulates random move for all Players and allways processes as last player
 func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time) [][]Action {
@@ -116,4 +117,39 @@ func filterPaths(paths [][]Action, longest int, percent float64, maxRemaining in
 		}
 	}
 	return filteredPaths
+}
+
+//RolloutClient is a client implementation that uses only rollouts to decide what to do next
+type RolloutClient struct{}
+
+// GetAction implements the Client interface
+func (c RolloutClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
+	stopChannel := time.After((calculationTime / 10) * 9)
+	simulateOtherPlayers = true
+	bestPaths := simulateRollouts(status, stopChannel)
+	possibleActions := status.Players[status.You].PossibleMoves(status.Cells, status.Turn, nil, false)
+	var possible [5]bool
+	//Computes if a action is possible based on the possibleActions Array
+	for _, action := range possibleActions {
+		possible[action] = true
+	}
+	counter := [5]int{1, 1, 1, 1, 1}
+	for _, path := range bestPaths {
+		counter[path[0]]++
+	}
+	var values [5]float64
+	for i := 0; i < 5; i++ {
+		values[i] = float64(counter[i]) / float64(len(bestPaths))
+	}
+	log.Println("calculated values", values)
+
+	minimum := math.Inf(0)
+	action := ChangeNothing
+	for i, v := range values {
+		if possible[i] && v > minimum {
+			minimum = v
+			action = Action(i)
+		}
+	}
+	return action
 }
