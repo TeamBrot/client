@@ -48,21 +48,23 @@ func (player *Player) ProcessAction(action Action, turn uint16) []*Coords {
 
 // checkCell checks if it is legal for a player to go from a position a certain number of fields
 func checkCell(cells [][]bool, direction Direction, y uint16, x uint16, fields uint16, extraCellInfo map[Coords]struct{}, extraCellAllowed bool) bool {
+	intY := int(y)
+	intX := int(x)
 	if direction == Up {
-		y -= fields
+		intY = int(y) - int(fields)
 	} else if direction == Down {
-		y += fields
+		intY = int(y) + int(fields)
 	} else if direction == Left {
-		x -= fields
+		intX = int(x) - int(fields)
 	} else {
-		x += fields
+		intX = int(x) + int(fields)
 	}
-	if x >= uint16(len(cells[0])) || y >= uint16(len(cells)) || x < 0 || y < 0 {
+	if intX >= len(cells[0]) || intY >= len(cells) || intX < 0 || intY < 0 {
 		return false
 	}
-	isPossible := !cells[y][x]
+	isPossible := !cells[intY][intX]
 	if extraCellInfo != nil {
-		_, fieldVisited := extraCellInfo[Coords{y, x}]
+		_, fieldVisited := extraCellInfo[Coords{uint16(intY), uint16(intX)}]
 		if extraCellAllowed {
 			return isPossible || fieldVisited
 		}
@@ -102,14 +104,14 @@ func (player *Player) PossibleMoves(cells [][]bool, turn uint16, extraCellInfo m
 	if changeNothing {
 		possibleMoves = append(possibleMoves, ChangeNothing)
 	}
-	if speedUp {
-		possibleMoves = append(possibleMoves, SpeedUp)
-	}
 	if turnLeft {
 		possibleMoves = append(possibleMoves, TurnLeft)
 	}
 	if turnRight {
 		possibleMoves = append(possibleMoves, TurnRight)
+	}
+	if speedUp {
+		possibleMoves = append(possibleMoves, SpeedUp)
 	}
 	if slowDown {
 		possibleMoves = append(possibleMoves, SlowDown)
