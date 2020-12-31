@@ -308,5 +308,6 @@ func (c ProbabilityClient) GetAction(player Player, status *Status, calculationT
 			action = Action(i)
 		}
 	}
+	log.Println("chose as best action", action)
 	return action
 }

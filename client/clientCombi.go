@@ -13,7 +13,7 @@ var probabilityTableOfLastTurn [][]float64
 const windowSize = 5
 
 //If the sum of all probabilities in the specified window is higher then this, miniMax can be used
-const miniMaxActivationValue = 0.8
+const miniMaxActivationValue = 0.5
 
 //if miniMax can be used a player also has to be nearer than this value to the player so it gets miniMaxed
 const miniMaxDistance = 12.0
@@ -75,14 +75,11 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 		inPaths[path[0]] = true
 		probabilities[path[0]] += score
 	}
-	log.Println(possible)
-	log.Println(inPaths)
 	if !miniMaxIsUsed {
 		for z := range possible {
 			possible[z] = possible[z] && inPaths[z]
 		}
 	}
-	log.Println(possible)
 	//computes how many times a Action was the first Action of path
 	counter := [5]int{1, 1, 1, 1, 1}
 	for _, path := range paths {

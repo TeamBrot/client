@@ -31,6 +31,7 @@ func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time) [][
 			path := make([]Action, 0)
 
 			testPossibleMoves := rolloutStatus.Players[rolloutStatus.You].PossibleMoves(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
+			//initialize rand numbers new after every First Action has been taken
 			if performedRollouts%len(testPossibleMoves) == 0 {
 				rand.Seed(int64(performedRollouts))
 			}
