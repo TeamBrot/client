@@ -37,7 +37,6 @@ func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time) [][
 			counter := 0
 			for {
 				me := rolloutStatus.Players[status.You]
-				rolloutStatus.Turn++
 				if simulateOtherPlayers == true {
 					countLivingPlayers := 0
 					//Process one random move for every other player besides me
@@ -71,6 +70,7 @@ func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time) [][
 					randomAction = possibleMoves[rand.Intn(len(possibleMoves))]
 				}
 				rolloutMove(rolloutStatus, randomAction, me)
+				rolloutStatus.Turn++
 				path = append(path, randomAction)
 			}
 			longestPaths, longest = checkPath(path, longestPaths, longest, performedRollouts)
@@ -132,7 +132,7 @@ func (c RolloutClient) GetAction(player Player, status *Status, calculationTime 
 	stopChannel := time.After((calculationTime / 10) * 9)
 	simulateOtherPlayers = true
 	bestPaths := simulateRollouts(status, stopChannel)
-	possibleActions := status.Players[status.You].PossibleMoves(status.Cells, status.Turn+1, nil, false)
+	possibleActions := status.Players[status.You].PossibleMoves(status.Cells, status.Turn, nil, false)
 	var possible [5]bool
 	//Computes if a action is possible based on the possibleActions Array
 	for _, action := range possibleActions {
@@ -151,7 +151,7 @@ func (c RolloutClient) GetAction(player Player, status *Status, calculationTime 
 	minimum := math.Inf(0)
 	action := ChangeNothing
 	for i, v := range values {
-		if possible[i] && v > minimum {
+		if possible[i] && v < minimum {
 			minimum = v
 			action = Action(i)
 		}

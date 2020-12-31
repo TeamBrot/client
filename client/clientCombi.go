@@ -44,14 +44,13 @@ func evaluateAction(player *Player, field [][]float64, action Action, turn uint1
 }
 
 //Simulates the moves of all Longest Paths until simDepth is reached. Computes a score for every possible Action and returns the Action with the lowes score
-func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, turn uint16, simDepth int, possibleActions []Action) Action {
+func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, turn uint16, simDepth int, possibleActions []Action, miniMaxIsUsed bool) Action {
 	var scores [5]float64
 	var possible [5]bool
 	//Computes if a action is possible based on the possibleActions Array
 	for _, action := range possibleActions {
 		possible[action] = true
 	}
-	turn++
 	var inPaths [5]bool
 	//computes the score for every path
 	for _, path := range paths {
@@ -78,8 +77,10 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 	}
 	log.Println(possible)
 	log.Println(inPaths)
-	for z := range possible {
-		possible[z] = possible[z] && inPaths[z]
+	if !miniMaxIsUsed {
+		for z := range possible {
+			possible[z] = possible[z] && inPaths[z]
+		}
 	}
 	log.Println(possible)
 	//computes how many times a Action was the first Action of path
@@ -175,7 +176,7 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	timingChannel := make(chan time.Time)
 	go combiClientTiming(calculationTime, timingChannel)
 	var bestAction Action
-	possibleActions := player.PossibleMoves(status.Cells, status.Turn+1, nil, false)
+	possibleActions := player.PossibleMoves(status.Cells, status.Turn, nil, false)
 	//handle trivial cases (zero or one possible Action)
 	if len(possibleActions) == 1 {
 		log.Println("only possible action: ", possibleActions[0])
@@ -230,10 +231,12 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	log.Println("sending stop signal to simulateRollouts and minimax...")
 	close(stopRolloutChan)
 	close(stopMiniMaxChannel)
+	var miniMaxIsUsed bool
 	if len(minMaxPlayers) > 0 {
 		miniMaxActions := <-miniMaxChannel
 		if len(miniMaxActions) != 0 {
 			possibleActions = miniMaxActions
+			miniMaxIsUsed = true
 		}
 	}
 	allProbabilityTables = <-probabilityTablesChan
@@ -246,7 +249,7 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	//Log Timing
 	log.Println("time until calculations are finished and evaluation can start: ", time.Since(start))
 	//Evaluate the paths with the given field and return the best Action based on this TODO: Needs improvement in case of naming
-	bestAction = evaluatePaths(player, allProbabilityTables, bestPaths, status.Turn, len(allProbabilityTables)-1, possibleActions)
+	bestAction = evaluatePaths(player, allProbabilityTables, bestPaths, status.Turn, len(allProbabilityTables)-1, possibleActions, miniMaxIsUsed)
 	//Log Timing
 	probabilityTableOfLastTurn = allProbabilityTables[len(allProbabilityTables)-1]
 	log.Println("total processing took", time.Since(start))

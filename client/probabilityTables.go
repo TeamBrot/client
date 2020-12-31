@@ -161,12 +161,12 @@ func calculateVisitsForPlayer(simPlayer *SimPlayer, id int, status *Status, elap
 	var currentProbabilityTable [][]float64
 	currentPlayers := make([]*SimPlayer, 1)
 	currentPlayers[0] = simPlayer
-	for turn := 1; turn <= maxSimDepth; turn++ {
+	for turn := 0; turn < maxSimDepth; turn++ {
 		visits := make([][]uint16, status.Height)
 		for r := range visits {
 			visits[r] = make([]uint16, status.Width)
 		}
-		if turn != 1 {
+		if turn != 0 {
 			select {
 			case newProbabilityTable := <-probabilityTableChannel:
 				addFields(&currentProbabilityTable, newProbabilityTable)
