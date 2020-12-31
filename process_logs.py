@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw
 import ffmpeg
 
 SCALING = 16
-COLORS = ["#dddddd", "#ff0000", "#00ff00", "#0000ff", "#00ffff", "#ffff00", "#ff00ff"]
+COLORS = ["#dddddd", "#ff0000", "#00ff00", "#0000ff", "#00ffff", "#ffff00", "#ff00ff", "#000000"]
 
 if len(sys.argv) < 2:
     print("no file given")
