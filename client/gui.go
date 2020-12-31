@@ -25,7 +25,7 @@ func StartGui(guiURL string, logger *log.Logger) *Gui {
 		gui.conn = c
 	})
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "gui.html")
+		http.ServeFile(w, r, "gui/index.html")
 	})
 
 	go func() {
