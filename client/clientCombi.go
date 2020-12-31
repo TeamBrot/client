@@ -76,9 +76,12 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 		inPaths[path[0]] = true
 		scores[path[0]] += score
 	}
-	for z, isPossible := range possible {
-		possible[z] = isPossible && inPaths[z]
+	log.Println(possible)
+	log.Println(inPaths)
+	for z := range possible {
+		possible[z] = possible[z] && inPaths[z]
 	}
+	log.Println(possible)
 	//computes how many times a Action was the first Action of path
 	counter := [5]int{1, 1, 1, 1, 1}
 	for _, path := range paths {
@@ -172,7 +175,7 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	timingChannel := make(chan time.Time)
 	go combiClientTiming(calculationTime, timingChannel)
 	var bestAction Action
-	possibleActions := player.PossibleMoves(status.Cells, status.Turn, nil, false)
+	possibleActions := player.PossibleMoves(status.Cells, status.Turn+1, nil, false)
 	//handle trivial cases (zero or one possible Action)
 	if len(possibleActions) == 1 {
 		log.Println("only possible action: ", possibleActions[0])
@@ -228,7 +231,10 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	close(stopRolloutChan)
 	close(stopMiniMaxChannel)
 	if len(minMaxPlayers) > 0 {
-		possibleActions = <-miniMaxChannel
+		miniMaxActions := <-miniMaxChannel
+		if len(miniMaxActions) != 0 {
+			possibleActions = miniMaxActions
+		}
 	}
 	allProbabilityTables = <-probabilityTablesChan
 	bestPaths := <-rolloutChan

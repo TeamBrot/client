@@ -132,7 +132,7 @@ func (c RolloutClient) GetAction(player Player, status *Status, calculationTime 
 	stopChannel := time.After((calculationTime / 10) * 9)
 	simulateOtherPlayers = true
 	bestPaths := simulateRollouts(status, stopChannel)
-	possibleActions := status.Players[status.You].PossibleMoves(status.Cells, status.Turn, nil, false)
+	possibleActions := status.Players[status.You].PossibleMoves(status.Cells, status.Turn+1, nil, false)
 	var possible [5]bool
 	//Computes if a action is possible based on the possibleActions Array
 	for _, action := range possibleActions {
