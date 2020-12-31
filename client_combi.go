@@ -159,7 +159,7 @@ func analyzeBoard(status *Status, probabilityTable [][]float64) ([]uint8, []*Pla
 func combiClientTiming(calculationTime time.Duration, timingChannel chan<- time.Time) {
 	time.Sleep(time.Duration(0.6 * float64(calculationTime.Nanoseconds())))
 	timingChannel <- time.Now()
-	time.Sleep(time.Duration(0.2 * float64(calculationTime.Nanoseconds())))
+	time.Sleep(time.Duration(0.3 * float64(calculationTime.Nanoseconds())))
 	close(timingChannel)
 }
 
