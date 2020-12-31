@@ -29,6 +29,11 @@ func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time) [][
 		default:
 			rolloutStatus := status.Copy()
 			path := make([]Action, 0)
+
+			testPossibleMoves := rolloutStatus.Players[rolloutStatus.You].PossibleMoves(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
+			if performedRollouts%len(testPossibleMoves) == 0 {
+				rand.Seed(int64(performedRollouts))
+			}
 			counter := 0
 			for {
 				me := rolloutStatus.Players[status.You]
