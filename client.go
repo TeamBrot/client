@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"os"
 	"time"
 )
 
@@ -12,29 +10,18 @@ type Client interface {
 	GetAction(player Player, status *Status, calculationTime time.Duration) Action
 }
 
-func newClientLogger(clientName string) *log.Logger {
-	logger := log.New(os.Stdout, "[client] ", log.Lmsgprefix|log.LstdFlags)
-	logger.Println("using client", clientName)
-	log.SetPrefix(fmt.Sprintf("[%s] ", clientName))
-	log.SetFlags(log.Lmsgprefix | log.LstdFlags)
-	return logger
-}
-
-func newFileLogger(filename string) (*log.Logger, func(), error) {
-	file, err := os.OpenFile(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		return nil, nil, err
-	}
-	logger := log.New(file, "", log.LstdFlags)
-	return logger, func() { file.Close() }, nil
-}
+// RunClient runs a spe_ed client using a specified configuration
 func RunClient(config Config) {
-	clientLogger := newClientLogger(config.clientName)
-	fileLogger, closeFunc, err := newFileLogger(defaultLogFile)
+	clientLogger := NewClientLogger(config.clientName)
+	fileLogger, err := NewFileLogger(config)
 	if err != nil {
-		clientLogger.Println("could not create fileLogger:", err)
+		clientLogger.Println("could not create file logger:", err)
 	}
-	defer closeFunc()
+	defer func() {
+		if err := fileLogger.Write(); err != nil {
+			clientLogger.Println("could not log to file:", err)
+		}
+	}()
 
 	gui := &Gui{nil}
 	if config.apiKey != "" {
@@ -94,35 +81,15 @@ func RunClient(config Config) {
 			clientLogger.Println("active players:", counter)
 			if !JSONStatus.Players[JSONStatus.You].Active {
 				clientLogger.Println("lost")
-				fileLogger.Println("At Beginnig there were", len(JSONStatus.Players), "Players")
-				fileLogger.Println("Now are", len(status.Players), "Players still Active")
-				fileLogger.Println("The Game lasted", status.Turn, "Turns")
-				fileLogger.Println("The field hat the dimensions", status.Width, "x", status.Height)
-				fileLogger.Println("lost")
 			}
 		} else if counter == 1 {
 			if JSONStatus.Players[JSONStatus.You].Active {
 				clientLogger.Println("won")
-				fileLogger.Println("At Beginnig there were", len(JSONStatus.Players), "Players")
-				fileLogger.Println("Now are", len(status.Players), "Players still Active")
-				fileLogger.Println("The Game lasted", status.Turn, "Turns")
-				fileLogger.Println("The field hat the dimensions", status.Width, "x", status.Height)
-				fileLogger.Println("won")
 			} else {
 				clientLogger.Println("lost")
-				fileLogger.Println("At Beginnig there were", len(JSONStatus.Players), "Players")
-				fileLogger.Println("Now are", len(status.Players), "Players still Active")
-				fileLogger.Println("The Game lasted", status.Turn, "Turns")
-				fileLogger.Println("The field hat the dimensions", status.Width, "x", status.Height)
-				fileLogger.Println("lost")
 			}
 		} else {
 			clientLogger.Println("lost")
-			fileLogger.Println("At Beginnig there were", len(JSONStatus.Players), "Players")
-			fileLogger.Println("Now are", len(status.Players), "Players still Active")
-			fileLogger.Println("The Game lasted", status.Turn, "Turns")
-			fileLogger.Println("The field hat the dimensions", status.Width, "x", status.Height)
-			fileLogger.Println("lost")
 		}
 	}
 	clientLogger.Println("player inactive, disconnecting...")

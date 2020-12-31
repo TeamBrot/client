@@ -56,7 +56,7 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 	//computes the score for every path
 	for _, path := range paths {
 		score := 0.0
-		minPlayer := player.copyPlayer()
+		minPlayer := player.Copy()
 		for i := 0; i < len(path); i++ {
 			if i != len(path) {
 				if i < simDepth {

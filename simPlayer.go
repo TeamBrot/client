@@ -7,10 +7,10 @@ type SimPlayer struct {
 	LastMoveVisitedCells map[Coords]struct{}
 }
 
-// Copys a SimPlayer Object (Might be transfered to a util.go)
-func (player *SimPlayer) copySimPlayer() *SimPlayer {
+// copySimPlayer copies a SimPlayer object
+func (player *SimPlayer) Copy() *SimPlayer {
 	var p SimPlayer
-	p.player = player.player.copyPlayer()
+	p.player = player.player.Copy()
 	p.Probability = player.Probability
 	p.LastMoveVisitedCells = make(map[Coords]struct{})
 	p.AllVisitedCells = make(map[Coords]struct{})
@@ -22,7 +22,7 @@ func (player *SimPlayer) copySimPlayer() *SimPlayer {
 
 func SimPlayerFromPlayer(player *Player, probability float64) *SimPlayer {
 	var simPlayer SimPlayer
-	simPlayer.player = player.copyPlayer()
+	simPlayer.player = player.Copy()
 	simPlayer.AllVisitedCells = make(map[Coords]struct{}, 0)
 	simPlayer.LastMoveVisitedCells = make(map[Coords]struct{}, 0)
 	simPlayer.Probability = probability

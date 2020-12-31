@@ -26,7 +26,7 @@ type Result struct {
 
 //Simulates a Action and for a simPlayer and a board. Raises the score of every visited cell at the board and adds the Coords to allVisitedCells and lastMoveVisitedCells
 func simulateMove(board [][]uint16, parentPlayer *SimPlayer, action Action, turn uint16, simField [][]float64) (*SimPlayer, float64) {
-	childPlayer := parentPlayer.copySimPlayer()
+	childPlayer := parentPlayer.Copy()
 	player := childPlayer.player
 	score := 0.0
 	visitedCoords := player.ProcessAction(action, turn)

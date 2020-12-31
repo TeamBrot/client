@@ -43,9 +43,26 @@ func (status *Status) Copy() *Status {
 	}
 	s.Players = make(map[uint8]*Player)
 	for id, player := range status.Players {
-		s.Players[id] = player.copyPlayer()
+		s.Players[id] = player.Copy()
 	}
 	return &s
+}
+
+func (jsonStatus *JSONStatus) Copy() *JSONStatus {
+	newStatus := *jsonStatus
+	newStatus.Cells = make([][]int, newStatus.Height)
+	for i := range newStatus.Cells {
+		newStatus.Cells[i] = make([]int, jsonStatus.Width)
+		for j := range newStatus.Cells[i] {
+			newStatus.Cells[i][j] = jsonStatus.Cells[i][j]
+		}
+	}
+	newStatus.Players = make(map[int]*JSONPlayer)
+	for id, player := range jsonStatus.Players {
+		newStatus.Players[id] = player.Copy()
+	}
+	return &newStatus
+
 }
 
 func (status *Status) FindClosestPlayerTo(originPlayer uint8) (uint8, error) {

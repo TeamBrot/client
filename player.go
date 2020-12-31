@@ -159,21 +159,23 @@ func (player *Player) DistanceTo(p2 *Player) float64 {
 }
 
 // ConvertToPlayer converts a JSONPlayer to a Player
-func (JSONPlayer *JSONPlayer) ConvertToPlayer() *Player {
+func (jsonPlayer *JSONPlayer) ConvertToPlayer() *Player {
 	var player Player
-	player.X = uint16(JSONPlayer.X)
-	player.Y = uint16(JSONPlayer.Y)
-	player.Speed = uint8(JSONPlayer.Speed)
-	player.Direction = JSONPlayer.Direction
+	player.X = uint16(jsonPlayer.X)
+	player.Y = uint16(jsonPlayer.Y)
+	player.Speed = uint8(jsonPlayer.Speed)
+	player.Direction = jsonPlayer.Direction
+	return &player
+}
+
+// Copy copies a JSONPlayer
+func (jsonPlayer *JSONPlayer) Copy() *JSONPlayer {
+	player := *jsonPlayer
 	return &player
 }
 
 //This function copies a struct of type Player
-func (player *Player) copyPlayer() *Player {
-	var newPlayer Player
-	newPlayer.Direction = player.Direction
-	newPlayer.Speed = player.Speed
-	newPlayer.X = player.X
-	newPlayer.Y = player.Y
+func (player *Player) Copy() *Player {
+	newPlayer := *player
 	return &newPlayer
 }
