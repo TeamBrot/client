@@ -163,7 +163,7 @@ func combiClientTiming(calculationTime time.Duration, timingChannel chan<- time.
 	close(timingChannel)
 }
 
-// CombiClient is a client implementation that uses speculation to decide what to do next
+// CombiClient is a client implementation that uses a combination of probability Tables, rollouts and miniMax to decide what to do next
 type CombiClient struct{}
 
 // GetAction implements the Client interface
