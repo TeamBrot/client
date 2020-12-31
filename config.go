@@ -14,14 +14,14 @@ const defaultGuiPort = 8081
 
 // Config represents a server and client configuration
 type Config struct {
-	gameURL string
-	timeURL string
-	apiKey  string
+	gameURL     string
+	timeURL     string
+	apiKey      string
 	guiHostname string
-	guiPort int
-	logfile string
-	clientName string
-	client  Client
+	guiPort     int
+	logfile     string
+	clientName  string
+	client      Client
 }
 
 func getenvDefault(key string, def string) string {
@@ -43,6 +43,12 @@ func getClient(name string) (Client, error) {
 		break
 	case "combi":
 		client = CombiClient{}
+		break
+	case "rollouts":
+		client = RolloutClient{}
+		break
+	case "probability":
+		client = ProbabilityClient{}
 		break
 	default:
 		return nil, fmt.Errorf("invalid client name: %s", name)
