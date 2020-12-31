@@ -1,5 +1,6 @@
 package main
 
+// SimPlayer adds a new array of visited cells
 type SimPlayer struct {
 	player               *Player
 	Probability          float64

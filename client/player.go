@@ -12,42 +12,6 @@ type Player struct {
 	Speed     uint8
 }
 
-//SimPlayer to add a new array of visited cells
-
-// JSONPlayer contains information on a specific player as returned by the server.
-type JSONPlayer struct {
-	X               int `json:"x"`
-	Y               int `json:"y"`
-	Direction       Direction `json:"-"`
-	StringDirection string `json:"direction"`
-	Speed           int    `json:"speed"`
-	Active          bool   `json:"active"`
-	Name            string `json:"name"`
-}
-
-// Direction contains the direction the player is facing
-type Direction uint8
-
-// turning left is equivalent to +1(mod 4) and turning right to (+3)(mod 4)
-const (
-	// Up makes the player face up
-	Up Direction = iota
-	// Left makes the player face left
-	Left
-	// Down makes the player face down
-	Down
-	// Right makes the player face right
-	Right
-)
-
-// Directions maps string direction representation to int representation
-var Directions = map[string]Direction{
-	"up":    Up,
-	"down":  Down,
-	"right": Right,
-	"left":  Left,
-}
-
 // ProcessAction moves the player according to action and turn. Returns visited coordinates
 func (player *Player) ProcessAction(action Action, turn uint16) []*Coords {
 	if action == SpeedUp {
@@ -156,22 +120,6 @@ func (player *Player) PossibleMoves(cells [][]bool, turn uint16, extraCellInfo m
 //Returns the distance between to players as float64
 func (player *Player) DistanceTo(p2 *Player) float64 {
 	return math.Sqrt(math.Pow(float64(int(player.X)-int(p2.X)), 2) + math.Pow(float64(int(player.Y)-int(p2.Y)), 2))
-}
-
-// ConvertToPlayer converts a JSONPlayer to a Player
-func (jsonPlayer *JSONPlayer) ConvertToPlayer() *Player {
-	var player Player
-	player.X = uint16(jsonPlayer.X)
-	player.Y = uint16(jsonPlayer.Y)
-	player.Speed = uint8(jsonPlayer.Speed)
-	player.Direction = jsonPlayer.Direction
-	return &player
-}
-
-// Copy copies a JSONPlayer
-func (jsonPlayer *JSONPlayer) Copy() *JSONPlayer {
-	player := *jsonPlayer
-	return &player
 }
 
 //This function copies a struct of type Player
