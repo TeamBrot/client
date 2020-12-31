@@ -135,9 +135,6 @@ func (player *Player) PossibleMoves(cells [][]bool, turn uint16, extraCellInfo m
 
 	possibleMoves := make([]Action, 0, 5)
 
-	if slowDown {
-		possibleMoves = append(possibleMoves, SlowDown)
-	}
 	if changeNothing {
 		possibleMoves = append(possibleMoves, ChangeNothing)
 	}
@@ -149,6 +146,9 @@ func (player *Player) PossibleMoves(cells [][]bool, turn uint16, extraCellInfo m
 	}
 	if turnRight {
 		possibleMoves = append(possibleMoves, TurnRight)
+	}
+	if slowDown {
+		possibleMoves = append(possibleMoves, SlowDown)
 	}
 	return possibleMoves
 }
