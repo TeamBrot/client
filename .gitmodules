@@ -1,0 +1,3 @@
+[submodule "server"]
+	path = server
+	url = git@gitlab.hpi.de:spe_ed-brot/server.git

@@ -1,5 +1,4 @@
-client
-client.exe
-q-table.txt
-logging.txt
+client/client
+client/client.exe
 log/
+.vscode

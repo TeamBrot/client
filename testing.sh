@@ -1,5 +1,5 @@
 
 while true
 do
-    ./client speku
+    ./client combi
 done

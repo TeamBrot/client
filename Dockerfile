@@ -4,7 +4,7 @@ WORKDIR /go/src/app
 
 RUN go get -v github.com/gorilla/websocket
 
-COPY . .
+COPY ./client .
 RUN go build -o client .
 
 CMD [ "./client" ]
