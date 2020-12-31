@@ -25,7 +25,7 @@ type Result struct {
 }
 
 //Simulates a Action and for a simPlayer and a board. Raises the score of every visited cell at the board and adds the Coords to allVisitedCells and lastMoveVisitedCells
-func simulateMove(board [][]uint16, parentPlayer *SimPlayer, action Action, turn uint16, simField [][]float64) (*SimPlayer, float64) {
+func simulateAction(board [][]uint16, parentPlayer *SimPlayer, action Action, turn uint16, simField [][]float64) (*SimPlayer, float64) {
 	childPlayer := parentPlayer.Copy()
 	player := childPlayer.player
 	score := 0.0
@@ -90,7 +90,7 @@ func calculateProbabilityTables(status *Status, stopSimulateGameChan <-chan time
 		probabilityTable := visitsToProbabilities(me, results, status.Width, status.Height, probabilityTableChannels)
 		allProbabilityTables = append(allProbabilityTables, probabilityTable)
 		if z != 0 {
-			addFields(&allProbabilityTables[z], allProbabilityTables[z-1])
+			addProbabilityTables(&allProbabilityTables[z], allProbabilityTables[z-1])
 		}
 	}
 	return allProbabilityTables
@@ -102,11 +102,13 @@ func visitsToProbabilities(me int, results []*Result, width uint16, height uint1
 		log.Println(results)
 		panic("Can't calculate probability Table without results")
 	}
+	//Prepares the accumulated visits array
 	accumulatedVisits := make([][][]uint16, len(results))
 	for u := 0; u < len(results); u++ {
 		accumulatedVisits[u] = makeEmptyVisits(height, width)
 	}
 
+	//Calculates for every player, the visits in absolute numbers, that another player could have visited a cell
 	for m, cells := range accumulatedVisits {
 		for n, result := range results {
 			if n != m {
@@ -114,7 +116,7 @@ func visitsToProbabilities(me int, results []*Result, width uint16, height uint1
 			}
 		}
 	}
-
+	//Adjust the probability if a player tries to visit a field, that another player also could visit
 	for g, cells := range accumulatedVisits {
 		result := results[g]
 		for _, player := range result.Player {
@@ -133,7 +135,7 @@ func visitsToProbabilities(me int, results []*Result, width uint16, height uint1
 	for k := range playerProbabilityTables {
 		playerProbabilityTables[k] = makeProbabilityTable(height, width)
 	}
-
+	//After the probabilites have been adjusted we write the probabilities for every player into the probability table
 	for l, result := range results {
 		for _, player := range result.Player {
 			if player == nil {
@@ -146,10 +148,10 @@ func visitsToProbabilities(me int, results []*Result, width uint16, height uint1
 					}
 				}
 			}
-			player = nil
 		}
 	}
-	runtime.GC()
+
+	//Give back the probability for the visit calculation
 	for o, probabilityTable := range playerProbabilityTables {
 		fieldChannels[o] <- probabilityTable
 	}
@@ -160,30 +162,35 @@ func visitsToProbabilities(me int, results []*Result, width uint16, height uint1
 func calculateVisitsForPlayer(simPlayer *SimPlayer, id int, status *Status, elapsedTurns uint16, resultChannel chan<- *Result, probabilityTableChannel <-chan [][]float64, stopChannel <-chan time.Time) {
 	var currentProbabilityTable [][]float64
 	currentPlayers := make([]*SimPlayer, 1)
+
 	currentPlayers[0] = simPlayer
 	for turn := 0; turn < maxSimDepth; turn++ {
+		//Initialize the visit table for this turn
 		visits := make([][]uint16, status.Height)
 		for r := range visits {
 			visits[r] = make([]uint16, status.Width)
 		}
 		if turn != 0 {
+			//recieve a new probabilityTable for this player from visits to probabilities or break if recieving the stop signal
 			select {
 			case newProbabilityTable := <-probabilityTableChannel:
-				addFields(&currentProbabilityTable, newProbabilityTable)
+				addProbabilityTables(&currentProbabilityTable, newProbabilityTable)
 			case <-stopChannel:
 				log.Println("ended simulation for player", id)
 				currentPlayers = nil
 				resultChannel <- nil
 				return
 			}
-
 		} else {
+			//Initialize the first probability Table
 			currentProbabilityTable = makeProbabilityTable(status.Height, status.Width)
 		}
 		children := make([]*SimPlayer, len(currentPlayers)*5)
 		childCounter := 0
+		//Finding the child for every current player
 		for playerCounter, player := range currentPlayers {
 			select {
+			//stopping if we recieve the stop signal
 			case <-stopChannel:
 				log.Println("ended Simulation for player", id)
 				currentPlayers = nil
@@ -192,29 +199,33 @@ func calculateVisitsForPlayer(simPlayer *SimPlayer, id int, status *Status, elap
 				resultChannel <- nil
 				return
 			default:
+				//Make a child for every possible Action
 				possibleActions := player.player.PossibleMoves(status.Cells, elapsedTurns+uint16(turn), player.AllVisitedCells, false)
 				for _, action := range possibleActions {
-					child, score := simulateMove(visits, player, action, elapsedTurns+uint16(turn), currentProbabilityTable)
+					child, score := simulateAction(visits, player, action, elapsedTurns+uint16(turn), currentProbabilityTable)
 					child.Probability *= 1.0/float64(len(possibleActions)) - (score / float64(len(child.LastMoveVisitedCells)))
-					if child.Probability < 0 {
+					//the child probability could get zero or below, if other player also try to visit the fields this child tries to use
+					if child.Probability <= 0 {
 						continue
 					}
 					children[childCounter] = child
 					childCounter++
 				}
-				//set unused parts nil
-				//player.AllVisitedCells = nil
+				//Set the now unused part of the currentPlayer array to nil
 				if len(currentPlayers)-1 > 0 {
 					currentPlayers = currentPlayers[1:len(currentPlayers)]
 				}
+				//schedule the garbage collection if the condition is met. This costs performance but improves memory usage by a lot
 				if playerCounter%processedPlayersTillGC == 0 && playerCounter != 0 && turn >= 6 {
 					go runtime.GC()
 				}
 			}
 
 		}
+		//Set new currentPlayers
 		currentPlayers = children[0:childCounter]
 		children = nil
+		//send back the result of the calculation to calculate probabilityTables
 		if resultChannel != nil {
 			resultChannel <- &Result{Visits: visits, Player: currentPlayers}
 		}
@@ -226,7 +237,7 @@ func calculateVisitsForPlayer(simPlayer *SimPlayer, id int, status *Status, elap
 }
 
 //Adds second field to first Field. First field has to be a pointer and is going to be changed
-func addFields(field1 *[][]float64, field2 [][]float64) {
+func addProbabilityTables(field1 *[][]float64, field2 [][]float64) {
 	field := *field1
 	for i := 0; i < len(field); i++ {
 		for j := 0; j < len(field[i]); j++ {

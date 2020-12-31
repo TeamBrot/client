@@ -30,7 +30,7 @@ for index, status in enumerate(data["game"]):
 
 (
     ffmpeg
-    .input('log/*.png', pattern_type='glob', framerate=10)
+    .input(basename+'*.png', pattern_type='glob', framerate=30)
     .output(basename + ".mp4")
     .run()
 )

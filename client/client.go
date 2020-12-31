@@ -53,7 +53,7 @@ func RunClient(config Config) {
 		clientLogger.Println("Speed", me.Speed)
 		calculationTime, err := computeCalculationTime(jsonStatus.Deadline, config)
 		if err != nil {
-			clientLogger.Fatalln("error receiving time from server")
+			clientLogger.Fatalln("error receiving time from server", err)
 		}
 
 		action := config.Client.GetAction(*status.Players[status.You], status, calculationTime)

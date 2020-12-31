@@ -1,15 +1,18 @@
 package main
 
 import (
-	"net/http"
 	"encoding/json"
+	"errors"
 	"log"
+	"net/http"
 	"time"
 )
 
 const timeAPIRequestTimeout = 1000 * time.Millisecond
+
 // If getting the time from the timing api fails and the calculation time calculated is more than this value in minutes away the program will throw an error
 const maxCalculationTime = 2 * time.Minute
+
 // This value is specified in milliseconds and is a the expected time which actions take to be sent to the server
 const calculationTimeOffset = 150
 
@@ -17,7 +20,6 @@ type ServerTime struct {
 	Time         time.Time `json:"time"`
 	Milliseconds int       `json:"milliseconds"`
 }
-
 
 var httpClient http.Client = http.Client{Timeout: timeAPIRequestTimeout}
 
@@ -42,9 +44,10 @@ func computeCalculationTime(deadline time.Time, config Config) (time.Duration, e
 		calculationTime := deadline.Sub(time.Now().UTC())
 		calculationTime = time.Duration((calculationTime.Milliseconds() - calculationTimeOffset) * 1000000000)
 		if calculationTime > maxCalculationTime {
-			return calculationTime, err
+			return calculationTime, errors.New("couldn't reach timing api and deadline is more than the specified maxCalculationTime away")
 		}
 		log.Println("the scheduled calculation Time is", calculationTime)
+		log.Println("This is only a assumption, based on the local machine tim!")
 		return calculationTime, nil
 	}
 	calculationTime := deadline.Sub(serverTime.Time)
@@ -52,4 +55,3 @@ func computeCalculationTime(deadline time.Time, config Config) (time.Duration, e
 	log.Println("the scheduled calculation Time is", calculationTime)
 	return calculationTime, nil
 }
-
