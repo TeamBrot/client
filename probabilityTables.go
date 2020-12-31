@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"math"
 	"runtime"
 	"time"
 )
@@ -261,4 +262,40 @@ func makeProbabilityTable(height uint16, width uint16) [][]float64 {
 		field[r] = make([]float64, width)
 	}
 	return field
+}
+
+//ProbabilityClient is a client implementation that uses a probabilityTable to decide what to do next
+type ProbabilityClient struct{}
+
+// GetAction implements the Client interface
+func (c ProbabilityClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
+	stopChannel := time.After((calculationTime / 10) * 7)
+	var allPlayers []*Player
+	for _, player := range status.Players {
+		allPlayers = append(allPlayers, player)
+	}
+	allProbabilityTables := calculateProbabilityTables(status, stopChannel, allPlayers)
+	possibleActions := status.Players[status.You].PossibleMoves(status.Cells, status.Turn, nil, false)
+	var possible [5]bool
+	//Computes if a action is possible based on the possibleActions Array
+	for _, action := range possibleActions {
+		possible[action] = true
+	}
+	var values [5]float64
+	for _, action := range possibleActions {
+		values[action] = evaluateAction(status.Players[status.You], allProbabilityTables[0], action, status.Turn)
+
+	}
+	//computes Value based on the score of a Action an
+	log.Println("calculated values", values)
+
+	minimum := math.Inf(0)
+	action := ChangeNothing
+	for i, v := range values {
+		if possible[i] && v < minimum {
+			minimum = v
+			action = Action(i)
+		}
+	}
+	return action
 }
