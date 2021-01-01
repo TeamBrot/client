@@ -252,7 +252,7 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	probabilityTableOfLastTurn = allProbabilityTables[len(allProbabilityTables)-1]
 	totalProcessingTime := time.Since(start)
 	if totalProcessingTime > calculationTime {
-		panic("Couldn' reach timing goal")
+		panic("Couldn't reach timing goal")
 	}
 	log.Println("total processing took", totalProcessingTime)
 	log.Println("chose best action", bestAction)
