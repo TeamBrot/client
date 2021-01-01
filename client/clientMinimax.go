@@ -219,7 +219,7 @@ func MinimaxBestActionsTimed(maximizerID uint8, minimizerID uint8, status *Statu
 	}
 }
 
-func miniMaxBestActionsMultiplePlayers(otherPlayerIDs []uint8, myID uint8, status *Status, stopChannel chan time.Time) []Action {
+func minimaxBestActionsMultiplePlayers(otherPlayerIDs []uint8, myID uint8, status *Status, stopChannel chan time.Time) []Action {
 	resultChannels := make(map[uint8]chan []Action)
 	for _, otherPlayerID := range otherPlayerIDs {
 		resultChannels[otherPlayerID] = make(chan []Action)
@@ -232,9 +232,9 @@ func miniMaxBestActionsMultiplePlayers(otherPlayerIDs []uint8, myID uint8, statu
 	allMiniMaxActions := make([]map[Action]struct{}, len(otherPlayerIDs))
 	counter := 0
 	for _, channel := range resultChannels {
-		miniMaxActions := <-channel
+		minimaxActions := <-channel
 		actionStruct := make(map[Action]struct{}, 0)
-		for _, action := range miniMaxActions {
+		for _, action := range minimaxActions {
 			actionStruct[action] = struct{}{}
 		}
 		allMiniMaxActions[counter] = actionStruct

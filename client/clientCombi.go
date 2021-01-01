@@ -9,14 +9,14 @@ import (
 
 var probabilityTableOfLastTurn [][]float64
 
-//this defines the window size from where the player reads the probabilites at the beginnig to analyze the field an knows if he should use miniMax
+//this defines the window size from where the player reads the probabilites at the beginnig to analyze the field an knows if he should use minimax
 const windowSize = 5
 
-//If the sum of all probabilities in the specified window is higher then this, miniMax can be used
-var miniMaxActivationValue = 0.5
+//If the sum of all probabilities in the specified window is higher then this, minimax can be used
+var minimaxActivationValue = 0.5
 
-//if miniMax can be used a player also has to be nearer than this value to the player so it gets miniMaxed
-const miniMaxDistance = 12.0
+//if minimax can be used a player also has to be nearer than this value to the player so it gets minimaxed
+const minimaxDistance = 12.0
 
 //This is the minimal Number of other players we are using to calculate the probability tables (if so many players are living)
 const minimalNumberOfSimPlayers = 2
@@ -44,7 +44,7 @@ func evaluateAction(player *Player, field [][]float64, action Action, turn uint1
 }
 
 //computes a score for every possible Action. The action with the lowest score is chosen
-func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, turn uint16, simDepth int, possibleActions []Action, miniMaxIsUsed bool) Action {
+func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, turn uint16, simDepth int, possibleActions []Action, minimaxIsUsed bool) Action {
 	var probabilities [5]float64
 	var possible [5]bool
 	//Computes if a action is possible based on the possibleActions Array
@@ -75,7 +75,7 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 		inPaths[path[0]] = true
 		probabilities[path[0]] += score
 	}
-	if !miniMaxIsUsed {
+	if !minimaxIsUsed {
 		for z := range possible {
 			possible[z] = possible[z] && inPaths[z]
 		}
@@ -122,7 +122,7 @@ func analyzeBoard(status *Status, probabilityTable [][]float64) ([]uint8, []*Pla
 			}
 		}
 		log.Println(accumulatedProbability)
-		if accumulatedProbability >= miniMaxActivationValue {
+		if accumulatedProbability >= minimaxActivationValue {
 			playersAreNear = true
 		}
 	} else {
@@ -135,7 +135,7 @@ func analyzeBoard(status *Status, probabilityTable [][]float64) ([]uint8, []*Pla
 		}
 		distance := player.DistanceTo(me)
 		relativeDistance := distance / float64(player.Speed) / float64(me.Speed)
-		if relativeDistance < miniMaxDistance && playersAreNear {
+		if relativeDistance < minimaxDistance && playersAreNear {
 			minimaxPlayers = append(minimaxPlayers, z)
 		}
 		relativeDistanceTo[distance/float64(player.Speed)] = player
@@ -157,7 +157,7 @@ func analyzeBoard(status *Status, probabilityTable [][]float64) ([]uint8, []*Pla
 	return minimaxPlayers, probabilityPlayers
 }
 
-// CombiClient is a client implementation that uses a combination of probability Tables, rollouts and miniMax to decide what to do next
+// CombiClient is a client implementation that uses a combination of probability Tables, rollouts and minimax to decide what to do next
 type CombiClient struct{}
 
 // GetAction implements the Client interface
@@ -183,23 +183,23 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	}()
 
 	//calculate which players are simulated TODO: Move this code to an external function and improve it
-	miniMaxPlayers, probabilityPlayers := analyzeBoard(status, probabilityTableOfLastTurn)
+	minimaxPlayers, probabilityPlayers := analyzeBoard(status, probabilityTableOfLastTurn)
 	log.Println("using", len(probabilityPlayers), "players, for calculation of probabilityFields")
-	miniMaxChannel := make(chan []Action, 1)
-	stopMiniMaxChannel := make(chan time.Time)
-	//If there is more than one player we should calculate miniMax for we need minimax for mutliple players
-	if len(miniMaxPlayers) > 1 {
+	minimaxChannel := make(chan []Action, 1)
+	stopMinimaxChannel := make(chan time.Time)
+	//If there is more than one player we should calculate minimax for we need minimax for mutliple players
+	if len(minimaxPlayers) > 1 {
 		go func() {
-			log.Println("using minimax wih", len(miniMaxPlayers), "opponents")
-			bestActionsMinimax := miniMaxBestActionsMultiplePlayers(miniMaxPlayers, status.You, status, stopMiniMaxChannel)
-			miniMaxChannel <- bestActionsMinimax
+			log.Println("using minimax wih", len(minimaxPlayers), "opponents")
+			bestActionsMinimax := minimaxBestActionsMultiplePlayers(minimaxPlayers, status.You, status, stopMinimaxChannel)
+			minimaxChannel <- bestActionsMinimax
 		}()
-	} else if len(miniMaxPlayers) == 1 {
+	} else if len(minimaxPlayers) == 1 {
 		go func() {
 			log.Println("using minimax with one opponent")
-			log.Println("using player", miniMaxPlayers[0], "at", status.Players[miniMaxPlayers[0]].X, status.Players[miniMaxPlayers[0]].Y, "as minimizer")
-			bestActionsMinimax := MinimaxBestActionsTimed(status.You, miniMaxPlayers[0], status, stopMiniMaxChannel)
-			miniMaxChannel <- bestActionsMinimax
+			log.Println("using player", minimaxPlayers[0], "at", status.Players[minimaxPlayers[0]].X, status.Players[minimaxPlayers[0]].Y, "as minimizer")
+			bestActionsMinimax := MinimaxBestActionsTimed(status.You, minimaxPlayers[0], status, stopMinimaxChannel)
+			minimaxChannel <- bestActionsMinimax
 		}()
 	}
 
@@ -220,14 +220,14 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	_ = <-stopChannel2
 	log.Println("sending stop signal to simulateRollouts and minimax...")
 	close(stopRolloutChan)
-	close(stopMiniMaxChannel)
-	var miniMaxIsUsed bool
-	if len(miniMaxPlayers) > 0 {
-		miniMaxActions := <-miniMaxChannel
-		//If we use miniMax against multiple Players miniMax Actions might be empty. Then we use possible Actions
-		if len(miniMaxActions) != 0 {
-			possibleActions = miniMaxActions
-			miniMaxIsUsed = true
+	close(stopMinimaxChannel)
+	var useMinimax bool
+	if len(minimaxPlayers) > 0 {
+		minimaxActions := <-minimaxChannel
+		//If we use minimax against multiple players minimax actions might be empty. Then we use possible actions
+		if len(minimaxActions) != 0 {
+			possibleActions = minimaxActions
+			useMinimax = true
 		}
 	}
 	allProbabilityTables = <-probabilityTablesChan
@@ -240,7 +240,7 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	//Log Timing
 	log.Println("time until calculations are finished and evaluation can start: ", time.Since(start))
 	//Evaluate the paths with the given field and return the best Action based on this TODO: Needs improvement in case of naming
-	bestAction = evaluatePaths(player, allProbabilityTables, bestPaths, status.Turn, len(allProbabilityTables)-1, possibleActions, miniMaxIsUsed)
+	bestAction = evaluatePaths(player, allProbabilityTables, bestPaths, status.Turn, len(allProbabilityTables)-1, possibleActions, useMinimax)
 	//Log Timing
 	probabilityTableOfLastTurn = allProbabilityTables[len(allProbabilityTables)-1]
 	totalProcessingTime := time.Since(start)

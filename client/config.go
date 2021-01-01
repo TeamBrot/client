@@ -63,7 +63,7 @@ func GetConfig() (Config, error) {
 	config.GameURL = getenvDefault("URL", defaultGameURL)
 	config.TimeURL = getenvDefault("TIME_URL", defaultTimeURL)
 	config.APIKey = getenvDefault("KEY", "")
-	flag.Float64Var(&miniMaxActivationValue, "activation", 0.5, "defines miniMaxctivationValue")
+	flag.Float64Var(&minimaxActivationValue, "activation", 0.5, "defines minimaxActivationValue")
 	flag.Float64Var(&myStartProbability, "probability", 1.0, "defines myStartProbability")
 	flag.StringVar(&config.ClientName, "client", "combi", "client to run")
 	flag.StringVar(&config.LogDirectory, "log", defaultLogDirectory, "directory in which game statistics are stored")
