@@ -176,9 +176,9 @@ func calculateVisitsForPlayer(simPlayer *SimPlayer, id int, status *Status, elap
 			case newProbabilityTable := <-probabilityTableChannel:
 				addProbabilityTables(&currentProbabilityTable, newProbabilityTable)
 			case <-stopChannel:
-				log.Println("ended simulation for player", id)
 				currentPlayers = nil
 				resultChannel <- nil
+				log.Println("ended simulation for player", id)
 				return
 			}
 		} else {
@@ -192,11 +192,10 @@ func calculateVisitsForPlayer(simPlayer *SimPlayer, id int, status *Status, elap
 			select {
 			//stopping if we recieve the stop signal
 			case <-stopChannel:
-				log.Println("ended Simulation for player", id)
 				currentPlayers = nil
 				children = nil
-				runtime.GC()
 				resultChannel <- nil
+				log.Println("ended Simulation for player", id)
 				return
 			default:
 				//Make a child for every possible Action

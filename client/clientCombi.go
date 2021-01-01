@@ -58,12 +58,10 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 		minPlayer := player.Copy()
 		for i := 0; i < len(path); i++ {
 			if i != len(path) {
-				if i < simDepth {
+				if i <= simDepth {
 					score += evaluateAction(minPlayer, allFields[i], path[i], turn+uint16(i))
-				} else if simDepth > 0 {
-					score += evaluateAction(minPlayer, allFields[simDepth-1], path[i], turn+uint16(i))
 				} else {
-					break
+					score += evaluateAction(minPlayer, allFields[simDepth-1], path[i], turn+uint16(i))
 				}
 			} else {
 				break
@@ -252,7 +250,11 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	bestAction = evaluatePaths(player, allProbabilityTables, bestPaths, status.Turn, len(allProbabilityTables)-1, possibleActions, miniMaxIsUsed)
 	//Log Timing
 	probabilityTableOfLastTurn = allProbabilityTables[len(allProbabilityTables)-1]
-	log.Println("total processing took", time.Since(start))
+	totalProcessingTime := time.Since(start)
+	if totalProcessingTime > calculationTime {
+		panic("Couldn' reach timing goal")
+	}
+	log.Println("total processing took", totalProcessingTime)
 	log.Println("chose best action", bestAction)
 	return bestAction
 }
