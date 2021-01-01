@@ -6,7 +6,7 @@ cd client
 mkdir -p "$logdir"
 go build .
 
-while [ ! -f ./stop ]
+while [ ! -f ../stop ]
 do
     ./client -client "$client" -log "$logdir"
 done
