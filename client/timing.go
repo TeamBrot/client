@@ -25,22 +25,25 @@ var httpClient http.Client = http.Client{Timeout: timeAPIRequestTimeout}
 
 //gets the current server Time via the specified API
 func getTime(url string) (ServerTime, error) {
-	var time ServerTime
+	var timeFromServer ServerTime
 	r, err := httpClient.Get(url)
 	if err != nil {
-		return time, err
+		return timeFromServer, err
 	}
 	defer r.Body.Close()
-
-	json.NewDecoder(r.Body).Decode(&time)
-	return time, nil
+	nullTime := time.Time{}
+	json.NewDecoder(r.Body).Decode(&timeFromServer)
+	if timeFromServer.Time == nullTime {
+		return timeFromServer, errors.New("invalid time from api")
+	}
+	return timeFromServer, nil
 }
 
 //Sends Signals to the Client after a specified amount of time has passed
-func computeCalculationTime(deadline time.Time, config Config) (time.Duration, error) {
+func computeCalculationTime(deadline time.Time, config Config, errorLogger *log.Logger) (time.Duration, error) {
 	serverTime, err := getTime(config.TimeURL)
 	if err != nil {
-		log.Println("couldn't reach timing api, try using machine time")
+		errorLogger.Println("couldn't reach timing api, try using machine time")
 		calculationTime := deadline.Sub(time.Now().UTC())
 		calculationTime = time.Duration((calculationTime.Milliseconds() - calculationTimeOffset) * 1000000000)
 		if calculationTime > maxCalculationTime {

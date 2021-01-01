@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"time"
 )
 
@@ -12,10 +14,14 @@ type Client interface {
 
 // RunClient runs a spe_ed client using a specified configuration
 func RunClient(config Config) {
+	if !info {
+		log.SetOutput(ioutil.Discard)
+	}
+	errorLogger := NewErrorLogger()
 	clientLogger := NewClientLogger(config.ClientName)
 	fileLogger, err := NewFileLogger(config)
 	if err != nil {
-		clientLogger.Println("could not create file logger:", err)
+		errorLogger.Println("could not create file logger:", err)
 	}
 	defer func() {
 		if err := fileLogger.Write(); err != nil {
@@ -32,13 +38,13 @@ func RunClient(config Config) {
 	clientLogger.Println("connecting to server")
 	conn, err := NewConnection(config)
 	if err != nil {
-		clientLogger.Fatalln("could not establish connection:", err)
+		errorLogger.Fatalln("could not establish connection:", err)
 	}
 	defer conn.Close()
 
 	status, jsonStatus, err := conn.ReadStatus()
 	if err != nil {
-		clientLogger.Fatalln("error on first status read:", err)
+		errorLogger.Fatalln("error on first status read:", err)
 	}
 	fileLogger.Store(jsonStatus)
 	clientLogger.Println("field dimensions:", status.Width, "x", status.Height)
@@ -51,26 +57,30 @@ func RunClient(config Config) {
 		me := status.Players[status.You]
 		clientLogger.Println("Position ", me.Y, "y", me.X, "x")
 		clientLogger.Println("Speed", me.Speed)
-		calculationTime, err := computeCalculationTime(jsonStatus.Deadline, config)
+		calculationTime, err := computeCalculationTime(jsonStatus.Deadline, config, errorLogger)
 		if err != nil {
-			clientLogger.Fatalln("error receiving time from server", err)
+			errorLogger.Fatalln("error receiving time from server", err)
 		}
-
+		start := time.Now()
 		action := config.Client.GetAction(*status.Players[status.You], status, calculationTime)
+		processingTime := time.Since(start)
+		if processingTime > calculationTime {
+			errorLogger.Println("the calculation took longer then it should have. the client might miss the deadline!")
+		}
 		err = conn.WriteAction(action)
 		if err != nil {
-			clientLogger.Fatalln("error sending action:", err)
+			errorLogger.Fatalln("error sending action:", err)
 		}
 
 		status, jsonStatus, err = conn.ReadStatus()
 		if err != nil {
-			clientLogger.Fatalln("error reading status:", err)
+			errorLogger.Fatalln("error reading status:", err)
 		}
 		fileLogger.Store(jsonStatus)
 
 		err = gui.WriteStatus(jsonStatus)
 		if err != nil {
-			clientLogger.Println("could not write status to gui:", err)
+			errorLogger.Println("could not write status to gui:", err)
 		}
 
 		counter := 0

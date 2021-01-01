@@ -27,7 +27,6 @@ func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time) [][
 			log.Println("The longest path was", longest, "Actions long")
 			return longestPaths
 		default:
-			log.Println("performing rollout", performedRollouts)
 			rolloutStatus := status.Copy()
 			path := make([]Action, 0)
 

@@ -61,5 +61,12 @@ func NewClientLogger(clientName string) *log.Logger {
 	logger.Println("using client", clientName)
 	log.SetPrefix(fmt.Sprintf("[%s] ", clientName))
 	log.SetFlags(log.Lmsgprefix | log.LstdFlags)
+	log.SetOutput(os.Stdout)
+	return logger
+}
+
+func NewErrorLogger() *log.Logger {
+	logger := log.New(os.Stderr, "[error]", log.Lmsgprefix|log.LstdFlags)
+	log.SetPrefix("[Error]")
 	return logger
 }
