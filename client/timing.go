@@ -31,9 +31,8 @@ func getTime(url string) (ServerTime, error) {
 		return timeFromServer, err
 	}
 	defer r.Body.Close()
-	nullTime := time.Time{}
 	json.NewDecoder(r.Body).Decode(&timeFromServer)
-	if timeFromServer.Time == nullTime {
+	if timeFromServer.Time.IsZero() {
 		return timeFromServer, errors.New("invalid time from api")
 	}
 	return timeFromServer, nil
