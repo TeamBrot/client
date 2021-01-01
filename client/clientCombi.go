@@ -60,8 +60,10 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 			if i != len(path) {
 				if i < simDepth {
 					score += evaluateAction(minPlayer, allFields[i], path[i], turn+uint16(i))
-				} else {
+				} else if simDepth > 0 {
 					score += evaluateAction(minPlayer, allFields[simDepth-1], path[i], turn+uint16(i))
+				} else {
+					break
 				}
 			} else {
 				break
