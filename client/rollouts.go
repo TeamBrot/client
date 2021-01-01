@@ -19,7 +19,7 @@ const filterValue = 0.85
 //search for the longest paths a player could reach. Simulates random move for all Players and allways processes as last player
 func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time) [][]Action {
 	longest := 0
-	longestPaths := make([][]Action, 0, maxNumberofRollouts)
+	longestPaths := make([][]Action, 0)
 	for performedRollouts := 0; performedRollouts < maxNumberofRollouts; performedRollouts++ {
 		select {
 		case <-stopSimulateRollouts:
@@ -27,18 +27,14 @@ func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time) [][
 			log.Println("The longest path was", longest, "Actions long")
 			return longestPaths
 		default:
+			log.Println("performing rollout", performedRollouts)
 			rolloutStatus := status.Copy()
 			path := make([]Action, 0)
 
-			testPossibleMoves := rolloutStatus.Players[rolloutStatus.You].PossibleMoves(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
-			//initialize rand numbers new after every First Action has been taken
-			if performedRollouts%len(testPossibleMoves) == 0 {
-				rand.Seed(int64(performedRollouts))
-			}
 			counter := 0
 			for {
 				me := rolloutStatus.Players[status.You]
-				if simulateOtherPlayers == true {
+				if simulateOtherPlayers {
 					countLivingPlayers := 0
 					//Process one random move for every other player besides me
 					for _, player := range rolloutStatus.Players {
@@ -100,12 +96,12 @@ func checkPath(path []Action, longestPaths [][]Action, longest int, allreadyPerf
 			longestPaths = append(longestPaths, path)
 			//If it is bigger by a lot we can forget every path we found until now
 		} else if float64(len(path))*filterValue > float64(longest) {
-			longestPaths = make([][]Action, 0, maxNumberofRollouts-allreadyPerformedRollouts)
+			longestPaths = make([][]Action, 0)
 			longestPaths = append(longestPaths, path)
 			longest = len(path)
 			//If none of the before is the case we have to filter all values that are in longest paths until now
 		} else {
-			longestPaths = filterPaths(longestPaths, len(path), filterValue, maxNumberofRollouts-allreadyPerformedRollouts+len(longestPaths))
+			longestPaths = filterPaths(longestPaths, len(path), filterValue)
 			longestPaths = append(longestPaths, path)
 			longest = len(path)
 		}
@@ -115,8 +111,8 @@ func checkPath(path []Action, longestPaths [][]Action, longest int, allreadyPerf
 }
 
 //Filters an given array of paths and returns an array of paths that match the criteria
-func filterPaths(paths [][]Action, longest int, percent float64, maxRemaining int) [][]Action {
-	filteredPaths := make([][]Action, 0, maxRemaining)
+func filterPaths(paths [][]Action, longest int, percent float64) [][]Action {
+	filteredPaths := make([][]Action, 0)
 	for _, path := range paths {
 		if float64(len(path)) >= float64(longest)*percent {
 			filteredPaths = append(filteredPaths, path)
