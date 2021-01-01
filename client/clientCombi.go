@@ -157,21 +157,14 @@ func analyzeBoard(status *Status, probabilityTable [][]float64) ([]uint8, []*Pla
 	return minimaxPlayers, probabilityPlayers
 }
 
-func combiClientTiming(calculationTime time.Duration, timingChannel chan<- time.Time) {
-	time.Sleep(time.Duration(0.6 * float64(calculationTime.Nanoseconds())))
-	timingChannel <- time.Now()
-	time.Sleep(time.Duration(0.3 * float64(calculationTime.Nanoseconds())))
-	close(timingChannel)
-}
-
 // CombiClient is a client implementation that uses a combination of probability Tables, rollouts and miniMax to decide what to do next
 type CombiClient struct{}
 
 // GetAction implements the Client interface
 func (c CombiClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
 	start := time.Now()
-	timingChannel := make(chan time.Time)
-	go combiClientTiming(calculationTime, timingChannel)
+	stopChannel1 := time.After(calculationTime / 10 * 6)
+	stopChannel2 := time.After(calculationTime / 10 * 9)
 	var bestAction Action
 	possibleActions := player.PossibleMoves(status.Cells, status.Turn, nil, false)
 	//handle trivial cases (zero or one possible Action)
@@ -221,10 +214,10 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 		probabilityTablesChan <- probabilityTables
 	}()
 	//recieve the first Timing signal and close the probability Calculation
-	_ = <-timingChannel
+	_ = <-stopChannel1
 	log.Println("sending stop signal to simulateGame...")
 	close(stopCalculateProbabilityTables)
-	_ = <-timingChannel
+	_ = <-stopChannel2
 	log.Println("sending stop signal to simulateRollouts and minimax...")
 	close(stopRolloutChan)
 	close(stopMiniMaxChannel)
