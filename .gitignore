@@ -3,3 +3,4 @@ client/client.exe
 client/log/
 .vscode
 *.mp4
+__pycache__

@@ -1,6 +1,12 @@
+#!/bin/bash
+client="combi"
+logdir="log/api/$client"
+
 cd client
+mkdir -p "$logdir"
 go build .
-while true
+
+while [ ! -f ./stop ]
 do
-    ./client
+    ./client -client "$client" -log "$logdir"
 done
