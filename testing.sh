@@ -9,5 +9,5 @@ go build .
 
 while [ ! -f ../stop ]
 do
-    ./client -client "$client" -log "$logdir" 2> error.txt
+    ./client -client "$client" -log "$logdir" 2>> error.txt
 done
