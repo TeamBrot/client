@@ -13,7 +13,7 @@ var probabilityTableOfLastTurn [][]float64
 const windowSize = 5
 
 //If the sum of all probabilities in the specified window is higher then this, miniMax can be used
-const miniMaxActivationValue = 0.5
+var miniMaxActivationValue = 0.5
 
 //if miniMax can be used a player also has to be nearer than this value to the player so it gets miniMaxed
 const miniMaxDistance = 12.0
