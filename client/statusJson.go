@@ -51,9 +51,7 @@ func (js JSONStatus) ConvertToStatus() *Status {
 	}
 	for y := range js.Cells {
 		for x := range js.Cells[0] {
-			if js.Cells[y][x] != 0 {
-				status.Cells[y][x] = true
-			}
+			status.Cells[y][x] = js.Cells[y][x] != 0
 		}
 	}
 	return &status
