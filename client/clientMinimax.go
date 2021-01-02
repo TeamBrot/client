@@ -8,7 +8,7 @@ import (
 )
 
 func score(status *Status, player *Player) int {
-	return len(player.PossibleMoves(status.Cells, status.Turn, nil, false))
+	return len(player.PossibleActions(status.Cells, status.Turn, nil, false))
 }
 
 // doMove makes the specified player do the specified action, using the specified status.
@@ -84,7 +84,7 @@ func getActionScore(you uint8, minimizer uint8, isMaximizer bool, status *Status
 	} else {
 		turn := status.Turn
 		if isMaximizer {
-			m := status.Players[minimizer].PossibleMoves(status.Cells, status.Turn, occupiedCells, true)
+			m := status.Players[minimizer].PossibleActions(status.Cells, status.Turn, occupiedCells, true)
 			// log.Println(depth, "moves for", minimizer, m, depth)
 			for _, action := range m {
 				sCopy := status.Copy()
@@ -109,7 +109,7 @@ func getActionScore(you uint8, minimizer uint8, isMaximizer bool, status *Status
 			}
 		} else {
 			status.Turn++
-			m := status.Players[you].PossibleMoves(status.Cells, status.Turn, occupiedCells, true)
+			m := status.Players[you].PossibleActions(status.Cells, status.Turn, occupiedCells, true)
 			// log.Println(depth, "moves for", you, m, depth)
 			for _, action := range m {
 				sCopy := status.Copy()
@@ -144,7 +144,7 @@ func getActionScore(you uint8, minimizer uint8, isMaximizer bool, status *Status
 // In this case, the return value should not be used.
 func MinimaxScoreMap(maximizerID uint8, minimizerID uint8, status *Status, depth int, stopChannel <-chan time.Time) (map[Action]int, int, error) {
 	scoreMap := map[Action]int{}
-	possibleMoves := status.Players[maximizerID].PossibleMoves(status.Cells, status.Turn, nil, true)
+	possibleMoves := status.Players[maximizerID].PossibleActions(status.Cells, status.Turn, nil, true)
 	maxDepth := 0
 	for _, action := range possibleMoves {
 		sCopy := status.Copy()
@@ -195,7 +195,7 @@ func MinimaxBestActionsTimed(maximizerID uint8, minimizerID uint8, status *Statu
 	startDepth := 1
 	depth += startDepth
 
-	actions = status.Players[status.You].PossibleMoves(status.Cells, status.Turn, nil, true)
+	actions = status.Players[status.You].PossibleActions(status.Cells, status.Turn, nil, true)
 	if len(actions) == 0 {
 		return []Action{ChangeNothing}
 	} else if len(actions) == 1 {

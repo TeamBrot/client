@@ -11,7 +11,7 @@ type SmartClient struct{}
 // GetAction Implementation for SmartClient
 func (c SmartClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
 	action := ChangeNothing
-	for _, a := range player.PossibleMoves(status.Cells, status.Turn, nil, false) {
+	for _, a := range player.PossibleActions(status.Cells, status.Turn, nil, false) {
 		if a == ChangeNothing {
 			action = a
 			break

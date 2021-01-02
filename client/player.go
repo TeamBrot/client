@@ -74,13 +74,13 @@ func checkCell(cells [][]bool, direction Direction, y uint16, x uint16, fields u
 	return isPossible
 }
 
-// PossibleMoves returns possible actions for a given situation for a player
-func (player *Player) PossibleMoves(cells [][]bool, turn uint16, extraCellInfo map[Coords]struct{}, extraCellAllowed bool) []Action {
+// PossibleActions returns possible actions for a given situation for a player
+func (player *Player) PossibleActions(cells [][]bool, turn uint16, extraCellInfo map[Coords]struct{}, extraCellAllowed bool) []Action {
 	changeNothing := true
 	turnRight := true
 	turnLeft := true
 	slowDown := player.Speed != 1
-	speedUp := player.Speed != 10
+	speedUp := player.Speed != 6
 	direction := player.Direction
 	y := player.Y
 	x := player.X

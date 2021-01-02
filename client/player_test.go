@@ -33,7 +33,7 @@ func TestPossibleMoves(t *testing.T) {
 	}
 
 	occupiedCells := map[Coords]struct{}{
-		{0,1}: {},
+		{0, 1}: {},
 	}
 
 	table := []TableEntry{
@@ -71,7 +71,7 @@ func TestPossibleMoves(t *testing.T) {
 		players[1].Speed = uint8(entry.Speed)
 		status.Cells = entry.Cells
 		status.Turn = uint16(entry.Turn)
-		moves := players[1].PossibleMoves(status.Cells, entry.Turn, entry.OccupiedCells, true)
+		moves := players[1].PossibleActions(status.Cells, entry.Turn, entry.OccupiedCells, true)
 
 		if len(moves) != len(entry.Moves) {
 			t.Error("wrong moves, expected", entry.Moves, "got", moves)
@@ -90,4 +90,3 @@ func TestPossibleMoves(t *testing.T) {
 		}
 	}
 }
-

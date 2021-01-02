@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"math"
 	"sort"
@@ -10,13 +11,13 @@ import (
 var probabilityTableOfLastTurn [][]float64
 
 //this defines the window size from where the player reads the probabilites at the beginnig to analyze the field an knows if he should use minimax
-const windowSize = 5
+const windowSize = 8
 
 //If the sum of all probabilities in the specified window is higher then this, minimax can be used
-var minimaxActivationValue = 0.5
+var minimaxActivationValue = 0.1
 
 //if minimax can be used a player also has to be nearer than this value to the player so it gets minimaxed
-const minimaxDistance = 12.0
+const minimaxDistance = 14.0
 
 //This is the minimal Number of other players we are using to calculate the probability tables (if so many players are living)
 const minimalNumberOfSimPlayers = 2
@@ -90,7 +91,7 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 		scores[i] = (probabilities[i] / float64(counter[i])) + (1.0 - (float64(counter[i]) / float64(len(paths))))
 	}
 	//computes Value based on the score of a Action an
-	log.Println("calculated values", scores)
+	log.Printf("calculated values %1.2f", scores)
 
 	minimum := math.Inf(0)
 	action := ChangeNothing
@@ -121,9 +122,10 @@ func analyzeBoard(status *Status, probabilityTable [][]float64) ([]uint8, []*Pla
 
 			}
 		}
-		log.Println(accumulatedProbability)
+		log.Printf("The calculated accumulated probability is %1.2e", accumulatedProbability)
 		if accumulatedProbability >= minimaxActivationValue {
 			playersAreNear = true
+			simulateOtherPlayers = true
 		}
 	} else {
 		playersAreNear = true
@@ -166,7 +168,7 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	stopChannel1 := time.After(calculationTime / 10 * 6)
 	stopChannel2 := time.After(calculationTime / 10 * 9)
 	var bestAction Action
-	possibleActions := player.PossibleMoves(status.Cells, status.Turn, nil, false)
+	possibleActions := player.PossibleActions(status.Cells, status.Turn, nil, false)
 	//handle trivial cases (zero or one possible Action)
 	if len(possibleActions) == 1 {
 		log.Println("only possible action: ", possibleActions[0])
@@ -237,6 +239,10 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	log.Println("could calculate probabilityTables for", len(allProbabilityTables), "turns")
 	//This is only for debugging purposes and combines the last field with the status
 	//log.Println(allProbabilityTables[len(allProbabilityTables)-1])
+	log.Println("Last calculated probability Table")
+	for y, row := range allProbabilityTables[len(allProbabilityTables)-1] {
+		fmt.Printf("%2d, %1.1e\n", y, row)
+	}
 	//Log Timing
 	log.Println("time until calculations are finished and evaluation can start: ", time.Since(start))
 	//Evaluate the paths with the given field and return the best Action based on this TODO: Needs improvement in case of naming
@@ -244,6 +250,7 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	//Log Timing
 	probabilityTableOfLastTurn = allProbabilityTables[len(allProbabilityTables)-1]
 	totalProcessingTime := time.Since(start)
+	simulateOtherPlayers = false
 	if totalProcessingTime > calculationTime {
 		panic("Couldn't reach timing goal")
 	}

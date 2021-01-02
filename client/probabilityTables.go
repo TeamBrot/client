@@ -8,7 +8,7 @@ import (
 )
 
 //Setting this value higher, makes makes us more confident, that we will visit a field and no one other does. Setting it lower does the exact opposite
-var myStartProbability = 1.0
+var myStartProbability = 1.12
 
 const othersStartProbability = 1.0
 
@@ -199,7 +199,7 @@ func calculateVisitsForPlayer(simPlayer *SimPlayer, id int, status *Status, elap
 				return
 			default:
 				//Make a child for every possible Action
-				possibleActions := player.player.PossibleMoves(status.Cells, elapsedTurns+uint16(turn), player.AllVisitedCells, false)
+				possibleActions := player.player.PossibleActions(status.Cells, elapsedTurns+uint16(turn), player.AllVisitedCells, false)
 				for _, action := range possibleActions {
 					child, score := simulateAction(visits, player, action, elapsedTurns+uint16(turn), currentProbabilityTable)
 					child.Probability *= 1.0/float64(len(possibleActions)) - (score / float64(len(child.LastMoveVisitedCells)))
@@ -285,7 +285,7 @@ func (c ProbabilityClient) GetAction(player Player, status *Status, calculationT
 		allPlayers = append(allPlayers, player)
 	}
 	allProbabilityTables := calculateProbabilityTables(status, stopChannel, allPlayers)
-	possibleActions := status.Players[status.You].PossibleMoves(status.Cells, status.Turn, nil, false)
+	possibleActions := status.Players[status.You].PossibleActions(status.Cells, status.Turn, nil, false)
 	var possible [5]bool
 	//Computes if a action is possible based on the possibleActions Array
 	for _, action := range possibleActions {

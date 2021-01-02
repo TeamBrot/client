@@ -14,7 +14,7 @@ var simulateOtherPlayers = false
 const maxNumberofRollouts = 10000000
 
 //This const defines the relation between the longest and the shortest path simulateRollouts gives back
-const filterValue = 0.85
+const filterValue = 0.73
 
 //search for the longest paths a player could reach. Simulates random move for all Players and allways processes as last player
 func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time) [][]Action {
@@ -29,7 +29,6 @@ func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time) [][
 		default:
 			rolloutStatus := status.Copy()
 			path := make([]Action, 0)
-
 			counter := 0
 			for {
 				me := rolloutStatus.Players[status.You]
@@ -38,7 +37,7 @@ func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time) [][
 					//Process one random move for every other player besides me
 					for _, player := range rolloutStatus.Players {
 						if player != me && player != nil {
-							possibleMoves := player.PossibleMoves(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
+							possibleMoves := player.PossibleActions(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
 							if len(possibleMoves) == 0 {
 								player = nil
 								continue
@@ -53,7 +52,7 @@ func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time) [][
 						break
 					}
 				}
-				possibleMoves := me.PossibleMoves(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
+				possibleMoves := me.PossibleActions(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
 				if len(possibleMoves) == 0 {
 					break
 				}
@@ -128,7 +127,7 @@ func (c RolloutClient) GetAction(player Player, status *Status, calculationTime 
 	stopChannel := time.After((calculationTime / 10) * 9)
 	simulateOtherPlayers = true
 	bestPaths := simulateRollouts(status, stopChannel)
-	possibleActions := status.Players[status.You].PossibleMoves(status.Cells, status.Turn, nil, false)
+	possibleActions := status.Players[status.You].PossibleActions(status.Cells, status.Turn, nil, false)
 	var possible [5]bool
 	//Computes if a action is possible based on the possibleActions Array
 	for _, action := range possibleActions {
