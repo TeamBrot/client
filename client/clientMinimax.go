@@ -227,10 +227,10 @@ func getScoreMapMultiplePlayers(maximizerID uint8, otherPlayerIDs []uint8, statu
 	for _, otherPlayerID := range otherPlayerIDs {
 		resultChannels[otherPlayerID] = make(chan map[Action]int)
 		log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
-		go func() {
-			scoreMap := getScoreMap(status.You, otherPlayerID, status, stopChannel)
-			resultChannels[otherPlayerID] <- scoreMap
-		}()
+		go func(id uint8) {
+			scoreMap := getScoreMap(status.You, id, status, stopChannel)
+			resultChannels[id] <- scoreMap
+		}(otherPlayerID)
 	}
 	scoreMaps := make([]map[Action]int, len(otherPlayerIDs))
 	for i, ch := range resultChannels {
