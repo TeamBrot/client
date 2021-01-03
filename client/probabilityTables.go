@@ -6,10 +6,6 @@ import (
 	"runtime"
 	"time"
 )
-
-//Setting this value higher, makes makes us more confident, that we will visit a field and no one other does. Setting it lower does the exact opposite
-var myStartProbability = 1.4
-
 const othersStartProbability = 1.0
 
 //This const defines the maximal number of Turns simulateGame will try to process
@@ -43,7 +39,7 @@ func simulateAction(board [][]uint16, parentPlayer *SimPlayer, action Action, tu
 }
 
 // Simulate games for all given Players and the given SimDepth. Uses simulatePlayer and resultsToField to achieve this
-func calculateProbabilityTables(status *Status, stopSimulateGameChan <-chan time.Time, activePlayersInRange []*Player) [][][]float64 {
+func calculateProbabilityTables(status *Status, stopSimulateGameChan <-chan time.Time, activePlayersInRange []*Player, myStartProbability float64) [][][]float64 {
 	var me int
 	allSimPlayer := make([]*SimPlayer, 0)
 	//Convert all Players that should be simulated to simPlayers

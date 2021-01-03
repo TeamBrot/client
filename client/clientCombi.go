@@ -7,13 +7,8 @@ import (
 	"time"
 )
 
-var probabilityTableOfLastTurn [][]float64
-
 //this defines the window size from where the player reads the probabilites at the beginnig to analyze the field an knows if he should use minimax
 const windowSize = 8
-
-//If the sum of all probabilities in the specified window is higher then this, minimax can be used
-var minimaxActivationValue = 0.008
 
 //if minimax can be used a player also has to be nearer than this value to the player so it gets minimaxed
 const minimaxDistance = 14.0
@@ -192,7 +187,12 @@ func analyzeBoard(status *Status, probabilityTable [][]float64) ([]uint8, []*Pla
 }
 
 // CombiClient is a client implementation that uses a combination of probability Tables, rollouts and minimax to decide what to do next
-type CombiClient struct{}
+type CombiClient struct{
+	minimaxActivationValue float64
+	myStartProbability float64
+}
+
+var probabilityTableOfLastTurn [][]float64
 
 // GetAction implements the Client interface
 func (c CombiClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
@@ -240,7 +240,7 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	stopCalculateProbabilityTables := make(chan time.Time)
 	probabilityTablesChan := make(chan [][][]float64, 1)
 	go func() {
-		probabilityTables := calculateProbabilityTables(status, stopCalculateProbabilityTables, probabilityPlayers)
+		probabilityTables := calculateProbabilityTables(status, stopCalculateProbabilityTables, probabilityPlayers, c.myStartProbability)
 		probabilityTablesChan <- probabilityTables
 	}()
 

@@ -14,17 +14,23 @@ const defaultLogFile = "logging.txt"
 const defaultGuiHostname = "0.0.0.0"
 const defaultGuiPort = 8081
 const defaultLogDirectory = "log"
+// If the sum of all probabilities in the specified window is higher then this, minimax can be used
+const defaultMinimaxActivationValue = 0.008
+const defaultMyStartProbability = 1.4
+
 
 // Config represents a server and client configuration
 type Config struct {
-	GameURL      string `json:"gameURL"`
-	TimeURL      string `json:"timeURL"`
-	APIKey       string `json:"-"`
-	GUIHostname  string `json:"-"`
-	GUIPort      int    `json:"-"`
-	LogDirectory string `json:"-"`
-	ClientName   string `json:"clientName"`
-	Client       Client `json:"-"`
+	GameURL                string  `json:"gameURL"`
+	TimeURL                string  `json:"timeURL"`
+	APIKey                 string  `json:"-"`
+	GUIHostname            string  `json:"-"`
+	GUIPort                int     `json:"-"`
+	LogDirectory           string  `json:"-"`
+	ClientName             string  `json:"clientName"`
+	Client                 Client  `json:"-"`
+	MinimaxActivationValue float64 `json:"minimaxActivationValue"`
+	MyStartProbability     float64 `json:"myStartProbability"`
 }
 
 func getenvDefault(key string, def string) string {
@@ -35,9 +41,9 @@ func getenvDefault(key string, def string) string {
 	return value
 }
 
-func getClient(name string) (Client, error) {
+func getClient(config Config) (Client, error) {
 	var client Client
-	switch name {
+	switch config.ClientName {
 	case "minimax":
 		client = MinimaxClient{}
 		break
@@ -45,7 +51,7 @@ func getClient(name string) (Client, error) {
 		client = SmartClient{}
 		break
 	case "combi":
-		client = CombiClient{}
+		client = CombiClient{config.MinimaxActivationValue, config.MyStartProbability}
 		break
 	case "rollouts":
 		client = RolloutClient{}
@@ -54,7 +60,7 @@ func getClient(name string) (Client, error) {
 		client = ProbabilityClient{}
 		break
 	default:
-		return nil, fmt.Errorf("invalid client name: %s", name)
+		return nil, fmt.Errorf("invalid client name: %s", config.ClientName)
 	}
 	return client, nil
 }
@@ -65,15 +71,15 @@ func GetConfig() (Config, error) {
 	config.GameURL = getenvDefault("URL", defaultGameURL)
 	config.TimeURL = getenvDefault("TIME_URL", defaultTimeURL)
 	config.APIKey = getenvDefault("KEY", "")
-	flag.Float64Var(&minimaxActivationValue, "activation", minimaxActivationValue, "defines minimaxActivationValue")
-	flag.Float64Var(&myStartProbability, "probability", myStartProbability, "defines myStartProbability")
+	flag.Float64Var(&config.MinimaxActivationValue, "activation", defaultMinimaxActivationValue, "defines minimaxActivationValue")
+	flag.Float64Var(&config.MyStartProbability, "probability", defaultMyStartProbability, "defines myStartProbability")
 	flag.StringVar(&config.ClientName, "client", "combi", "client to run")
 	flag.StringVar(&config.LogDirectory, "log", defaultLogDirectory, "directory in which game statistics are stored")
 	flag.StringVar(&config.GUIHostname, "guihostname", defaultGuiHostname, "hostname on which the gui server is listening")
 	flag.IntVar(&config.GUIPort, "guiport", defaultGuiPort, "port on which the gui server is listening")
 	flag.Parse()
 
-	client, err := getClient(config.ClientName)
+	client, err := getClient(config)
 	config.Client = client
 	return config, err
 }
