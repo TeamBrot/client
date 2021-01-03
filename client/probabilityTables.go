@@ -8,7 +8,7 @@ import (
 )
 
 //Setting this value higher, makes makes us more confident, that we will visit a field and no one other does. Setting it lower does the exact opposite
-var myStartProbability = 1.12
+var myStartProbability = 1.4
 
 const othersStartProbability = 1.0
 
