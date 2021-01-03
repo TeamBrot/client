@@ -187,9 +187,9 @@ func analyzeBoard(status *Status, probabilityTable [][]float64, minimaxActivatio
 }
 
 // CombiClient is a client implementation that uses a combination of probability Tables, rollouts and minimax to decide what to do next
-type CombiClient struct{
+type CombiClient struct {
 	minimaxActivationValue float64
-	myStartProbability float64
+	myStartProbability     float64
 }
 
 var probabilityTableOfLastTurn [][]float64
@@ -207,9 +207,6 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	if len(possibleActions) == 1 {
 		log.Println("only possible action: ", possibleActions[0])
 		return possibleActions[0]
-	} else if len(possibleActions) == 0 {
-		log.Println("going to die... choosing change_nothing as last action")
-		return ChangeNothing
 	}
 
 	// analyze which players to compute minimax and probability tables for
