@@ -9,7 +9,7 @@ import (
 
 // Client represents a handler that decides what the specific player should do next
 type Client interface {
-	GetAction(player Player, status *Status, calculationTime time.Duration) Action
+	GetAction(status *Status, calculationTime time.Duration) Action
 }
 
 // RunClient runs a spe_ed client using a specified configuration
@@ -62,7 +62,7 @@ func RunClient(config Config) {
 			errorLogger.Fatalln("error receiving time from server", err)
 		}
 		start := time.Now()
-		action := config.Client.GetAction(*status.Players[status.You], status, calculationTime)
+		action := config.Client.GetAction(status, calculationTime)
 		processingTime := time.Since(start)
 		if processingTime > calculationTime {
 			errorLogger.Println("the calculation took longer then it should have. the client might miss the deadline!")

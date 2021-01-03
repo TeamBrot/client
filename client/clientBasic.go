@@ -9,7 +9,8 @@ import (
 type SmartClient struct{}
 
 // GetAction Implementation for SmartClient
-func (c SmartClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
+func (c SmartClient) GetAction(status *Status, calculationTime time.Duration) Action {
+	player := status.Players[status.You]
 	action := ChangeNothing
 	for _, a := range player.PossibleActions(status.Cells, status.Turn, nil, false) {
 		if a == ChangeNothing {

@@ -172,7 +172,7 @@ func filterPaths(paths [][]Action, longest int, percent float64) [][]Action {
 type RolloutClient struct{}
 
 // GetAction implements the Client interface
-func (c RolloutClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
+func (c RolloutClient) GetAction(status *Status, calculationTime time.Duration) Action {
 	stopChannel := time.After((calculationTime / 10) * 9)
 	simulateOtherPlayers = true
 	stillValidPaths := validBestPathsOfLastTurn
