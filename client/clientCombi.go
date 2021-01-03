@@ -204,15 +204,13 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 
 	// handle trivial cases (zero or one possible actions)
 	possibleActions := player.PossibleActions(status.Cells, status.Turn, nil, false)
-	if len(possibleActions) == 1 {
-		log.Println("only possible action: ", possibleActions[0])
-		return possibleActions[0]
+	if len(possibleActions) == 0 {
+		log.Println("going to die use change_nothing")
+		return ChangeNothing
 	}
 
 	// analyze which players to compute minimax and probability tables for
 	minimaxPlayers, probabilityPlayers := analyzeBoard(status, probabilityTableOfLastTurn, c.minimaxActivationValue)
-	log.Println("using players", probabilityPlayers, "for probabilityFields")
-	log.Println("using players", minimaxPlayers, "for minimax")
 
 	// start rollouts
 	stopRolloutChan := make(chan time.Time)
@@ -241,6 +239,10 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 		probabilityTablesChan <- probabilityTables
 	}()
 
+	for _, player := range probabilityPlayers {
+		log.Printf("using player %+v for probabilityFields", player)
+	}
+	log.Printf("using players %d for minimax", minimaxPlayers)
 	// receive the first timing signal and stop the probability table computation
 	_ = <-stopChannel1
 	log.Println("sending stop signal to calculateProbabilityTables...")
