@@ -271,7 +271,9 @@ func makeProbabilityTable(height uint16, width uint16) [][]float64 {
 }
 
 //ProbabilityClient is a client implementation that uses a probabilityTable to decide what to do next
-type ProbabilityClient struct{}
+type ProbabilityClient struct{
+	myStartProbability float64
+}
 
 // GetAction implements the Client interface
 func (c ProbabilityClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
@@ -280,7 +282,7 @@ func (c ProbabilityClient) GetAction(player Player, status *Status, calculationT
 	for _, player := range status.Players {
 		allPlayers = append(allPlayers, player)
 	}
-	allProbabilityTables := calculateProbabilityTables(status, stopChannel, allPlayers)
+	allProbabilityTables := calculateProbabilityTables(status, stopChannel, allPlayers, c.myStartProbability)
 	possibleActions := status.Players[status.You].PossibleActions(status.Cells, status.Turn, nil, false)
 	var possible [5]bool
 	//Computes if a action is possible based on the possibleActions Array

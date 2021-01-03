@@ -57,7 +57,7 @@ func getClient(config Config) (Client, error) {
 		client = RolloutClient{}
 		break
 	case "probability":
-		client = ProbabilityClient{}
+		client = ProbabilityClient{config.MyStartProbability}
 		break
 	default:
 		return nil, fmt.Errorf("invalid client name: %s", config.ClientName)

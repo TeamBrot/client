@@ -119,7 +119,7 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 }
 
 //This Method and tells us which players we should simulate
-func analyzeBoard(status *Status, probabilityTable [][]float64) ([]uint8, []*Player) {
+func analyzeBoard(status *Status, probabilityTable [][]float64, minimaxActivationValue float64) ([]uint8, []*Player) {
 	var probabilityPlayers []*Player
 	var minimaxPlayers []uint8
 	var playersAreNear bool
@@ -213,7 +213,7 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	}
 
 	// analyze which players to compute minimax and probability tables for
-	minimaxPlayers, probabilityPlayers := analyzeBoard(status, probabilityTableOfLastTurn)
+	minimaxPlayers, probabilityPlayers := analyzeBoard(status, probabilityTableOfLastTurn, c.minimaxActivationValue)
 	log.Println("using players", probabilityPlayers, "for probabilityFields")
 	log.Println("using players", minimaxPlayers, "for minimax")
 
