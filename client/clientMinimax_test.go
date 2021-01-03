@@ -56,7 +56,7 @@ func TestBestActionsFromScoreMap(t *testing.T) {
 	}
 
 	scoreMap2 := map[Action]int{ChangeNothing: 2, TurnRight: 2, TurnLeft: 2, SpeedUp: -1}
-	bestActions2 := []Action{ChangeNothing, TurnLeft, TurnRight}
+	bestActions2 := []Action{ChangeNothing, TurnRight, TurnLeft}
 	if !reflect.DeepEqual(bestActionsFromScoreMap(scoreMap2), bestActions2) {
 		t.Error("best actions are not equal", bestActions2, bestActionsFromScoreMap(scoreMap2))
 	}
