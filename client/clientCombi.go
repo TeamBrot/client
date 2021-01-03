@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"math"
 	"sort"
@@ -14,7 +13,7 @@ var probabilityTableOfLastTurn [][]float64
 const windowSize = 8
 
 //If the sum of all probabilities in the specified window is higher then this, minimax can be used
-var minimaxActivationValue = 0.1
+var minimaxActivationValue = 0.008
 
 //if minimax can be used a player also has to be nearer than this value to the player so it gets minimaxed
 const minimaxDistance = 14.0
@@ -76,19 +75,32 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 		inPaths[path[0]] = true
 		probabilities[path[0]] += score
 	}
+	log.Println(possible)
 	if !minimaxIsUsed {
 		for z := range possible {
 			possible[z] = possible[z] && inPaths[z]
 		}
 	}
+	log.Println(possible)
 	//computes how many times a Action was the first Action of path
 	counter := [5]int{1, 1, 1, 1, 1}
 	for _, path := range paths {
 		counter[path[0]]++
 	}
+	var sumOfProbabilities float64
+	for z, probability := range probabilities {
+		sumOfProbabilities += probability / float64(counter[z])
+	}
+	log.Println(sumOfProbabilities)
 	var scores [5]float64
 	for i := 0; i < 5; i++ {
-		scores[i] = (probabilities[i] / float64(counter[i])) + (1.0 - (float64(counter[i]) / float64(len(paths))))
+		if sumOfProbabilities != 0 {
+			log.Println(probabilities[i] / float64(counter[i]) / sumOfProbabilities)
+			log.Println(1.0 - (float64(counter[i]) / float64(len(paths))))
+			scores[i] = (probabilities[i] / float64(counter[i]) / sumOfProbabilities) + (1.0 - (float64(counter[i]) / float64(len(paths))))
+		} else {
+			scores[i] = 1.0 - (float64(counter[i]) / float64(len(paths)))
+		}
 	}
 	//computes Value based on the score of a Action an
 	log.Printf("calculated values %1.2f", scores)
@@ -101,6 +113,13 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 			action = Action(i)
 		}
 	}
+
+	promissingPaths = make([][]Action, 0)
+	for _, path := range paths {
+		if path[0] == action && len(path) > 1 {
+			promissingPaths = append(promissingPaths, path[1:len(path)-1])
+		}
+	}
 	return action
 }
 
@@ -111,18 +130,31 @@ func analyzeBoard(status *Status, probabilityTable [][]float64) ([]uint8, []*Pla
 	var playersAreNear bool
 	me := status.Players[status.You]
 	if probabilityTable != nil {
+		var occupiedCellsInWindow float64
 		var accumulatedProbability float64
 		for y := int(me.Y) - windowSize; y < int(me.Y)+windowSize; y++ {
 			if y >= 0 && y < int(status.Height) {
 				for x := int(me.X) - windowSize; x < int(me.X)+windowSize; x++ {
 					if x >= 0 && x < int(status.Width) {
 						accumulatedProbability += probabilityTable[y][x]
+						if status.Cells[y][x] {
+							occupiedCellsInWindow++
+						} else if probabilityTable[y][x] == 0 {
+							occupiedCellsInWindow++
+						}
+					} else {
+						occupiedCellsInWindow++
 					}
 				}
 
+			} else {
+				occupiedCellsInWindow += 2*windowSize + 1
 			}
 		}
-		log.Printf("The calculated accumulated probability is %1.2e", accumulatedProbability)
+		if occupiedCellsInWindow != 0 {
+			accumulatedProbability /= math.Pow((2*windowSize+1), 2.0) - occupiedCellsInWindow
+		}
+		log.Printf("The average probability in the window is %1.2e", accumulatedProbability)
 		if accumulatedProbability >= minimaxActivationValue {
 			playersAreNear = true
 			simulateOtherPlayers = true
@@ -166,7 +198,7 @@ type CombiClient struct{}
 func (c CombiClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
 	start := time.Now()
 	stopChannel1 := time.After(calculationTime / 10 * 6)
-	stopChannel2 := time.After(calculationTime / 10 * 9)
+	stopChannel2 := time.After(calculationTime / 10 * 8)
 	var bestAction Action
 	possibleActions := player.PossibleActions(status.Cells, status.Turn, nil, false)
 	//handle trivial cases (zero or one possible Action)
@@ -177,6 +209,7 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 		log.Println("going to die... choosing change_nothing as last action")
 		return ChangeNothing
 	}
+	minimaxPlayers, probabilityPlayers := analyzeBoard(status, probabilityTableOfLastTurn)
 	stopRolloutChan := make(chan time.Time)
 	rolloutChan := make(chan [][]Action, 1)
 	go func() {
@@ -185,7 +218,6 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	}()
 
 	//calculate which players are simulated TODO: Move this code to an external function and improve it
-	minimaxPlayers, probabilityPlayers := analyzeBoard(status, probabilityTableOfLastTurn)
 	log.Println("using", len(probabilityPlayers), "players, for calculation of probabilityFields")
 	minimaxChannel := make(chan []Action, 1)
 	stopMinimaxChannel := make(chan time.Time)
@@ -239,10 +271,10 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	log.Println("could calculate probabilityTables for", len(allProbabilityTables), "turns")
 	//This is only for debugging purposes and combines the last field with the status
 	//log.Println(allProbabilityTables[len(allProbabilityTables)-1])
-	log.Println("Last calculated probability Table")
-	for y, row := range allProbabilityTables[len(allProbabilityTables)-1] {
-		fmt.Printf("%2d, %1.1e\n", y, row)
-	}
+	//log.Println("Last calculated probability Table")
+	//for y, row := range allProbabilityTables[len(allProbabilityTables)-1] {
+	//fmt.Printf("%2d, %1.1e\n", y, row)
+	//}
 	//Log Timing
 	log.Println("time until calculations are finished and evaluation can start: ", time.Since(start))
 	//Evaluate the paths with the given field and return the best Action based on this TODO: Needs improvement in case of naming
