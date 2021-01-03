@@ -9,9 +9,9 @@ import ffmpeg
 SCALING = 16
 COLORS = ["#dddddd", "#ff0000", "#00ff00", "#0000ff", "#00ffff", "#ffff00", "#ff00ff", "#000000"]
 PLAYER_COLOR_INDEX = 1
-FPS = 10
+FPS = 30
 NUM_FINAL_FRAMES = 30
-NUM_START_FRAMES = 20
+NUM_START_FRAMES = 30
 
 def json_basename(json_filename):
     return os.path.basename(json_filename).removesuffix(".json")
