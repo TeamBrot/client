@@ -80,7 +80,7 @@ func (player *Player) PossibleActions(cells [][]bool, turn uint16, extraCellInfo
 	turnRight := true
 	turnLeft := true
 	slowDown := player.Speed != 1
-	speedUp := player.Speed != 6
+	speedUp := player.Speed != 10
 	direction := player.Direction
 	y := player.Y
 	x := player.X
