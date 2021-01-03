@@ -233,8 +233,10 @@ func getScoreMapMultiplePlayers(maximizerID uint8, otherPlayerIDs []uint8, statu
 		}(otherPlayerID)
 	}
 	scoreMaps := make([]map[Action]int, len(otherPlayerIDs))
-	for i, ch := range resultChannels {
+	i := 0
+	for _, ch := range resultChannels {
 		scoreMaps[i] = <-ch
+		i++
 	}
 	return combineScoreMaps(scoreMaps)
 }
