@@ -166,6 +166,7 @@ func bestActionsFromScoreMap(scoreMap map[Action]int) []Action {
 	bestActions := []Action{}
 	bestScore := math.MinInt32
 	for action, score := range scoreMap {
+		log.Println(action, score)
 		if score > bestScore {
 			bestScore = score
 			bestActions = []Action{action}

@@ -48,17 +48,38 @@ func TestCombineScoreMapMinimum(t *testing.T) {
 	}
 }
 
+func actionsEq(a1 []Action, a2 []Action) bool {
+	if len(a1) != len(a2) {
+		return false
+	}
+	for _, action := range a1 {
+		found := false
+		for _, action2 := range a2 {
+			if action == action2 {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
 func TestBestActionsFromScoreMap(t *testing.T) {
 	scoreMap1 := map[Action]int{ChangeNothing: 2, TurnRight: 1}
 	bestActions1 := []Action{ChangeNothing}
-	if !reflect.DeepEqual(bestActions1, bestActionsFromScoreMap(scoreMap1)) {
-		t.Error("best actions not equal", bestActions1, bestActionsFromScoreMap(scoreMap1))
+	bestActionsScoreMap1 := bestActionsFromScoreMap(scoreMap1)
+	if !actionsEq(bestActions1, bestActionsScoreMap1) {
+		t.Error("best actions not equal", bestActions1, bestActionsScoreMap1)
 	}
 
 	scoreMap2 := map[Action]int{ChangeNothing: 2, TurnRight: 2, TurnLeft: 2, SpeedUp: -1}
 	bestActions2 := []Action{ChangeNothing, TurnRight, TurnLeft}
-	if !reflect.DeepEqual(bestActionsFromScoreMap(scoreMap2), bestActions2) {
-		t.Error("best actions are not equal", bestActions2, bestActionsFromScoreMap(scoreMap2))
+	bestActionsScoreMap2 := bestActionsFromScoreMap(scoreMap2)
+	if !actionsEq(bestActions2, bestActionsScoreMap2) {
+		t.Error("best actions not equal", bestActions2, bestActionsScoreMap2)
 	}
 }
 
