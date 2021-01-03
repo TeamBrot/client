@@ -196,12 +196,14 @@ type CombiClient struct{}
 
 // GetAction implements the Client interface
 func (c CombiClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
+
+	// create timing channels
 	start := time.Now()
 	stopChannel1 := time.After(calculationTime / 10 * 6)
 	stopChannel2 := time.After(calculationTime / 10 * 8)
-	var bestAction Action
+
+	// handle trivial cases (zero or one possible actions)
 	possibleActions := player.PossibleActions(status.Cells, status.Turn, nil, false)
-	//handle trivial cases (zero or one possible Action)
 	if len(possibleActions) == 1 {
 		log.Println("only possible action: ", possibleActions[0])
 		return possibleActions[0]
@@ -209,7 +211,13 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 		log.Println("going to die... choosing change_nothing as last action")
 		return ChangeNothing
 	}
+
+	// analyze which players to compute minimax and probability tables for
 	minimaxPlayers, probabilityPlayers := analyzeBoard(status, probabilityTableOfLastTurn)
+	log.Println("using players", probabilityPlayers, "for probabilityFields")
+	log.Println("using players", minimaxPlayers, "for minimax")
+
+	// start rollouts
 	stopRolloutChan := make(chan time.Time)
 	rolloutChan := make(chan [][]Action, 1)
 	go func() {
@@ -218,8 +226,7 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 		rolloutChan <- rolloutPaths
 	}()
 
-	//calculate which players are simulated TODO: Move this code to an external function and improve it
-	log.Println("using", len(probabilityPlayers), "players, for calculation of probabilityFields")
+	// start minimax if needed
 	minimaxChannel := make(chan []Action, 1)
 	stopMinimaxChannel := make(chan time.Time)
 	if len(minimaxPlayers) > 0 {
@@ -229,38 +236,44 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 		}()
 	}
 
-	var allProbabilityTables [][][]float64
-	//This channel is used to recieve an array of all calculated ProbabilityTables from simulate game
-	var probabilityTablesChan chan [][][]float64
-	var stopCalculateProbabilityTables chan time.Time
-	stopCalculateProbabilityTables = make(chan time.Time)
-	probabilityTablesChan = make(chan [][][]float64, 1)
+	// start probability tables
+	stopCalculateProbabilityTables := make(chan time.Time)
+	probabilityTablesChan := make(chan [][][]float64, 1)
 	go func() {
 		probabilityTables := calculateProbabilityTables(status, stopCalculateProbabilityTables, probabilityPlayers)
 		probabilityTablesChan <- probabilityTables
 	}()
-	//recieve the first Timing signal and close the probability Calculation
+
+	// receive the first timing signal and stop the probability table computation
 	_ = <-stopChannel1
-	log.Println("sending stop signal to simulateGame...")
+	log.Println("sending stop signal to calculateProbabilityTables...")
 	close(stopCalculateProbabilityTables)
+
+	// receive the second timing signal and stop rollouts and minimax computations
 	_ = <-stopChannel2
 	log.Println("sending stop signal to simulateRollouts and minimax...")
 	close(stopRolloutChan)
 	close(stopMinimaxChannel)
-	var useMinimax bool
+
+	// get minimax results
+	useMinimax := false
 	if len(minimaxPlayers) > 0 {
 		minimaxActions := <-minimaxChannel
-		//If we use minimax against multiple players minimax actions might be empty. Then we use possible actions
+		// If we use minimax against multiple players minimax actions might be empty. Then we use possible actions
 		if len(minimaxActions) != 0 {
 			possibleActions = minimaxActions
 			useMinimax = true
 		}
 	}
-	allProbabilityTables = <-probabilityTablesChan
-	bestPaths := <-rolloutChan
 
+	// get rollout results
+	bestPaths := <-rolloutChan
 	log.Println("found", len(bestPaths), "paths that should be evaluated")
-	log.Println("could calculate probabilityTables for", len(allProbabilityTables), "turns")
+
+	// get probability table results
+	allProbabilityTables := <-probabilityTablesChan
+	log.Println("could calculate probability tables for", len(allProbabilityTables), "turns")
+
 	//This is only for debugging purposes and combines the last field with the status
 	//log.Println(allProbabilityTables[len(allProbabilityTables)-1])
 	//log.Println("Last calculated probability Table")
@@ -270,6 +283,7 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	//Log Timing
 	log.Println("time until calculations are finished and evaluation can start: ", time.Since(start))
 	//Evaluate the paths with the given field and return the best Action based on this TODO: Needs improvement in case of naming
+	var bestAction Action
 	bestAction, validBestPathsOfLastTurn = evaluatePaths(player, allProbabilityTables, bestPaths, status.Turn, len(allProbabilityTables)-1, possibleActions, useMinimax)
 	//Log Timing
 	probabilityTableOfLastTurn = allProbabilityTables[len(allProbabilityTables)-1]
