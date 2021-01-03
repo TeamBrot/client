@@ -44,7 +44,7 @@ func evaluateAction(player *Player, field [][]float64, action Action, turn uint1
 }
 
 //computes a score for every possible Action. The action with the lowest score is chosen
-func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, turn uint16, simDepth int, possibleActions []Action, minimaxIsUsed bool) Action {
+func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, turn uint16, simDepth int, possibleActions []Action, minimaxIsUsed bool) (Action, [][]Action) {
 	var probabilities [5]float64
 	var possible [5]bool
 	//Computes if a action is possible based on the possibleActions Array
@@ -69,7 +69,7 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 		}
 		if len(path) == 0 {
 			log.Println("all other players are going to die in the next turn")
-			return possibleActions[0]
+			return possibleActions[0], nil
 		}
 		score /= float64(len(path))
 		inPaths[path[0]] = true
@@ -114,13 +114,13 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 		}
 	}
 
-	promissingPaths = make([][]Action, 0)
+	stillValidPaths := make([][]Action, 0)
 	for _, path := range paths {
 		if path[0] == action && len(path) > 1 {
-			promissingPaths = append(promissingPaths, path[1:len(path)-1])
+			stillValidPaths = append(stillValidPaths, path[1:len(path)-1])
 		}
 	}
-	return action
+	return action, stillValidPaths
 }
 
 //This Method and tells us which players we should simulate
@@ -213,7 +213,8 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	stopRolloutChan := make(chan time.Time)
 	rolloutChan := make(chan [][]Action, 1)
 	go func() {
-		rolloutPaths := simulateRollouts(status, stopRolloutChan)
+		stillValidPaths := validBestPathsOfLastTurn
+		rolloutPaths := simulateRollouts(status, stopRolloutChan, stillValidPaths)
 		rolloutChan <- rolloutPaths
 	}()
 
@@ -278,7 +279,7 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	//Log Timing
 	log.Println("time until calculations are finished and evaluation can start: ", time.Since(start))
 	//Evaluate the paths with the given field and return the best Action based on this TODO: Needs improvement in case of naming
-	bestAction = evaluatePaths(player, allProbabilityTables, bestPaths, status.Turn, len(allProbabilityTables)-1, possibleActions, useMinimax)
+	bestAction, validBestPathsOfLastTurn = evaluatePaths(player, allProbabilityTables, bestPaths, status.Turn, len(allProbabilityTables)-1, possibleActions, useMinimax)
 	//Log Timing
 	probabilityTableOfLastTurn = allProbabilityTables[len(allProbabilityTables)-1]
 	totalProcessingTime := time.Since(start)

@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-var promissingPaths [][]Action
+var validBestPathsOfLastTurn [][]Action
 
 //If this value is set to true we process in every rollout before we choose our own action a action for every other living player
 var simulateOtherPlayers = false
@@ -19,11 +19,11 @@ const maxNumberofRollouts = 10000000
 const filterValue = 0.7
 
 //search for the longest paths a player could reach. Simulates random move for all Players and allways processes as last player
-func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time) [][]Action {
+func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time, pathsOfLastTurn [][]Action) [][]Action {
 	var longestPaths [][]Action
 	var longest int
-	if promissingPaths != nil && !simulateOtherPlayers {
-		longestPaths, longest = checkPathsOfLastRound(promissingPaths, status)
+	if pathsOfLastTurn != nil && !simulateOtherPlayers {
+		longestPaths, longest = checkPathsOfLastRound(pathsOfLastTurn, status)
 		longestPaths = filterPaths(longestPaths, longest, filterValue)
 		log.Println("Paths that are valid after filtering", len(longestPaths))
 	} else {
@@ -175,7 +175,8 @@ type RolloutClient struct{}
 func (c RolloutClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
 	stopChannel := time.After((calculationTime / 10) * 9)
 	simulateOtherPlayers = true
-	bestPaths := simulateRollouts(status, stopChannel)
+	stillValidPaths := validBestPathsOfLastTurn
+	bestPaths := simulateRollouts(status, stopChannel, stillValidPaths)
 	possibleActions := status.Players[status.You].PossibleActions(status.Cells, status.Turn, nil, false)
 	var possible [5]bool
 	//Computes if a action is possible based on the possibleActions Array
@@ -200,10 +201,10 @@ func (c RolloutClient) GetAction(player Player, status *Status, calculationTime 
 			action = Action(i)
 		}
 	}
-	promissingPaths = make([][]Action, 0)
+	validBestPathsOfLastTurn = make([][]Action, 0)
 	for _, path := range bestPaths {
 		if path[0] == action {
-			promissingPaths = append(promissingPaths, path[1:len(path)-1])
+			validBestPathsOfLastTurn = append(validBestPathsOfLastTurn, path[1:len(path)-1])
 		}
 	}
 	return action
