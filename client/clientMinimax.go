@@ -261,7 +261,7 @@ func MinimaxBestActions(maximizerID uint8, otherPlayerIDs []uint8, status *Statu
 type MinimaxClient struct{}
 
 // GetAction implements the Client interface
-func (c MinimaxClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
+func (c MinimaxClient) GetAction(status *Status, calculationTime time.Duration) Action {
 	stopChannel := time.After((calculationTime / 10) * 9)
 	otherPlayerID, err := status.FindClosestPlayerTo(status.You)
 	if err != nil {

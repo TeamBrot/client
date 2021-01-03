@@ -195,7 +195,9 @@ type CombiClient struct {
 var probabilityTableOfLastTurn [][]float64
 
 // GetAction implements the Client interface
-func (c CombiClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
+func (c CombiClient) GetAction(status *Status, calculationTime time.Duration) Action {
+
+	player := *status.Players[status.You]
 
 	// create timing channels
 	start := time.Now()

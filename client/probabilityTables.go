@@ -276,7 +276,7 @@ type ProbabilityClient struct{
 }
 
 // GetAction implements the Client interface
-func (c ProbabilityClient) GetAction(player Player, status *Status, calculationTime time.Duration) Action {
+func (c ProbabilityClient) GetAction(status *Status, calculationTime time.Duration) Action {
 	stopChannel := time.After((calculationTime / 10) * 7)
 	var allPlayers []*Player
 	for _, player := range status.Players {
