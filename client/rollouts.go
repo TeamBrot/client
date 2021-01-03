@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+var promissingPaths [][]Action
+
 //If this value is set to true we process in every rollout before we choose our own action a action for every other living player
 var simulateOtherPlayers = false
 
@@ -14,12 +16,20 @@ var simulateOtherPlayers = false
 const maxNumberofRollouts = 10000000
 
 //This const defines the relation between the longest and the shortest path simulateRollouts gives back
-const filterValue = 0.73
+const filterValue = 0.7
 
 //search for the longest paths a player could reach. Simulates random move for all Players and allways processes as last player
 func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time) [][]Action {
-	longest := 0
-	longestPaths := make([][]Action, 0)
+	var longestPaths [][]Action
+	var longest int
+	if promissingPaths != nil && !simulateOtherPlayers {
+		longestPaths, longest = checkPathsOfLastRound(promissingPaths, status)
+		longestPaths = filterPaths(longestPaths, longest, filterValue)
+		log.Println("Paths that are valid after filtering", len(longestPaths))
+	} else {
+		longest = 0
+		longestPaths = make([][]Action, 0)
+	}
 	for performedRollouts := 0; performedRollouts < maxNumberofRollouts; performedRollouts++ {
 		select {
 		case <-stopSimulateRollouts:
@@ -75,6 +85,44 @@ func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time) [][
 	return longestPaths
 }
 
+//Checks if a Action, that was taken in the last turn is still valid
+func checkIfActionIsPossible(checkedAction Action, status *Status, player *Player) bool {
+	possibleActions := player.PossibleActions(status.Cells, status.Turn, nil, false)
+	for _, action := range possibleActions {
+		if action == checkedAction {
+			return true
+		}
+	}
+	return false
+}
+
+//Takes an Array of paths and checks if they are still valid and returns the array and the number of the longest path
+func checkPathsOfLastRound(oldPaths [][]Action, status *Status) ([][]Action, int) {
+	newPaths := make([][]Action, 0)
+	log.Println("Paths of the last round that are checked", len(oldPaths))
+	longest := 0
+	for _, path := range oldPaths {
+		rolloutstatus := status.Copy()
+		me := rolloutstatus.Players[rolloutstatus.You]
+		lengthCounter := 0
+		for _, action := range path {
+			if checkIfActionIsPossible(action, rolloutstatus, me) {
+				rolloutMove(rolloutstatus, action, me)
+				lengthCounter++
+				rolloutstatus.Turn++
+			} else {
+				break
+			}
+		}
+		if lengthCounter > longest {
+			longest = lengthCounter
+		}
+		newPaths = append(newPaths, path[0:lengthCounter])
+	}
+	log.Println("Length of the longest valid path of the last round", longest)
+	return newPaths, longest
+}
+
 //implements the doMove function for the rollout function
 func rolloutMove(status *Status, action Action, player *Player) {
 	visitedCoords := player.ProcessAction(action, status.Turn)
@@ -86,6 +134,7 @@ func rolloutMove(status *Status, action Action, player *Player) {
 	}
 
 }
+
 func checkPath(path []Action, longestPaths [][]Action, longest int, allreadyPerformedRollouts int) ([][]Action, int) {
 	//Now we chek if the last taken path was longer then every other path
 	if float64(len(path)) >= float64(longest)*filterValue {
@@ -149,6 +198,12 @@ func (c RolloutClient) GetAction(player Player, status *Status, calculationTime 
 		if possible[i] && v < minimum {
 			minimum = v
 			action = Action(i)
+		}
+	}
+	promissingPaths = make([][]Action, 0)
+	for _, path := range bestPaths {
+		if path[0] == action {
+			promissingPaths = append(promissingPaths, path[1:len(path)-1])
 		}
 	}
 	return action
