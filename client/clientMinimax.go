@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"log"
+	"math"
 	"math/rand"
 	"time"
 )
@@ -138,11 +139,44 @@ func getActionScore(you uint8, minimizer uint8, isMaximizer bool, status *Status
 	return bestScore, maxDepth, nil
 }
 
-// MinimaxScoreMap returns a map that contains the score of every possible move, given a certain depth.
-// It could also be empty, indicating that there are no possible moves.
-// It stops execution when a signal is received on the specified channel.
-// In this case, the return value should not be used.
-func MinimaxScoreMap(maximizerID uint8, minimizerID uint8, status *Status, depth int, stopChannel <-chan time.Time) (map[Action]int, int, error) {
+func combineScoreMaps(scoreMaps []map[Action]int) map[Action]int {
+	resultScoreMap := make(map[Action]int, 0)
+	for _, action := range Actions {
+		minimumScore := math.MaxInt32
+		actionPossible := true
+		for _, scoreMap := range scoreMaps {
+			score, isIn := scoreMap[action]
+			if !isIn {
+				actionPossible = false
+				break
+			}
+			if score < minimumScore {
+				minimumScore = score
+			}
+
+		}
+		if actionPossible {
+			resultScoreMap[action] = minimumScore
+		}
+	}
+	return resultScoreMap
+}
+
+func bestActionsFromScoreMap(scoreMap map[Action]int) []Action {
+	bestActions := []Action{}
+	bestScore := math.MinInt32
+	for action, score := range scoreMap {
+		if score > bestScore {
+			bestScore = score
+			bestActions = []Action{action}
+		} else if score == bestScore {
+			bestActions = append(bestActions, action)
+		}
+	}
+	return bestActions
+}
+
+func getScoreMapDepth(maximizerID uint8, minimizerID uint8, status *Status, depth int, stopChannel <-chan time.Time) (map[Action]int, int, error) {
 	scoreMap := map[Action]int{}
 	possibleMoves := status.Players[maximizerID].PossibleActions(status.Cells, status.Turn, nil, true)
 	maxDepth := 0
@@ -160,100 +194,64 @@ func MinimaxScoreMap(maximizerID uint8, minimizerID uint8, status *Status, depth
 	return scoreMap, maxDepth, nil
 }
 
-// MinimaxBestActions returns the best actions according to the minimax algorithm, with given depth.
-// It stops execution when a signal is received on the specified channel.
-// In this case, the return value should not be used.
-func MinimaxBestActions(maximizerID uint8, minimizerID uint8, status *Status, depth int, stopChannel <-chan time.Time) ([]Action, int, error) {
-	scoreMap, maxDepth, err := MinimaxScoreMap(maximizerID, minimizerID, status, depth, stopChannel)
-	if err != nil {
-		return []Action{}, maxDepth, err
-	}
-	if len(scoreMap) == 0 {
-		log.Println("no possible moves, using change_nothing")
-		return []Action{ChangeNothing}, maxDepth, nil
-	}
-	bestActions := []Action{}
-	bestScore := -1000
-	for action, score := range scoreMap {
-		if score == bestScore {
-			bestActions = append(bestActions, action)
-		} else if score > bestScore {
-			bestActions = []Action{action}
-			bestScore = score
-		}
-	}
-	log.Println("action-score-map", scoreMap)
-	return bestActions, maxDepth, nil
-}
-
-// MinimaxBestActionsTimed returns the best actions according to the minimax algorithm.
-// It stops execution when a signal is received on the specified channel.
-// In this case, the return value is the best one available.
-func MinimaxBestActionsTimed(maximizerID uint8, minimizerID uint8, status *Status, timingChannel <-chan time.Time) []Action {
-	var actions []Action
+// getScoreMap returns a score map that contains the score that can be reached against the specified player other players
+func getScoreMap(maximizerID uint8, minimizerID uint8, status *Status, timingChannel <-chan time.Time) map[Action]int {
+	var scoreMap map[Action]int
 	var depth int
 	startDepth := 1
 	depth += startDepth
 
-	actions = status.Players[status.You].PossibleActions(status.Cells, status.Turn, nil, true)
-	if len(actions) == 0 {
-		return []Action{ChangeNothing}
-	} else if len(actions) == 1 {
-		return actions
-	}
 	for {
 		sCopy := status.Copy()
-		actionsTemp, maxDepth, err := MinimaxBestActions(maximizerID, minimizerID, sCopy, depth, timingChannel)
+		scoreMapTemp, maxDepth, err := getScoreMapDepth(maximizerID, minimizerID, sCopy, depth, timingChannel)
 		if err == nil {
-			log.Println("minimax with depth", depth, "actions", actionsTemp)
-			actions = actionsTemp
+			scoreMap = scoreMapTemp
+			log.Println("minimax with depth", depth, "score map", scoreMap)
 		} else {
-			log.Println("couldn't finish calculation for depth", depth, "returning", actions)
-			return actions
+			log.Println("minimax couldn't finish calculation for depth", depth, "returning", scoreMap)
+			return scoreMap
 		}
 		if depth > maxDepth {
-			log.Println("maximum depth was", maxDepth, "returning", actionsTemp)
-			return actions
+			log.Println("minimax maximum depth was", maxDepth, "returning", scoreMap)
+			return scoreMap
 		}
 		depth++
 	}
 }
 
-func minimaxBestActionsMultiplePlayers(otherPlayerIDs []uint8, myID uint8, status *Status, stopChannel chan time.Time) []Action {
-	resultChannels := make(map[uint8]chan []Action)
+// getScoreMapMultiplePlayers returns a score map that contains the minimum score that can be reached against all other players
+// the stop channel has to be closed when the process should stop
+func getScoreMapMultiplePlayers(maximizerID uint8, otherPlayerIDs []uint8, status *Status, stopChannel <-chan time.Time) map[Action]int {
+	resultChannels := make(map[uint8]chan map[Action]int)
 	for _, otherPlayerID := range otherPlayerIDs {
-		resultChannels[otherPlayerID] = make(chan []Action)
+		resultChannels[otherPlayerID] = make(chan map[Action]int)
 		log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
-		go func(otherPlayerID uint8) {
-			bestActionsMinimax := MinimaxBestActionsTimed(status.You, otherPlayerID, status, stopChannel)
-			resultChannels[otherPlayerID] <- bestActionsMinimax
-		}(otherPlayerID)
+		go func() {
+			scoreMap := getScoreMap(status.You, otherPlayerID, status, stopChannel)
+			resultChannels[otherPlayerID] <- scoreMap
+		}()
 	}
-	allMiniMaxActions := make([]map[Action]struct{}, len(otherPlayerIDs))
-	counter := 0
-	for _, channel := range resultChannels {
-		minimaxActions := <-channel
-		actionStruct := make(map[Action]struct{}, 0)
-		for _, action := range minimaxActions {
-			actionStruct[action] = struct{}{}
-		}
-		allMiniMaxActions[counter] = actionStruct
-		counter++
+	scoreMaps := make([]map[Action]int, len(otherPlayerIDs))
+	for i, ch := range resultChannels {
+		scoreMaps[i] = <-ch
 	}
-	bestActionsMinimax := make([]Action, 0)
-	for _, action := range Actions {
-		for z, actionMap := range allMiniMaxActions {
-			_, isIn := actionMap[action]
-			if !isIn {
-				break
-			}
-			if z+1 == len(allMiniMaxActions) {
-				bestActionsMinimax = append(bestActionsMinimax, action)
-			}
-		}
+	return combineScoreMaps(scoreMaps)
+}
+
+// MinimaxBestActions returns the best actions according to the minimax algorithm
+// It stops execution when the specified channel is closed
+func MinimaxBestActions(maximizerID uint8, otherPlayerIDs []uint8, status *Status, stopChannel <-chan time.Time) []Action {
+	actions := status.Players[status.You].PossibleActions(status.Cells, status.Turn, nil, true)
+	if len(actions) == 0 {
+		return []Action{ChangeNothing}
+	} else if len(actions) == 1 {
+		return actions
 	}
-	log.Println(bestActionsMinimax)
-	return bestActionsMinimax
+
+	if len(otherPlayerIDs) == 1 {
+		return bestActionsFromScoreMap(getScoreMap(maximizerID, otherPlayerIDs[0], status, stopChannel))
+	}
+	return bestActionsFromScoreMap(getScoreMapMultiplePlayers(maximizerID, otherPlayerIDs, status, stopChannel))
 }
 
 // MinimaxClient is a client implementation that uses Minimax to decide what to do next
@@ -268,7 +266,7 @@ func (c MinimaxClient) GetAction(player Player, status *Status, calculationTime 
 		return ChangeNothing
 	}
 	log.Println("using player", otherPlayerID, "at", status.Players[otherPlayerID].X, status.Players[otherPlayerID].Y, "as minimizer")
-	actions := MinimaxBestActionsTimed(status.You, otherPlayerID, status, stopChannel)
+	actions := MinimaxBestActions(status.You, []uint8{otherPlayerID}, status, stopChannel)
 	if len(actions) > 0 {
 		return actions[rand.Intn(len(actions))]
 	}

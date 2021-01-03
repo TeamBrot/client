@@ -222,18 +222,9 @@ func (c CombiClient) GetAction(player Player, status *Status, calculationTime ti
 	log.Println("using", len(probabilityPlayers), "players, for calculation of probabilityFields")
 	minimaxChannel := make(chan []Action, 1)
 	stopMinimaxChannel := make(chan time.Time)
-	//If there is more than one player we should calculate minimax for we need minimax for mutliple players
-	if len(minimaxPlayers) > 1 {
+	if len(minimaxPlayers) > 0 {
 		go func() {
-			log.Println("using minimax wih", len(minimaxPlayers), "opponents")
-			bestActionsMinimax := minimaxBestActionsMultiplePlayers(minimaxPlayers, status.You, status, stopMinimaxChannel)
-			minimaxChannel <- bestActionsMinimax
-		}()
-	} else if len(minimaxPlayers) == 1 {
-		go func() {
-			log.Println("using minimax with one opponent")
-			log.Println("using player", minimaxPlayers[0], "at", status.Players[minimaxPlayers[0]].X, status.Players[minimaxPlayers[0]].Y, "as minimizer")
-			bestActionsMinimax := MinimaxBestActionsTimed(status.You, minimaxPlayers[0], status, stopMinimaxChannel)
+			bestActionsMinimax := MinimaxBestActions(status.You, minimaxPlayers, status, stopMinimaxChannel)
 			minimaxChannel <- bestActionsMinimax
 		}()
 	}
