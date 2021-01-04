@@ -17,8 +17,8 @@ cd ../client
 go build .
 echo "build client..."
 cd ..
-#while [ ! -f ../stop ]
-#do
+while [ ! -f ../stop ]
+do
     pid=()
     cd server
     players=${numPlayers[$RANDOM % ${#numPlayers[@]} ]}
@@ -83,4 +83,4 @@ cd ..
     echo "I got here"
     killall server
     cd ..
-#done
+done
