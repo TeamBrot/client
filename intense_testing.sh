@@ -60,8 +60,8 @@ do
                 errordir="error/$client/$probability/$minimax"
                 logdir="$baselog/$client/$probability/$minimax"
             else
-                probability=0
-                minimax=0
+                probability="0"
+                minimax="0"
                 logdir="$baselog/$client"
                 errordir="$baseerror/$client"
             fi
@@ -74,7 +74,6 @@ do
             pids[${i}]=$!
         fi
     done 
-    echo $pids
     for pid in ${pids[*]}
     do
         echo "Waiting for $pid"
