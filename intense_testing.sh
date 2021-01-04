@@ -19,10 +19,11 @@ echo "build client..."
 cd ..
 while [ ! -f ../stop ]
 do
+    echo "start new"
     pid=()
     cd server
     players=${numPlayers[$RANDOM % ${#numPlayers[@]} ]}
-    echo "using players $player"
+    echo "using players $players"
     height=${lengths[$RANDOM % ${#lengths[@]} ]}
     echo "height $height"
     width=${lengths[$RANDOM % ${#lengths[@]} ]}
@@ -31,11 +32,10 @@ do
     echo "minimal deadline $deadline"
     offset=${offsets[$RANDOM % ${#offsets[@]} ]}
     echo "offset $offset"
-    ./server -p "$players" -h "$height" -w "$width" -d "$deadline" -o "$offset" &
+    ./server -p "$players" -h "$height" -w "$width" -d "$deadline" -o "$offset" &> "/dev/null" &
     cd ../client
-    for((i=1; i<=6;i++))
+    for((i=1; i<=$players;i++))
     do
-        echo $i
         if (($i == 1))
         then 
             client="combi"
@@ -80,7 +80,6 @@ do
         echo "Waiting for $pid"
         wait $pid
     done
-    echo "I got here"
     killall server
     cd ..
 done
