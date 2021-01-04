@@ -1,6 +1,6 @@
 #!/bin/bash
 baseerror="error"
-baselog="log/nightlyTests"
+baselog="log"
 baseoutput="output"
 probabilities=( "0.2" "0.3" "0.4" "0.5" "0.6" "0.7" "0.8" "0.9" "1.0" "1.2" "1.3" "1.4" "1.6" "1.7" "1.8" "1.9" "2.0")
 activations=("0.005" "0.001" "0.0005" "0.00001" "0.000005")
@@ -9,7 +9,6 @@ numPlayers=("2" "3" "4" "5" "6")
 lengths=("10" "15" "25" "35" "40" "50" "70" "100")
 offsets=("10" "5" "1" "15")
 deadlines=("1" "3" "5")
-
 cd server
 go build .
 echo "build server..."
@@ -17,9 +16,15 @@ cd ../client
 go build .
 echo "build client..."
 cd ..
+counter=0
+
+while [ -d "client/$baselog/game-$counter" ]
+do
+    counter=$((counter+1))
+done
 while [ ! -f ../stop ]
 do
-    echo "start new"
+    echo "starting game $counter"
     pid=()
     cd server
     players=${numPlayers[$RANDOM % ${#numPlayers[@]} ]}
@@ -35,6 +40,13 @@ do
     ./server -p "$players" -h "$height" -w "$width" -d "$deadline" -o "$offset" &> "/dev/null" &
     sleep 0.2
     cd ../client
+    logdir="$baselog/game-$counter"
+    errordir="$logdir/$baseerror"
+    outputdir="$logdir/$baseoutput"
+
+    mkdir -p "$logdir"
+    mkdir -p "$errordir"
+    mkdir -p "$outputdir"
     for((i=1; i<=$players;i++))
     do
         if (($i == 1))
@@ -42,15 +54,11 @@ do
             client="combi"
             probability=${probabilities[$RANDOM % ${#probabilities[@]} ]}
             minimax=${activations[$RANDOM % ${#activations[@]} ]}
-            errordir="$baseerror/$client/$probability/$minimax"
-            logdir="$baselog/$client/$probability/$minimax"
-            outputdir="$baseoutput/$client"
-            mkdir -p "$logdir"
-            mkdir -p "$errordir"
-            mkdir -p "$outputdir"
+
             now=$( date +%s)
             echo "starting first client"
-            ./client -client "$client" -log "$logdir" -probability "$probability" -activation "$minimax"   >> "$outputdir/outputdir$now.txt" 2>> "$errordir/error$now.txt" &
+            echo -e "$i $client \n $probability \n $minimax \n \n" >> "$logdir/gameInfo.txt"
+            ./client -client "$client" -log "$logdir" -probability "$probability" -activation "$minimax"   >> "$outputdir/$i-$client-output-$now.txt" 2>> "$errordir/$i-$client-error-$now.txt" &
             pids[${i}]=$!
         else
             client=${clients[$RANDOM % ${#clients[@]}]}
@@ -58,20 +66,13 @@ do
             then
                 probability=${probabilities[$RANDOM % ${#probabilities[@]} ]}
                 minimax=${activations[$RANDOM % ${#activations[@]} ]}
-                errordir="error/$client/$probability/$minimax"
-                logdir="$baselog/$client/$probability/$minimax"
             else
                 probability="0"
                 minimax="0"
-                logdir="$baselog/$client"
-                errordir="$baseerror/$client"
             fi
             now=$( date +%s)
-            outputdir="$baseoutput/$client"
-            mkdir -p "$outputdir"
-            mkdir -p "$logdir"
-            mkdir -p "$errordir"
-            ./client -client "$client" -log "$logdir" -probability "$probability" -activation "$minimax"  >> "$outputdir/outputdir$now.txt"  2>> "$errordir/error$now.txt" &
+            echo -e "$i $client \n $probability \n $minimax \n \n" >> "$logdir/gameInfo.txt"
+            ./client -client "$client" -log "$logdir" -probability "$probability" -activation "$minimax"   >> "$outputdir/$i-$client-output-$now.txt" 2>> "$errordir/$i-$client-error-$now.txt" &
             pids[${i}]=$!
         fi
     done 
@@ -80,6 +81,7 @@ do
         echo "Waiting for $pid"
         wait $pid
     done
+    counter=$((counter+1))
     killall server
     cd ..
 done
