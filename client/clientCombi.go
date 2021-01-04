@@ -152,7 +152,7 @@ func analyzeBoard(status *Status, probabilityTable [][]float64, minimaxActivatio
 		log.Printf("The average probability in the window is %1.2e", accumulatedProbability)
 		if accumulatedProbability >= minimaxActivationValue {
 			playersAreNear = true
-			simulateOtherPlayers = true
+			//simulateOtherPlayers = true
 		}
 	} else {
 		playersAreNear = true
@@ -204,7 +204,7 @@ func (c CombiClient) GetAction(status *Status, calculationTime time.Duration) Ac
 	stopChannel1 := time.After(calculationTime / 10 * 6)
 	stopChannel2 := time.After(calculationTime / 10 * 8)
 
-	// handle trivial cases (zero or one possible actions)
+	// handle trivial cases (zero possible actions)
 	possibleActions := player.PossibleActions(status.Cells, status.Turn, nil, false)
 	if len(possibleActions) == 0 {
 		log.Println("going to die use change_nothing")
@@ -218,8 +218,8 @@ func (c CombiClient) GetAction(status *Status, calculationTime time.Duration) Ac
 	stopRolloutChan := make(chan time.Time)
 	rolloutChan := make(chan [][]Action, 1)
 	go func() {
-		stillValidPaths := validBestPathsOfLastTurn
-		rolloutPaths := simulateRollouts(status, stopRolloutChan, stillValidPaths)
+		cachedPaths := validPathsToCache
+		rolloutPaths := simulateRollouts(status, stopRolloutChan, cachedPaths)
 		rolloutChan <- rolloutPaths
 	}()
 
@@ -285,11 +285,10 @@ func (c CombiClient) GetAction(status *Status, calculationTime time.Duration) Ac
 	log.Println("time until calculations are finished and evaluation can start: ", time.Since(start))
 	//Evaluate the paths with the given field and return the best Action based on this TODO: Needs improvement in case of naming
 	var bestAction Action
-	bestAction, validBestPathsOfLastTurn = evaluatePaths(player, allProbabilityTables, bestPaths, status.Turn, len(allProbabilityTables)-1, possibleActions, useMinimax)
+	bestAction, validPathsToCache = evaluatePaths(player, allProbabilityTables, bestPaths, status.Turn, len(allProbabilityTables)-1, possibleActions, useMinimax)
 	//Log Timing
 	probabilityTableOfLastTurn = allProbabilityTables[len(allProbabilityTables)-1]
 	totalProcessingTime := time.Since(start)
-	simulateOtherPlayers = false
 	if totalProcessingTime > calculationTime {
 		panic("Couldn't reach timing goal")
 	}

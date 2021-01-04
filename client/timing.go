@@ -14,7 +14,7 @@ const timeAPIRequestTimeout = 1000 * time.Millisecond
 const maxCalculationTime = 2 * time.Minute
 
 // This value is specified in milliseconds and is a the expected time which actions take to be sent to the server
-const calculationTimeOffset = 150
+const calculationTimeOffset = 200
 
 type ServerTime struct {
 	Time         time.Time `json:"time"`

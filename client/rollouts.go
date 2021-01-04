@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-var validBestPathsOfLastTurn [][]Action
+var validPathsToCache [][]Action
 
 //If this value is set to true we process in every rollout before we choose our own action a action for every other living player
 var simulateOtherPlayers = false
@@ -19,11 +19,11 @@ const maxNumberofRollouts = 10000000
 const filterValue = 0.73
 
 //search for the longest paths a player could reach. Simulates random move for all Players and allways processes as last player
-func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time, pathsOfLastTurn [][]Action) [][]Action {
+func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time, cachedPaths [][]Action) [][]Action {
 	var longestPaths [][]Action
 	var longest int
-	if pathsOfLastTurn != nil && !simulateOtherPlayers {
-		longestPaths, longest = checkPathsOfLastRound(pathsOfLastTurn, status)
+	if cachedPaths != nil && !simulateOtherPlayers {
+		longestPaths, longest = validateCachedPaths(cachedPaths, status)
 		longestPaths = filterPaths(longestPaths, longest, filterValue)
 		log.Println("Paths that are valid after filtering", len(longestPaths))
 	} else {
@@ -91,7 +91,7 @@ func checkIfActionIsPossible(checkedAction Action, status *Status, player *Playe
 }
 
 //Takes an Array of paths and checks if they are still valid and returns the array and the number of the longest path
-func checkPathsOfLastRound(oldPaths [][]Action, status *Status) ([][]Action, int) {
+func validateCachedPaths(oldPaths [][]Action, status *Status) ([][]Action, int) {
 	newPaths := make([][]Action, 0)
 	log.Println("Paths of the last round that are checked", len(oldPaths))
 	longest := 0
@@ -169,7 +169,7 @@ type RolloutClient struct{}
 func (c RolloutClient) GetAction(status *Status, calculationTime time.Duration) Action {
 	stopChannel := time.After((calculationTime / 10) * 9)
 	simulateOtherPlayers = true
-	stillValidPaths := validBestPathsOfLastTurn
+	stillValidPaths := validPathsToCache
 	bestPaths := simulateRollouts(status, stopChannel, stillValidPaths)
 	possibleActions := status.Players[status.You].PossibleActions(status.Cells, status.Turn, nil, false)
 	var possible [5]bool
@@ -195,10 +195,10 @@ func (c RolloutClient) GetAction(status *Status, calculationTime time.Duration) 
 			action = Action(i)
 		}
 	}
-	validBestPathsOfLastTurn = make([][]Action, 0)
+	validPathsToCache = make([][]Action, 0)
 	for _, path := range bestPaths {
 		if path[0] == action {
-			validBestPathsOfLastTurn = append(validBestPathsOfLastTurn, path[1:len(path)-1])
+			validPathsToCache = append(validPathsToCache, path[1:len(path)-1])
 		}
 	}
 	return action

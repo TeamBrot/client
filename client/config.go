@@ -14,10 +14,10 @@ const defaultLogFile = "logging.txt"
 const defaultGuiHostname = "0.0.0.0"
 const defaultGuiPort = 8081
 const defaultLogDirectory = "log"
-// If the sum of all probabilities in the specified window is higher then this, minimax can be used
-const defaultMinimaxActivationValue = 0.008
-const defaultMyStartProbability = 1.4
 
+// If the sum of all probabilities in the specified window is higher then this, minimax can be used
+const defaultMinimaxActivationValue = 0.003
+const defaultMyStartProbability = 1.6
 
 // Config represents a server and client configuration
 type Config struct {
