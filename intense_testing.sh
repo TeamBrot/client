@@ -1,6 +1,6 @@
 #!/bin/bash
 baseerror="error"
-baselog="log/nigthlyTests"
+baselog="log/nightlyTests"
 baseoutput="output"
 probabilities=( "0.2" "0.3" "0.4" "0.5" "0.6" "0.7" "0.8" "0.9" "1.0" "1.2" "1.3" "1.4" "1.6" "1.7" "1.8" "1.9" "2.0")
 activations=("0.005" "0.001" "0.0005" "0.00001" "0.000005")
@@ -33,6 +33,7 @@ do
     offset=${offsets[$RANDOM % ${#offsets[@]} ]}
     echo "offset $offset"
     ./server -p "$players" -h "$height" -w "$width" -d "$deadline" -o "$offset" &> "/dev/null" &
+    sleep 0.2
     cd ../client
     for((i=1; i<=$players;i++))
     do
