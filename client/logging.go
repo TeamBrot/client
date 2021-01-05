@@ -11,10 +11,9 @@ import (
 
 // FileLogger represents all information needed to log a single game to a JSON-encoded file
 type FileLogger struct {
-	filename string
-	Start    time.Time    `json:"start"`
-	Game     []JSONStatus `json:"game"`
-	Config   Config       `json:"config"`
+	Start     time.Time    `json:"start"`
+	Game      []JSONStatus `json:"game"`
+	Config    Config       `json:"config"`
 }
 
 // NewFileLogger creates a FileLogger with a specified client configuration
@@ -22,18 +21,7 @@ func NewFileLogger(config Config) (FileLogger, error) {
 	if _, err := os.Stat(config.LogDirectory); os.IsNotExist(err) {
 		os.Mkdir(config.LogDirectory, 0755)
 	}
-	var filename string
-	startTime := time.Now()
-	for i := 0; ; i++ {
-		filename = fmt.Sprintf("%s%c%d-%s-%d.json", config.LogDirectory, os.PathSeparator, int64(startTime.Unix()), config.ClientName, i)
-		_, err := os.Stat(filename)
-		if os.IsNotExist(err) {
-			break
-		} else if err != nil {
-			return FileLogger{}, err
-		}
-	}
-	fileLogger := FileLogger{filename: filename, Start: startTime, Game: []JSONStatus{}, Config: config}
+	fileLogger := FileLogger{Start: time.Now(), Game: []JSONStatus{}, Config: config}
 	return fileLogger, nil
 }
 
@@ -43,12 +31,13 @@ func (fileLogger *FileLogger) Store(jsonStatus *JSONStatus) {
 }
 
 // Write writes the game data to disk
-func (fileLogger FileLogger) Write() error {
+func (fileLogger FileLogger) Write(id int) error {
 	data, err := json.Marshal(fileLogger)
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(fileLogger.filename, data, 0644)
+	filename := fmt.Sprintf("%s%c%d-%s-%d.json", fileLogger.Config.LogDirectory, os.PathSeparator, fileLogger.Start.Unix(), fileLogger.Config.ClientName, id)
+	err = ioutil.WriteFile(filename, data, 0644)
 	if err != nil {
 		return err
 	}

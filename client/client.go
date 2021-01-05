@@ -23,11 +23,6 @@ func RunClient(config Config) {
 	if err != nil {
 		errorLogger.Println("could not create file logger:", err)
 	}
-	defer func() {
-		if err := fileLogger.Write(); err != nil {
-			clientLogger.Println("could not log to file:", err)
-		}
-	}()
 
 	gui := &Gui{nil}
 	if config.APIKey != "" {
@@ -49,6 +44,12 @@ func RunClient(config Config) {
 	fileLogger.Store(jsonStatus)
 	clientLogger.Println("field dimensions:", status.Width, "x", status.Height)
 	clientLogger.Println("number of players:", len(status.Players))
+
+	defer func() {
+		if err := fileLogger.Write(jsonStatus.You); err != nil {
+			clientLogger.Println("could not log to file:", err)
+		}
+	}()
 
 	for jsonStatus.Running && jsonStatus.Players[jsonStatus.You].Active {
 
