@@ -53,8 +53,10 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 		minPlayer := player.Copy()
 		for i := 0; i < len(path); i++ {
 			if i != len(path) {
-				if i <= simDepth || simDepth == 0 {
+				if i <= simDepth {
 					score += evaluateAction(minPlayer, allFields[i], path[i], turn+uint16(i))
+				} else if simDepth == 0 {
+					score += evaluateAction(minPlayer, allFields[0], path[i], turn+uint16(i))
 				} else {
 					score += evaluateAction(minPlayer, allFields[simDepth-1], path[i], turn+uint16(i))
 				}
