@@ -43,18 +43,18 @@ do
     logdir="$baselog/game-$counter"
     errordir="$logdir/$baseerror"
     outputdir="$logdir/$baseoutput"
-
+    
     mkdir -p "$logdir"
     mkdir -p "$errordir"
     mkdir -p "$outputdir"
     for((i=1; i<=$players;i++))
     do
         if (($i == 1))
-        then 
+        then
             client="combi"
             probability=${probabilities[$RANDOM % ${#probabilities[@]} ]}
             minimax=${activations[$RANDOM % ${#activations[@]} ]}
-
+            
             now=$( date +%s)
             echo "starting first client"
             echo -e "Game Info \n players: $players \n width: $width \n height: $height \n mindead: $deadline \n off: $offset \n $i $client \n $probability \n $minimax \n \n" >> "$logdir/gameInfo.txt"
@@ -75,7 +75,7 @@ do
             ./client -client "$client" -log "$logdir" -probability "$probability" -activation "$minimax"   >> "$outputdir/$i-$client-output-$now.txt" 2>> "$errordir/$i-$client-error-$now.txt" &
             pids[${i}]=$!
         fi
-    done 
+    done
     for pid in ${pids[*]}
     do
         echo "Waiting for $pid"
