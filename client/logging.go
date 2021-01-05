@@ -66,7 +66,6 @@ func NewClientLogger(clientName string) *log.Logger {
 }
 
 func NewErrorLogger() *log.Logger {
-	logger := log.New(os.Stderr, "[error]", log.Lmsgprefix|log.LstdFlags)
-	log.SetPrefix("[Error]")
+	logger := log.New(os.Stderr, "[error] ", log.Lmsgprefix|log.LstdFlags)
 	return logger
 }
