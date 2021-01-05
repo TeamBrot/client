@@ -172,6 +172,10 @@ func (c RolloutClient) GetAction(status *Status, calculationTime time.Duration) 
 	stillValidPaths := validPathsToCache
 	bestPaths := simulateRollouts(status, stopChannel, stillValidPaths)
 	possibleActions := status.Players[status.You].PossibleActions(status.Cells, status.Turn, nil, false)
+	if len(possibleActions) == 0 {
+		log.Println("I'll die")
+		return ChangeNothing
+	}
 	var possible [5]bool
 	//Computes if a action is possible based on the possibleActions Array
 	for _, action := range possibleActions {
@@ -197,8 +201,10 @@ func (c RolloutClient) GetAction(status *Status, calculationTime time.Duration) 
 	}
 	validPathsToCache = make([][]Action, 0)
 	for _, path := range bestPaths {
-		if path[0] == action {
-			validPathsToCache = append(validPathsToCache, path[1:len(path)-1])
+		if len(path) > 1 {
+			if path[0] == action {
+				validPathsToCache = append(validPathsToCache, path[1:len(path)-1])
+			}
 		}
 	}
 	return action

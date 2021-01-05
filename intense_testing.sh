@@ -5,7 +5,7 @@ baseoutput="output"
 probabilities=( "0.2" "0.3" "0.4" "0.5" "0.6" "0.7" "0.8" "0.9" "1.0" "1.2" "1.3" "1.4" "1.6" "1.7" "1.8" "1.9" "2.0")
 activations=("0.005" "0.001" "0.0005" "0.00001" "0.000005")
 clients=("smart" "minimax" "rollouts" "probability")
-numPlayers=("2" "3" "4" "5" "6")
+numPlayers=("2" "3" "4")
 lengths=("10" "15" "25" "35" "40" "50" "70" "100")
 offsets=("10" "5" "1" "15")
 deadlines=("1" "3" "5")
@@ -22,7 +22,7 @@ while [ -d "client/$baselog/game-$counter" ]
 do
     counter=$((counter+1))
 done
-while [ ! -f ../stop ]
+while [ ! -f ./stop ]
 do
     echo "starting game $counter"
     pid=()
@@ -57,7 +57,7 @@ do
 
             now=$( date +%s)
             echo "starting first client"
-            echo -e "$i $client \n $probability \n $minimax \n \n" >> "$logdir/gameInfo.txt"
+            echo -e "Game Info \n players: $players \n width: $width \n height: $height \n mindead: $deadline \n off: $offset \n $i $client \n $probability \n $minimax \n \n" >> "$logdir/gameInfo.txt"
             ./client -client "$client" -log "$logdir" -probability "$probability" -activation "$minimax"   >> "$outputdir/$i-$client-output-$now.txt" 2>> "$errordir/$i-$client-error-$now.txt" &
             pids[${i}]=$!
         else

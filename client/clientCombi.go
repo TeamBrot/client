@@ -53,7 +53,7 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 		minPlayer := player.Copy()
 		for i := 0; i < len(path); i++ {
 			if i != len(path) {
-				if i <= simDepth {
+				if i <= simDepth || simDepth == 0 {
 					score += evaluateAction(minPlayer, allFields[i], path[i], turn+uint16(i))
 				} else {
 					score += evaluateAction(minPlayer, allFields[simDepth-1], path[i], turn+uint16(i))
@@ -285,6 +285,10 @@ func (c CombiClient) GetAction(status *Status, calculationTime time.Duration) Ac
 	log.Println("time until calculations are finished and evaluation can start: ", time.Since(start))
 	//Evaluate the paths with the given field and return the best Action based on this TODO: Needs improvement in case of naming
 	var bestAction Action
+	if len(allProbabilityTables) == 0 {
+		log.Println("I'dont know what this means but probably all other players are going to die")
+		return possibleActions[0]
+	}
 	bestAction, validPathsToCache = evaluatePaths(player, allProbabilityTables, bestPaths, status.Turn, len(allProbabilityTables)-1, possibleActions, useMinimax)
 	//Log Timing
 	probabilityTableOfLastTurn = allProbabilityTables[len(allProbabilityTables)-1]
