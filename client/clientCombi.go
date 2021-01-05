@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"math"
 	"sort"
@@ -192,6 +193,7 @@ func analyzeBoard(status *Status, probabilityTable [][]float64, minimaxActivatio
 type CombiClient struct {
 	minimaxActivationValue float64
 	myStartProbability     float64
+	filterValue            float64
 }
 
 var probabilityTableOfLastTurn [][]float64
@@ -221,7 +223,7 @@ func (c CombiClient) GetAction(status *Status, calculationTime time.Duration) Ac
 	rolloutChan := make(chan [][]Action, 1)
 	go func() {
 		cachedPaths := validPathsToCache
-		rolloutPaths := simulateRollouts(status, stopRolloutChan, cachedPaths)
+		rolloutPaths := simulateRollouts(status, stopRolloutChan, cachedPaths, c.filterValue)
 		rolloutChan <- rolloutPaths
 	}()
 
@@ -279,10 +281,10 @@ func (c CombiClient) GetAction(status *Status, calculationTime time.Duration) Ac
 
 	//This is only for debugging purposes and combines the last field with the status
 	//log.Println(allProbabilityTables[len(allProbabilityTables)-1])
-	//log.Println("Last calculated probability Table")
-	//for y, row := range allProbabilityTables[len(allProbabilityTables)-1] {
-	//fmt.Printf("%2d, %1.1e\n", y, row)
-	//}
+	log.Println("Last calculated probability Table")
+	for y, row := range allProbabilityTables[len(allProbabilityTables)-1] {
+		fmt.Printf("%2d, %1.1e\n", y, row)
+	}
 	//Log Timing
 	log.Println("time until calculations are finished and evaluation can start: ", time.Since(start))
 	//Evaluate the paths with the given field and return the best Action based on this TODO: Needs improvement in case of naming

@@ -15,11 +15,8 @@ var simulateOtherPlayers = false
 //This const defines the max number of Rollouts simulateRollouts will perform. Normally there is no good reason to change this value
 const maxNumberofRollouts = 10000000
 
-//This const defines the relation between the longest and the shortest path simulateRollouts gives back
-const filterValue = 0.73
-
 //search for the longest paths a player could reach. Simulates random move for all Players and allways processes as last player
-func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time, cachedPaths [][]Action) [][]Action {
+func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time, cachedPaths [][]Action, filterValue float64) [][]Action {
 	var longestPaths [][]Action
 	var longest int
 	if cachedPaths != nil && !simulateOtherPlayers {
@@ -72,7 +69,7 @@ func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time, cac
 				rolloutStatus.Turn++
 				path = append(path, randomAction)
 			}
-			longestPaths, longest = checkPath(path, longestPaths, longest, performedRollouts)
+			longestPaths, longest = checkPath(path, longestPaths, longest, performedRollouts, filterValue)
 		}
 	}
 	log.Println("could perfom", maxNumberofRollouts, "rollouts, which is the maximum possible")
@@ -129,7 +126,7 @@ func rolloutMove(status *Status, action Action, player *Player) {
 
 }
 
-func checkPath(path []Action, longestPaths [][]Action, longest int, allreadyPerformedRollouts int) ([][]Action, int) {
+func checkPath(path []Action, longestPaths [][]Action, longest int, allreadyPerformedRollouts int, filterValue float64) ([][]Action, int) {
 	//Now we chek if the last taken path was longer then every other path
 	if float64(len(path)) >= float64(longest)*filterValue {
 		//if longest is still bigger then the path found now we only append the path
@@ -163,14 +160,16 @@ func filterPaths(paths [][]Action, longest int, percent float64) [][]Action {
 }
 
 //RolloutClient is a client implementation that uses only rollouts to decide what to do next
-type RolloutClient struct{}
+type RolloutClient struct {
+	filterValue float64
+}
 
 // GetAction implements the Client interface
 func (c RolloutClient) GetAction(status *Status, calculationTime time.Duration) Action {
 	stopChannel := time.After((calculationTime / 10) * 9)
 	simulateOtherPlayers = true
 	stillValidPaths := validPathsToCache
-	bestPaths := simulateRollouts(status, stopChannel, stillValidPaths)
+	bestPaths := simulateRollouts(status, stopChannel, stillValidPaths, c.filterValue)
 	possibleActions := status.Players[status.You].PossibleActions(status.Cells, status.Turn, nil, false)
 	if len(possibleActions) == 0 {
 		log.Println("I'll die")

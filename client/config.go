@@ -18,6 +18,7 @@ const defaultLogDirectory = "log"
 // If the sum of all probabilities in the specified window is higher then this, minimax can be used
 const defaultMinimaxActivationValue = 0.003
 const defaultMyStartProbability = 1.6
+const defaultFilterValue = 0.7
 
 // Config represents a server and client configuration
 type Config struct {
@@ -31,6 +32,7 @@ type Config struct {
 	Client                 Client  `json:"-"`
 	MinimaxActivationValue float64 `json:"minimaxActivationValue"`
 	MyStartProbability     float64 `json:"myStartProbability"`
+	FilterValue            float64 `json:"filterValue"`
 }
 
 func getenvDefault(key string, def string) string {
@@ -51,10 +53,10 @@ func getClient(config Config) (Client, error) {
 		client = SmartClient{}
 		break
 	case "combi":
-		client = CombiClient{config.MinimaxActivationValue, config.MyStartProbability}
+		client = CombiClient{config.MinimaxActivationValue, config.MyStartProbability, config.FilterValue}
 		break
 	case "rollouts":
-		client = RolloutClient{}
+		client = RolloutClient{config.FilterValue}
 		break
 	case "probability":
 		client = ProbabilityClient{config.MyStartProbability}
@@ -71,6 +73,7 @@ func GetConfig() (Config, error) {
 	config.GameURL = getenvDefault("URL", defaultGameURL)
 	config.TimeURL = getenvDefault("TIME_URL", defaultTimeURL)
 	config.APIKey = getenvDefault("KEY", "")
+	flag.Float64Var(&config.FilterValue, "filter", defaultFilterValue, "defines the filterValue used in rollouts")
 	flag.Float64Var(&config.MinimaxActivationValue, "activation", defaultMinimaxActivationValue, "defines minimaxActivationValue")
 	flag.Float64Var(&config.MyStartProbability, "probability", defaultMyStartProbability, "defines myStartProbability")
 	flag.StringVar(&config.ClientName, "client", "combi", "client to run")
