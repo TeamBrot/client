@@ -70,6 +70,10 @@ func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time, cac
 				path = append(path, randomAction)
 			}
 			longestPaths, longest = checkPath(path, longestPaths, longest, performedRollouts, filterValue)
+			if len(longestPaths) > 2000 {
+				longestPaths = filterPaths(longestPaths, longest, 1.0)
+				longestPaths = longestPaths[0:int(float64(len(longestPaths))/5)]
+			}
 		}
 	}
 	log.Println("could perfom", maxNumberofRollouts, "rollouts, which is the maximum possible")
