@@ -22,7 +22,11 @@ result: {
 }
 """
 
-ATTRIBUTE = "filterValue"
+ATTRIBUTES = [
+    "myStartProbability",
+    "minimaxActivationValue",
+    "filterValue"
+]
 
 def has_errors(game_path):
     for error in os.scandir(os.path.join(game_path, "error")):
@@ -73,21 +77,26 @@ if __name__ == '__main__':
             error_games += 1
             continue
         print("reading", game.path)
-        results += get_results(game.path)
+        try:
+            results += get_results(game.path)
+        except Exception as e:
+            print("could not get game results:", e)
+            print("skipping", game.path)
+
 
     print("out of", total_games, "games,", error_games, "contain errors")
 
-    wins = defaultdict(int)
-    total_games = defaultdict(int)
-    win_percentage = {}
+    for attribute in ATTRIBUTES:
+        wins = defaultdict(int)
+        total_games = defaultdict(int)
+        win_percentage = {}
+        print("results for", attribute)
+        for result in results:
+            total_games[result[attribute]] += 1
+            if result["place"] == 1:
+                wins[result[attribute]] += 1
 
-    print("results for", ATTRIBUTE)
-    for result in results:
-        total_games[result[ATTRIBUTE]] += 1
-        if result["place"] == 1:
-            wins[result[ATTRIBUTE]] += 1
+        for value in sorted(total_games.keys()):
+            win_percentage[value] = wins[value] / total_games[value]
 
-    for value in sorted(total_games.keys()):
-        win_percentage[value] = wins[value] / total_games[value]
-
-        print(value, "\t", total_games[value], wins[value], win_percentage[value])
+            print(value, "\t", total_games[value], wins[value], "{:.3f}".format(win_percentage[value]))
