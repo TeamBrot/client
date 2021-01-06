@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"runtime"
 	"sort"
 	"time"
 )
@@ -200,7 +201,7 @@ var probabilityTableOfLastTurn [][]float64
 
 // GetAction implements the Client interface
 func (c CombiClient) GetAction(status *Status, calculationTime time.Duration) Action {
-
+	runtime.GOMAXPROCS(2)
 	player := *status.Players[status.You]
 
 	// create timing channels

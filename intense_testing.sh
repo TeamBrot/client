@@ -1,18 +1,21 @@
 #!/bin/bash
 #Defines the base Error directory for logging purposes
+#Hier bitte euren Namen eingeben!!
+name=""
 baseerror="error"
-baselog="log"
+baselog="log/intenseTesting/"
 baseoutput="output"
 
 #When starting a combi Client it takes one of those values as combis
-probabilities=( "0.2" "0.3" "0.4" "0.5" "0.6" "0.7" "0.8" "0.9" "1.0" "1.2" "1.3" "1.4" "1.6" "1.7" "1.8" "1.9" "2.0")
+probabilities=( "0.2" "0.6" "1.0" "1.4" "1.6" "2.0")
 activations=("0.005" "0.001" "0.0005" "0.00001" "0.000005")
-clients=("smart" "minimax" "rollouts" "probability")
-numPlayers=("2" "3" "4")
-lengths=("10" "15" "25" "35" "40" "50" "70" "100")
-offsets=("10" "5" "1" "15")
-deadlines=("1" "3" "5")
-filterValues=("0.4" "0.5" "0.6" "0.7" "0.9" "1.0")
+clients=("combi")
+numPlayers=("2")
+lengths=("10" "15" "25" "35" "40" "50" "70")
+offsets=("4")
+deadlines=("2")
+filterValues=("0.3" "0.5" "0.7" "0.9" "1.0")
+
 cd server
 go build .
 echo "build server..."
@@ -22,7 +25,7 @@ echo "build client..."
 cd ..
 counter=0
 
-while [ -d "client/$baselog/game-$counter" ]
+while [ -d "client/$baselog/$name-game-$counter" ]
 do
     counter=$((counter+1))
 done
@@ -44,7 +47,7 @@ do
     ./server -p "$players" -h "$height" -w "$width" -d "$deadline" -o "$offset" &> "/dev/null" &
     sleep 0.2
     cd ../client
-    logdir="$baselog/game-$counter"
+    logdir="$baselog/$name-game-$counter"
     errordir="$logdir/$baseerror"
     outputdir="$logdir/$baseoutput"
     
@@ -58,7 +61,7 @@ do
             client="combi"
             probability=${probabilities[$RANDOM % ${#probabilities[@]} ]}
             minimax=${activations[$RANDOM % ${#activations[@]} ]}
-            filterValue=${filterValues[$RANDOM % ${filterValues[@]}]}
+            filterValue=${filterValues[$RANDOM % ${#filterValues[@]}]}
             now=$( date +%s)
             echo "starting first client"
             echo -e "Game Info \n players: $players \n width: $width \n height: $height \n mindead: $deadline \n off: $offset \n $i $client \n $probability \n $minimax \n $filterValue\n" >> "$logdir/gameInfo.txt"
@@ -74,10 +77,10 @@ do
                 probability="0"
                 minimax="0"
             fi
-            filterValue=${filterValues[$RANDOM % ${filterValues[@]}]}
+            filterValue=${filterValues[$RANDOM % ${#filterValues[@]}]}
             now=$( date +%s)
             echo -e "$i $client \n $probability \n $minimax \n $filterValue\n" >> "$logdir/gameInfo.txt"
-            ./client -client "$client" -log "$logdir" -filter"$filterValue" -probability "$probability" -activation "$minimax"   >> "$outputdir/$i-$client-output-$now.txt" 2>> "$errordir/$i-$client-error-$now.txt" &
+            ./client -client "$client" -log "$logdir" -filter "$filterValue" -probability "$probability" -activation "$minimax"   >> "$outputdir/$i-$client-output-$now.txt" 2>> "$errordir/$i-$client-error-$now.txt" &
             pids[${i}]=$!
         fi
     done
