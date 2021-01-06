@@ -3,7 +3,7 @@
 #Hier bitte euren Namen eingeben!!
 name=""
 baseerror="error"
-baselog="log/intenseTesting/"
+baselog="log/intense-testing/"
 baseoutput="output"
 
 #When starting a combi Client it takes one of those values as combis
