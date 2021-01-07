@@ -140,12 +140,12 @@ func checkPath(path []Action, longestPaths [][]Action, longest int, allreadyPerf
 		//if longest is still bigger then the path found now we only append the path
 		if longest >= len(path) {
 			longestPaths = append(longestPaths, path)
-			//If it is bigger by a lot we can forget every path we found until now
+		//If it is bigger by a lot we can forget every path we found until now
 		} else if float64(len(path))*filterValue > float64(longest) {
 			longestPaths = make([][]Action, 0)
 			longestPaths = append(longestPaths, path)
 			longest = len(path)
-			//If none of the before is the case we have to filter all values that are in longest paths until now
+		//If none of the before is the case we have to filter all values that are in longest paths until now
 		} else {
 			longestPaths = filterPaths(longestPaths, len(path), filterValue)
 			longestPaths = append(longestPaths, path)
