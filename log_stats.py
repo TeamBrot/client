@@ -86,10 +86,15 @@ if __name__ == '__main__':
 
     print("out of", total_games, "games,", error_games, "contain errors")
 
-    for attribute in ATTRIBUTES:
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(1, 3, figsize=(10,5))
+    # fig.suptitle("Gewinnhäufigkeit in Abhängigkeit verschiedener Hyperparameter")
+    fig.tight_layout()
+
+    for i, attribute in enumerate(ATTRIBUTES):
         wins = defaultdict(int)
         total_games = defaultdict(int)
-        win_percentage = {}
+        win_percentage = dict()
         print("results for", attribute)
         for result in results:
             total_games[result[attribute]] += 1
@@ -100,3 +105,10 @@ if __name__ == '__main__':
             win_percentage[value] = wins[value] / total_games[value]
 
             print(value, "\t", total_games[value], wins[value], "{:.3f}".format(win_percentage[value]))
+
+        x = win_percentage.keys()
+        y = [ win_percentage[key] for key in x ]
+        x = list(map(str, x))
+        ax[i].bar(x, y)
+        ax[i].set_xlabel(attribute)
+    plt.savefig('hyperparameters.svg', format="svg")
