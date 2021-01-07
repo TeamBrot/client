@@ -12,14 +12,13 @@ func score(status *Status, player *Player) int {
 	return len(player.PossibleActions(status.Cells, status.Turn, nil, false))
 }
 
-// doMove makes the specified player do the specified action, using the specified status.
+// performAction makes the specified player do the specified action, using the specified status.
 // An optional occupiedCells can be supplied.
 // In this case, a function return value of false indicates that the specified action is valid but would lead to another player dying (the one that created occupiedCells)
 // Also, every field newly entered is written into occupiedCells
-// The function panics when an illegal move was selected
-func doMove(status *Status, playerID uint8, action Action, occupiedCells map[Coords]struct{}, writeOccupiedCells bool) bool {
+// The function panics when an illegal action was selected
+func performAction(status *Status, playerID uint8, action Action, occupiedCells map[Coords]struct{}, writeOccupiedCells bool) bool {
 	player := status.Players[playerID]
-	// log.Println("doMove start: ", player.X, player.Y, player.Direction, player.Speed)
 	visitedCoords := player.ProcessAction(action, status.Turn)
 	for _, coords := range visitedCoords {
 		if coords == nil {
@@ -43,13 +42,11 @@ func doMove(status *Status, playerID uint8, action Action, occupiedCells map[Coo
 		}
 
 	}
-	// log.Println("doMove end: ", player.X, player.Y, player.Direction, player.Speed)
 	return true
 
 }
 
 func getActionScore(you uint8, minimizer uint8, isMaximizer bool, status *Status, action Action, depth int, alpha int, beta int, occupiedCells map[Coords]struct{}, stopChannel <-chan time.Time) (int, int, error) {
-	// log.Println("Simulate: ", you, minimizer, action, depth)
 	select {
 	case <-stopChannel:
 		return 0, 0, errors.New("stopped in computation")
@@ -65,7 +62,6 @@ func getActionScore(you uint8, minimizer uint8, isMaximizer bool, status *Status
 		playerID = minimizer
 		bestScore = -1 - depth
 	}
-	//log.Println("Player: ", player)
 	if isMaximizer {
 		if occupiedCells != nil {
 			panic("occupiedCells should be nil if maximizer = true")
@@ -74,8 +70,7 @@ func getActionScore(you uint8, minimizer uint8, isMaximizer bool, status *Status
 	} else if occupiedCells == nil {
 		panic("occupiedCells should not be nil if maximizer = false")
 	}
-	// log.Println(depth, "doing move", action, "with speed", status.Players[playerID].Speed, "from", status.Players[playerID].X, status.Players[playerID].Y)
-	youSurvived := doMove(status, playerID, action, occupiedCells, isMaximizer)
+	youSurvived := performAction(status, playerID, action, occupiedCells, isMaximizer)
 	if !youSurvived {
 		return bestScore, 0, nil
 	}
@@ -86,7 +81,6 @@ func getActionScore(you uint8, minimizer uint8, isMaximizer bool, status *Status
 		turn := status.Turn
 		if isMaximizer {
 			m := status.Players[minimizer].PossibleActions(status.Cells, status.Turn, occupiedCells, true)
-			// log.Println(depth, "moves for", minimizer, m, depth)
 			for _, action := range m {
 				sCopy := status.Copy()
 				score, d, err := getActionScore(you, minimizer, false, sCopy, action, depth, alpha, beta, occupiedCells, stopChannel)
@@ -111,7 +105,6 @@ func getActionScore(you uint8, minimizer uint8, isMaximizer bool, status *Status
 		} else {
 			status.Turn++
 			m := status.Players[you].PossibleActions(status.Cells, status.Turn, occupiedCells, true)
-			// log.Println(depth, "moves for", you, m, depth)
 			for _, action := range m {
 				sCopy := status.Copy()
 				score, d, err := getActionScore(you, minimizer, true, sCopy, action, depth-1, alpha, beta, nil, stopChannel)
@@ -179,9 +172,9 @@ func bestActionsFromScoreMap(scoreMap map[Action]int) []Action {
 
 func getScoreMapDepth(maximizerID uint8, minimizerID uint8, status *Status, depth int, stopChannel <-chan time.Time) (map[Action]int, int, error) {
 	scoreMap := map[Action]int{}
-	possibleMoves := status.Players[maximizerID].PossibleActions(status.Cells, status.Turn, nil, true)
+	possibleActions := status.Players[maximizerID].PossibleActions(status.Cells, status.Turn, nil, true)
 	maxDepth := 0
-	for _, action := range possibleMoves {
+	for _, action := range possibleActions {
 		sCopy := status.Copy()
 		score, depth, err := getActionScore(maximizerID, minimizerID, true, sCopy, action, depth, -200, 200, nil, stopChannel)
 		if err != nil {

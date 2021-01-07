@@ -99,24 +99,24 @@ func (player *Player) PossibleActions(cells [][]bool, turn uint16, extraCellInfo
 	}
 	speedUp = speedUp && checkCell(cells, direction, y, x, uint16(player.Speed+1), extraCellInfo, extraCellAllowed)
 
-	possibleMoves := make([]Action, 0, 5)
+	possibleActions := make([]Action, 0, 5)
 
 	if changeNothing {
-		possibleMoves = append(possibleMoves, ChangeNothing)
+		possibleActions = append(possibleActions, ChangeNothing)
 	}
 	if turnLeft {
-		possibleMoves = append(possibleMoves, TurnLeft)
+		possibleActions = append(possibleActions, TurnLeft)
 	}
 	if turnRight {
-		possibleMoves = append(possibleMoves, TurnRight)
+		possibleActions = append(possibleActions, TurnRight)
 	}
 	if speedUp {
-		possibleMoves = append(possibleMoves, SpeedUp)
+		possibleActions = append(possibleActions, SpeedUp)
 	}
 	if slowDown {
-		possibleMoves = append(possibleMoves, SlowDown)
+		possibleActions = append(possibleActions, SlowDown)
 	}
-	return possibleMoves
+	return possibleActions
 }
 
 //Returns the distance between to players as float64

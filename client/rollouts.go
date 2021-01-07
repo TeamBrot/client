@@ -15,7 +15,7 @@ var simulateOtherPlayers = false
 //This const defines the max number of Rollouts simulateRollouts will perform. Normally there is no good reason to change this value
 const maxNumberofRollouts = 10000000
 
-//search for the longest paths a player could reach. Simulates random move for all Players and allways processes as last player
+//search for the longest paths a player could reach. Simulates random action for all Players and allways processes as last player
 func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time, cachedPaths [][]Action, filterValue float64) [][]Action {
 	var longestPaths [][]Action
 	var longest int
@@ -40,30 +40,30 @@ func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time, cac
 			for {
 				me := rolloutStatus.Players[status.You]
 				if simulateOtherPlayers {
-					//Process one random move for every other player besides me
+					//Process one random action for every other player besides me
 					for _, player := range rolloutStatus.Players {
 						if player != me && player != nil {
-							possibleMoves := player.PossibleActions(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
-							if len(possibleMoves) == 0 {
+							possibleActions := player.PossibleActions(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
+							if len(possibleActions) == 0 {
 								player = nil
 								continue
 							}
-							randomAction := possibleMoves[rand.Intn(len(possibleMoves))]
+							randomAction := possibleActions[rand.Intn(len(possibleActions))]
 							rolloutMove(rolloutStatus, randomAction, player)
 						}
 					}
 				}
-				possibleMoves := me.PossibleActions(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
-				if len(possibleMoves) == 0 {
+				possibleActions := me.PossibleActions(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
+				if len(possibleActions) == 0 {
 					break
 				}
 				var randomAction Action
 				//This should distribute the first Action taken equally
 				if counter == 0 {
-					randomAction = possibleMoves[performedRollouts%len(possibleMoves)]
+					randomAction = possibleActions[performedRollouts%len(possibleActions)]
 					counter++
 				} else {
-					randomAction = possibleMoves[rand.Intn(len(possibleMoves))]
+					randomAction = possibleActions[rand.Intn(len(possibleActions))]
 				}
 				rolloutMove(rolloutStatus, randomAction, me)
 				rolloutStatus.Turn++

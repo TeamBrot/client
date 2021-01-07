@@ -155,7 +155,7 @@ func visitsToProbabilities(me int, results []*Result, width uint16, height uint1
 	return playerProbabilityTables[me]
 }
 
-// simulate all possible moves for a given simPlayer and a given status until numberOfTurns is reached
+// simulate all possible actions for a given simPlayer and a given status until numberOfTurns is reached
 func calculateVisitsForPlayer(simPlayer *SimPlayer, id int, status *Status, elapsedTurns uint16, resultChannel chan<- *Result, probabilityTableChannel <-chan [][]float64, stopChannel <-chan time.Time) {
 	var currentProbabilityTable [][]float64
 	currentPlayers := make([]*SimPlayer, 1)
