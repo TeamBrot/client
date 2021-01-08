@@ -1,0 +1,10 @@
+default:
+    image: golang:1.15
+    before_script:
+        - cd client
+
+test:
+    script:
+        - go test
+
+
