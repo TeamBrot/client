@@ -1,0 +1,11 @@
+default:
+    image: golang:1.15
+    before_script:
+        - go get github.com/gorilla/websocket
+        - cd client
+
+test:
+    script:
+        - go test
+
+
