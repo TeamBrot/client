@@ -1,6 +1,6 @@
 # brot
 
-![](brot.jpg)
+<img align="center" src="brot.jpg" width="400px">
 
 This repository contains a client for `spe_ed`, the game of the [InformatiCup 2021](https://github.com/InformatiCup/InformatiCup2021).
 
