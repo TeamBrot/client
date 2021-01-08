@@ -4,9 +4,15 @@
 
 This repository contains a client for `spe_ed`, the game of the [InformatiCup 2021](https://github.com/InformatiCup/InformatiCup2021).
 
-## Playing locally
+## Installation
 
 To pull the server code, run `git submodule update --init`.
+
+This program uses the websocket library that can be found here: [https://github.com/gorilla/websocket](https://github.com/gorilla/websocket).
+
+To install the library, run `go get github.com/gorilla/websocket`. 
+
+## Playing locally
 
 ### Starting the server
 
