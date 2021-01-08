@@ -1,4 +1,10 @@
+# brot
+
+This repository contains a client for `spe_ed`, the game of the [InformatiCup 2021](https://github.com/InformatiCup/InformatiCup2021).
+
 ## Playing locally
+
+To pull the server code, run `git submodule update --init`.
 
 ### Starting the server
 
