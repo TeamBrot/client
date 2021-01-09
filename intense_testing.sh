@@ -7,14 +7,14 @@ baselog="log/intense-testing/"
 baseoutput="output"
 
 #When starting a combi Client it takes one of those values as combis
-probabilities=("1.0" "1.2" "1.4" "1.6" "1.8" "2.0" "2.2" "2.4")
-activations=("0.01" "0.0075" "0.005" "0.0025" "0.001" "0.1")
+probabilities=("1.0" "1.2" "1.4" "1.6" "1.8" "2.0" "2.2" "2.4" "2.6")
+activations=("0.007" "0.006" "0.005" "0.004" "0.003" "0.002" "0.001" "0.0005")
 clients=("combi")
 numPlayers=("2")
 lengths=("10" "15" "25" "35" "40" "50" "70")
 offsets=("4")
 deadlines=("2")
-filterValues=("0.67" "0.68" "0.69" "0.7" "0.71" "0.72" "0.73")
+filterValues=("0.69")
 
 cd server
 go build .
