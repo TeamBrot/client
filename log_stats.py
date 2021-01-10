@@ -101,7 +101,7 @@ if __name__ == '__main__':
             if result["place"] == 1:
                 wins[result[attribute]] += 1
 
-        for value in sorted(total_games.keys()):
+        for value in sorted(map(float, total_games.keys())):
             win_percentage[value] = wins[value] / total_games[value]
 
             print(value, "\t", total_games[value], wins[value], "{:.3f}".format(win_percentage[value]))

@@ -73,12 +73,14 @@ def place(data):
     # We are active in the last status, so we won
     if you in players_end:
         assert(not last_status["running"])
+        assert(len(players_end) == 1)
         return 1
     # We are not active in the last status
     if len(list(players_end)) == 0:
         # We and our enemies dies simultaneously
         assert(not last_status["running"])
-        return 1
+        print("no active players in last run, both lost")
+        return 2
     return len(players_end) + 1
 
 
