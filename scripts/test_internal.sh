@@ -1,22 +1,22 @@
 #!/bin/bash
 #Defines the base Error directory for logging purposes
 #Hier bitte euren Namen eingeben!!
-name=""
+name="richard"
 baseerror="error"
 baselog="log/intense-testing/"
 baseoutput="output"
 
 #When starting a combi Client it takes one of those values as combis
-probabilities=("1.0" "1.2" "1.4" "1.6" "1.8" "2.0" "2.2" "2.4" "2.6")
-activations=("0.007" "0.006" "0.005" "0.004" "0.003" "0.002" "0.001" "0.0005")
-clients=("combi")
+probabilities=("2.0")
+activations=("0.001")
+clients=("minimax")
 numPlayers=("2")
 lengths=("10" "15" "25" "35" "40" "50" "70")
 offsets=("4")
 deadlines=("2")
 filterValues=("0.69")
 
-cd server
+cd "$(dirname "$0")/../server"
 go build .
 echo "build server..."
 cd ../client

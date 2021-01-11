@@ -2,7 +2,7 @@
 client="combi"
 logdir="log/api/$client"
 
-cd client
+cd "$(dirname "$0")/../client"
 touch error.txt
 mkdir -p "$logdir"
 go build .
