@@ -16,7 +16,7 @@ const defaultGuiPort = 8081
 const defaultLogDirectory = "log"
 
 // If the sum of all probabilities in the specified window is higher then this, minimax can be used
-const defaultMinimaxActivationValue = 0.04
+const defaultMinimaxActivationValue = 0.001
 const defaultMyStartProbability = 2.0
 const defaultFilterValue = 0.69
 
