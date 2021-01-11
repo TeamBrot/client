@@ -4,6 +4,7 @@ import sys
 import json
 from process_logs import place
 from collections import defaultdict
+import argparse
 
 """
 result: {
@@ -28,6 +29,14 @@ ATTRIBUTES = [
     "filterValue"
 ]
 
+CLIENTS =[
+    "combi",
+    "minimax",
+    "rollouts",
+    "probability",
+    "smart"
+]
+
 def has_errors(game_path):
     for error in os.scandir(os.path.join(game_path, "error")):
         if not error.is_file():
@@ -36,37 +45,34 @@ def has_errors(game_path):
             return True
     return False
 
-def get_results(game_path: str):
+def file_result(file_path: str):
+    print("reading", file_path)
+    with open(file_path) as f:
+        data = json.load(f)
+
+    return {
+        "client": data["config"]["clientName"],
+        "players": len(data["game"][0]["players"]),
+        "width": data["game"][0]["width"],
+        "height": data["game"][0]["height"],
+        "deadline": 0,
+        "offset": 0,
+        "myStartProbability": data["config"]["myStartProbability"],
+        "minimaxActivationValue": data["config"]["minimaxActivationValue"],
+        "filterValue": data["config"]["filterValue"],
+        "place": place(data)
+    }
+
+def dir_result(game_path: str):
     results = []
     for result_file in os.scandir(game_path):
         if not result_file.is_file or not result_file.path.endswith(".json"):
             continue
+        results.append(file_result(result_file.path))
 
-        with open(result_file.path) as f:
-            data = json.load(f)
-
-        results.append({
-            "client": data["config"]["clientName"],
-            "players": len(data["game"][0]["players"]),
-            "width": data["game"][0]["width"],
-            "height": data["game"][0]["height"],
-            "deadline": 0,
-            "offset": 0,
-            "myStartProbability": data["config"]["myStartProbability"],
-            "minimaxActivationValue": data["config"]["minimaxActivationValue"],
-            "filterValue": data["config"]["filterValue"],
-            "place": place(data)
-        })
     return results
 
-
-
-if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print("dir required")
-        exit()
-    directory = sys.argv[1]
-
+def get_results_from_dir(directory: str):
     results = []
     total_games = 0
     error_games = 0
@@ -76,19 +82,32 @@ if __name__ == '__main__':
             print("skipping", game.path, "since it contains errors")
             error_games += 1
             continue
-        print("reading", game.path)
         try:
-            results += get_results(game.path)
+            results += dir_result(game.path)
         except Exception as e:
             print("could not get game results:", e)
             print("skipping", game.path)
 
-
     print("out of", total_games, "games,", error_games, "contain errors")
+    return results
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="process logfiles and show statistics")
+    parser.add_argument("files", metavar="file", help="json logfiles or directory structures", nargs='*')
+    parser.add_argument("--output", "-o", help="diagram output file, can be jpeg, png, svg")
+    return parser.parse_args()
+
+if __name__ == '__main__':
+    args = parse_args()
+    results = []
+    for f in args.files:
+        if f.endswith(".json"):
+            results.append(file_result(f))
+        else:
+            results += get_results_from_dir(f)
 
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots(1, 3, figsize=(10,5))
-    # fig.suptitle("Gewinnhäufigkeit in Abhängigkeit verschiedener Hyperparameter")
     fig.tight_layout()
 
     for i, attribute in enumerate(ATTRIBUTES):
@@ -111,4 +130,21 @@ if __name__ == '__main__':
         x = list(map(str, x))
         ax[i].bar(x, y)
         ax[i].set_xlabel(attribute)
-    plt.savefig('hyperparameters.svg', format="svg")
+
+    if args.output is not None:
+        plt.savefig(args.output, format=args.output.split('.')[-1])
+
+    for i, client in enumerate(CLIENTS):
+        wins = 0
+        total_games = 0
+        for result in results:
+            if result["client"] == client:
+                total_games += 1
+                if result["place"] == 1:
+                    wins += 1
+
+        if total_games == 0:
+            continue
+        win_percentage = wins / total_games
+        print("results for", client)
+        print(total_games, wins, "{:.3f}".format(win_percentage))
