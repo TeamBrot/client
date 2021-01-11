@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"math"
 	"math/rand"
 	"time"
 )
@@ -175,7 +174,6 @@ type RolloutClient struct {
 // GetAction implements the Client interface
 func (c RolloutClient) GetAction(status *Status, calculationTime time.Duration) Action {
 	stopChannel := time.After((calculationTime / 10) * 9)
-	simulateOtherPlayers = true
 	stillValidPaths := validPathsToCache
 	bestPaths := simulateRollouts(status, stopChannel, stillValidPaths, c.filterValue)
 	possibleActions := status.Players[status.You].PossibleActions(status.Cells, status.Turn, nil, false)
@@ -188,6 +186,7 @@ func (c RolloutClient) GetAction(status *Status, calculationTime time.Duration) 
 	for _, action := range possibleActions {
 		possible[action] = true
 	}
+
 	counter := [5]int{1, 1, 1, 1, 1}
 	for _, path := range bestPaths {
 		counter[path[0]]++
@@ -198,11 +197,11 @@ func (c RolloutClient) GetAction(status *Status, calculationTime time.Duration) 
 	}
 	log.Println("calculated values", values)
 
-	minimum := math.Inf(0)
+	maximum := 0.0
 	action := ChangeNothing
 	for i, v := range values {
-		if possible[i] && v < minimum {
-			minimum = v
+		if possible[i] && v > maximum {
+			maximum = v
 			action = Action(i)
 		}
 	}
