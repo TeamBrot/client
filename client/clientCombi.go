@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"runtime"
 	"sort"
 	"time"
 )
@@ -50,7 +49,10 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 	}
 	var inPaths [5]bool
 	//computes the score for every path
+	counter := [5]int{1, 1, 1, 1, 1}
 	for _, path := range paths {
+		//computes how many times a Action was the first Action of path
+		counter[path[0]]++
 		score := 0.0
 		minPlayer := player.Copy()
 		for i := 0; i < len(path); i++ {
@@ -67,7 +69,6 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 			}
 		}
 		if len(path) == 0 {
-			log.Println("all other players are going to die in the next turn")
 			return possibleActions[0], nil
 		}
 		score /= float64(len(path))
@@ -81,11 +82,6 @@ func evaluatePaths(player Player, allFields [][][]float64, paths [][]Action, tur
 		}
 	}
 	log.Println(possible)
-	//computes how many times a Action was the first Action of path
-	counter := [5]int{1, 1, 1, 1, 1}
-	for _, path := range paths {
-		counter[path[0]]++
-	}
 	var sumOfProbabilities float64
 	for z, probability := range probabilities {
 		sumOfProbabilities += probability / float64(counter[z])
@@ -156,7 +152,6 @@ func analyzeBoard(status *Status, probabilityTable [][]float64, minimaxActivatio
 		log.Printf("The average probability in the window is %1.2e", accumulatedProbability)
 		if accumulatedProbability >= minimaxActivationValue {
 			playersAreNear = true
-			//simulateOtherPlayers = true
 		}
 	} else {
 		playersAreNear = true
@@ -201,13 +196,12 @@ var probabilityTableOfLastTurn [][]float64
 
 // GetAction implements the Client interface
 func (c CombiClient) GetAction(status *Status, calculationTime time.Duration) Action {
-	runtime.GOMAXPROCS(2)
 	player := *status.Players[status.You]
 
 	// create timing channels
 	start := time.Now()
 	stopChannel1 := time.After(calculationTime / 10 * 6)
-	stopChannel2 := time.After(calculationTime / 10 * 8)
+	stopChannel2 := time.After(calculationTime / 10 * 9)
 
 	// handle trivial cases (zero possible actions)
 	possibleActions := player.PossibleActions(status.Cells, status.Turn, nil, false)
@@ -215,9 +209,6 @@ func (c CombiClient) GetAction(status *Status, calculationTime time.Duration) Ac
 		log.Println("going to die use change_nothing")
 		return ChangeNothing
 	}
-
-	// analyze which players to compute minimax and probability tables for
-	minimaxPlayers, probabilityPlayers := analyzeBoard(status, probabilityTableOfLastTurn, c.minimaxActivationValue)
 
 	// start rollouts
 	stopRolloutChan := make(chan time.Time)
@@ -227,6 +218,9 @@ func (c CombiClient) GetAction(status *Status, calculationTime time.Duration) Ac
 		rolloutPaths := simulateRollouts(status, stopRolloutChan, cachedPaths, c.filterValue)
 		rolloutChan <- rolloutPaths
 	}()
+
+	// analyze which players to compute minimax and probability tables for
+	minimaxPlayers, probabilityPlayers := analyzeBoard(status, probabilityTableOfLastTurn, c.minimaxActivationValue)
 
 	// start minimax if needed
 	minimaxChannel := make(chan []Action, 1)
@@ -282,9 +276,11 @@ func (c CombiClient) GetAction(status *Status, calculationTime time.Duration) Ac
 
 	//This is only for debugging purposes and combines the last field with the status
 	//log.Println(allProbabilityTables[len(allProbabilityTables)-1])
-	log.Println("Last calculated probability Table")
-	for y, row := range allProbabilityTables[len(allProbabilityTables)-1] {
-		fmt.Printf("%2d, %1.1e\n", y, row)
+	if len(allProbabilityTables) > 0 {
+		log.Println("Last calculated probability Table")
+		for y, row := range allProbabilityTables[len(allProbabilityTables)-1] {
+			fmt.Printf("%2d, %1.1e\n", y, row)
+		}
 	}
 	//Log Timing
 	log.Println("time until calculations are finished and evaluation can start: ", time.Since(start))
