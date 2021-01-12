@@ -192,6 +192,7 @@ type CombiClient struct {
 	filterValue            float64
 }
 
+//This is a variable to store the probability Table of the last turn, so we can use it in this turn to analyze the board
 var probabilityTableOfLastTurn [][]float64
 
 // GetAction implements the Client interface
@@ -244,6 +245,7 @@ func (c CombiClient) GetAction(status *Status, calculationTime time.Duration) Ac
 		log.Printf("using player %+v for probabilityFields", player)
 	}
 	log.Printf("using players %d for minimax", minimaxPlayers)
+
 	// receive the first timing signal and stop the probability table computation
 	_ = <-stopChannel1
 	log.Println("sending stop signal to calculateProbabilityTables...")
@@ -274,7 +276,6 @@ func (c CombiClient) GetAction(status *Status, calculationTime time.Duration) Ac
 	allProbabilityTables := <-probabilityTablesChan
 	log.Println("could calculate probability tables for", len(allProbabilityTables), "turns")
 
-	//This is only for debugging purposes and combines the last field with the status
 	//log.Println(allProbabilityTables[len(allProbabilityTables)-1])
 	if len(allProbabilityTables) > 0 {
 		log.Println("Last calculated probability Table")
@@ -282,21 +283,25 @@ func (c CombiClient) GetAction(status *Status, calculationTime time.Duration) Ac
 			fmt.Printf("%2d, %1.1e\n", y, row)
 		}
 	}
+
 	//Log Timing
 	log.Println("time until calculations are finished and evaluation can start: ", time.Since(start))
-	//Evaluate the paths with the given field and return the best Action based on this TODO: Needs improvement in case of naming
+
+	//Evaluate the paths with the given field and return the best Action based on this
 	var bestAction Action
 	if len(allProbabilityTables) == 0 {
 		log.Println("I'dont know what this means but probably all other players are going to die")
 		return possibleActions[0]
 	}
+
+	//We get the bestAction based on minimax, probabilityTables and the best paths from the rollouts
 	bestAction, validPathsToCache = evaluatePaths(player, allProbabilityTables, bestPaths, status.Turn, len(allProbabilityTables)-1, possibleActions, useMinimax)
-	//Log Timing
+
+	//Cache the probabilityTable for the next turn
 	probabilityTableOfLastTurn = allProbabilityTables[len(allProbabilityTables)-1]
+
+	//Log Timing
 	totalProcessingTime := time.Since(start)
-	if totalProcessingTime > calculationTime {
-		panic("Couldn't reach timing goal")
-	}
 	log.Println("total processing took", totalProcessingTime)
 	log.Println("chose best action", bestAction)
 	return bestAction

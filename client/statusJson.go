@@ -16,23 +16,25 @@ type JSONStatus struct {
 	Turn     int                 `json:"turn"`
 }
 
-func (jsonStatus *JSONStatus) Copy() *JSONStatus {
-	newStatus := *jsonStatus
+// Copy copies a JSONStatus
+func (js *JSONStatus) Copy() *JSONStatus {
+	newStatus := *js
 	newStatus.Cells = make([][]int, newStatus.Height)
 	for i := range newStatus.Cells {
-		newStatus.Cells[i] = make([]int, jsonStatus.Width)
+		newStatus.Cells[i] = make([]int, js.Width)
 		for j := range newStatus.Cells[i] {
-			newStatus.Cells[i][j] = jsonStatus.Cells[i][j]
+			newStatus.Cells[i][j] = js.Cells[i][j]
 		}
 	}
 	newStatus.Players = make(map[int]*JSONPlayer)
-	for id, player := range jsonStatus.Players {
+	for id, player := range js.Players {
 		newStatus.Players[id] = player.Copy()
 	}
 	return &newStatus
 
 }
 
+// ConvertToStatus converts a JSONStatus to a Status
 func (js JSONStatus) ConvertToStatus() *Status {
 	var status Status
 	status.Height = uint16(js.Height)
@@ -56,4 +58,3 @@ func (js JSONStatus) ConvertToStatus() *Status {
 	}
 	return &status
 }
-

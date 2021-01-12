@@ -8,7 +8,7 @@ type SimPlayer struct {
 	LastMoveVisitedCells map[Coords]struct{}
 }
 
-// copySimPlayer copies a SimPlayer object
+// Copy copies a SimPlayer object
 func (player *SimPlayer) Copy() *SimPlayer {
 	var p SimPlayer
 	p.player = player.player.Copy()
@@ -21,6 +21,7 @@ func (player *SimPlayer) Copy() *SimPlayer {
 	return &p
 }
 
+// SimPlayerFromPlayer is the constructor for a simPlayer. A simPlayer can only be constructed with a player
 func SimPlayerFromPlayer(player *Player, probability float64) *SimPlayer {
 	var simPlayer SimPlayer
 	simPlayer.player = player.Copy()

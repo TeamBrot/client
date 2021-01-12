@@ -7,12 +7,14 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+//Gui stores the websocket connection for the gui
 type Gui struct {
 	conn *websocket.Conn
 }
 
 var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
 
+//StartGui establishes the connection with the gui in the browser
 func StartGui(guiURL string, logger *log.Logger) *Gui {
 	gui := &Gui{nil}
 	http.HandleFunc("/spe_ed/gui", func(w http.ResponseWriter, r *http.Request) {
@@ -34,6 +36,7 @@ func StartGui(guiURL string, logger *log.Logger) *Gui {
 	return gui
 }
 
+//WriteStatus writes the new Status to the gui
 func (g *Gui) WriteStatus(status *JSONStatus) error {
 	if g.conn != nil {
 		return g.conn.WriteJSON(status)
@@ -41,6 +44,7 @@ func (g *Gui) WriteStatus(status *JSONStatus) error {
 	return nil
 }
 
+//Close closes the websocket connection to the gui
 func (g *Gui) Close() {
 	if g.conn != nil {
 		g.conn.Close()

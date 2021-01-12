@@ -15,6 +15,7 @@ type Status struct {
 	Turn    uint16
 }
 
+// Copy copies a status
 func (status *Status) Copy() *Status {
 	var s Status
 	s.Width = status.Width
@@ -35,6 +36,7 @@ func (status *Status) Copy() *Status {
 	return &s
 }
 
+// FindClosestPlayerTo returns the player that is closest to the specified
 func (status *Status) FindClosestPlayerTo(originPlayer uint8) (uint8, error) {
 	ourPlayer := status.Players[originPlayer]
 	var nearestPlayer uint8

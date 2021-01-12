@@ -119,12 +119,12 @@ func (player *Player) PossibleActions(cells [][]bool, turn uint16, extraCellInfo
 	return possibleActions
 }
 
-//Returns the distance between to players as float64
+//DistanceTo returns the distance between to players as float64
 func (player *Player) DistanceTo(p2 *Player) float64 {
 	return math.Sqrt(math.Pow(float64(int(player.X)-int(p2.X)), 2) + math.Pow(float64(int(player.Y)-int(p2.Y)), 2))
 }
 
-//This function copies a struct of type Player
+//Copy copies a struct of type Player
 func (player *Player) Copy() *Player {
 	newPlayer := *player
 	return &newPlayer

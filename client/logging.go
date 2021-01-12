@@ -11,9 +11,9 @@ import (
 
 // FileLogger represents all information needed to log a single game to a JSON-encoded file
 type FileLogger struct {
-	Start     time.Time    `json:"start"`
-	Game      []JSONStatus `json:"game"`
-	Config    Config       `json:"config"`
+	Start  time.Time    `json:"start"`
+	Game   []JSONStatus `json:"game"`
+	Config Config       `json:"config"`
 }
 
 // NewFileLogger creates a FileLogger with a specified client configuration
@@ -54,6 +54,7 @@ func NewClientLogger(clientName string) *log.Logger {
 	return logger
 }
 
+// NewErrorLogger returns a new Logger that writes to Stderr and should be used for all warnings and errors
 func NewErrorLogger() *log.Logger {
 	logger := log.New(os.Stderr, "[error] ", log.Lmsgprefix|log.LstdFlags)
 	return logger

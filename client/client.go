@@ -26,8 +26,8 @@ func RunClient(config Config) {
 
 	gui := &Gui{nil}
 	if config.APIKey != "" {
-		guiUrl := fmt.Sprintf("%s:%d", config.GUIHostname, config.GUIPort)
-		gui = StartGui(guiUrl, clientLogger)
+		guiURL := fmt.Sprintf("%s:%d", config.GUIHostname, config.GUIPort)
+		gui = StartGui(guiURL, clientLogger)
 	}
 
 	clientLogger.Println("connecting to server")

@@ -16,6 +16,7 @@ const maxCalculationTime = 2 * time.Minute
 // This value is specified in milliseconds and is a the expected time which actions take to be sent to the server
 const calculationTimeOffset = 200 * time.Millisecond
 
+// ServerTime stores the value recieved from the timingAPI
 type ServerTime struct {
 	Time         time.Time `json:"time"`
 	Milliseconds int       `json:"milliseconds"`
@@ -51,7 +52,7 @@ func computeCalculationTime(deadline time.Time, config Config, errorLogger *log.
 		return calculationTime, nil
 	}
 	calculationTime := deadline.Sub(serverTime.Time)
-	calculationTime = calculationTime - time.Duration(serverTime.Milliseconds) * time.Millisecond - calculationTimeOffset
+	calculationTime = calculationTime - time.Duration(serverTime.Milliseconds)*time.Millisecond - calculationTimeOffset
 	log.Println("the scheduled calculation time is", calculationTime)
 	return calculationTime, nil
 }
