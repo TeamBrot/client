@@ -1,8 +1,6 @@
 client/client
 client/client.exe
 client/log/
-client/error/
-client/output/
 .vscode
 *.mp4
 *.svg
