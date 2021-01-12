@@ -12,6 +12,12 @@ var validPathsToCache [][]Action
 //This const defines the max number of Rollouts simulateRollouts will perform. Normally there is no good reason to change this value
 const maxNumberofRollouts = 10000000
 
+//If the longestPath array is longer than this value we filter the paths with filterValue 0.9
+const maxNumberOfPaths = 5000
+
+//If after filtering there are still more paths than this value we only keep 1/5 of them
+const cutOff = 100
+
 //search for the longest paths a player could reach. Simulates random action for all Players and allways processes as last player
 func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time, cachedPaths [][]Action, filterValue float64) [][]Action {
 	var longestPaths [][]Action
@@ -53,10 +59,10 @@ func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time, cac
 				path = append(path, randomAction)
 			}
 			longestPaths, longest = checkPath(path, longestPaths, longest, performedRollouts, filterValue)
-			if len(longestPaths) > 5000 {
+			if len(longestPaths) > maxNumberOfPaths {
 				longestPaths = filterPaths(longestPaths, longest, 0.9)
 				log.Println("filter the longest paths cause there are too many of them, after filtering", len(longestPaths), "remaining")
-				if len(longestPaths) > 100 {
+				if len(longestPaths) > cutOff {
 					longestPaths = longestPaths[0:int(float64(len(longestPaths))/5)]
 				}
 				log.Println("keeping", len(longestPaths), "paths after all")
