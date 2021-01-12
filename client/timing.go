@@ -14,7 +14,7 @@ const timeAPIRequestTimeout = 1000 * time.Millisecond
 const maxCalculationTime = 2 * time.Minute
 
 // This value is specified in milliseconds and is a the expected time which actions take to be sent to the server
-const calculationTimeOffset = 200
+const calculationTimeOffset = 200 * time.Millisecond
 
 type ServerTime struct {
 	Time         time.Time `json:"time"`
@@ -43,17 +43,15 @@ func computeCalculationTime(deadline time.Time, config Config, errorLogger *log.
 	serverTime, err := getTime(config.TimeURL)
 	if err != nil {
 		errorLogger.Println("couldn't reach timing api, try using machine time")
-		calculationTime := deadline.Sub(time.Now().UTC())
-		calculationTime = time.Duration((calculationTime.Milliseconds() - calculationTimeOffset) * 1000000000)
+		calculationTime := deadline.Sub(time.Now().UTC()) - calculationTimeOffset
 		if calculationTime > maxCalculationTime {
 			return calculationTime, errors.New("couldn't reach timing api and deadline is more than the specified maxCalculationTime away")
 		}
-		log.Println("the scheduled calculation Time is", calculationTime)
-		log.Println("This is only a assumption, based on the local machine tim!")
+		log.Println("the scheduled calculation time, based on machine time, is", calculationTime)
 		return calculationTime, nil
 	}
 	calculationTime := deadline.Sub(serverTime.Time)
-	calculationTime = time.Duration((calculationTime.Milliseconds() - int64(serverTime.Milliseconds) - calculationTimeOffset) * 1000000)
-	log.Println("the scheduled calculation Time is", calculationTime)
+	calculationTime = calculationTime - time.Duration(serverTime.Milliseconds) * time.Millisecond - calculationTimeOffset
+	log.Println("the scheduled calculation time is", calculationTime)
 	return calculationTime, nil
 }
