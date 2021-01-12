@@ -6,10 +6,8 @@ import (
 	"time"
 )
 
+// In this variable we save the paths that are still Valid for the next turn after our evaluation
 var validPathsToCache [][]Action
-
-//If this value is set to true we process in every rollout before we choose our own action a action for every other living player
-var simulateOtherPlayers = false
 
 //This const defines the max number of Rollouts simulateRollouts will perform. Normally there is no good reason to change this value
 const maxNumberofRollouts = 10000000
@@ -18,7 +16,7 @@ const maxNumberofRollouts = 10000000
 func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time, cachedPaths [][]Action, filterValue float64) [][]Action {
 	var longestPaths [][]Action
 	var longest int
-	if cachedPaths != nil && !simulateOtherPlayers {
+	if cachedPaths != nil {
 		longestPaths, longest = validateCachedPaths(cachedPaths, status)
 		longestPaths = filterPaths(longestPaths, longest, filterValue)
 		log.Println("Paths that are valid after filtering", len(longestPaths))
@@ -38,20 +36,6 @@ func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time, cac
 			counter := 0
 			for {
 				me := rolloutStatus.Players[status.You]
-				if simulateOtherPlayers {
-					//Process one random action for every other player besides me
-					for _, player := range rolloutStatus.Players {
-						if player != me && player != nil {
-							possibleActions := player.PossibleActions(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
-							if len(possibleActions) == 0 {
-								player = nil
-								continue
-							}
-							randomAction := possibleActions[rand.Intn(len(possibleActions))]
-							rolloutMove(rolloutStatus, randomAction, player)
-						}
-					}
-				}
 				possibleActions := me.PossibleActions(rolloutStatus.Cells, rolloutStatus.Turn, nil, false)
 				if len(possibleActions) == 0 {
 					break
@@ -121,7 +105,7 @@ func validateCachedPaths(oldPaths [][]Action, status *Status) ([][]Action, int) 
 	return newPaths, longest
 }
 
-//implements the doMove function for the rollout function
+//Sets all fields that are visited to true
 func rolloutMove(status *Status, action Action, player *Player) {
 	visitedCoords := player.ProcessAction(action, status.Turn)
 	for _, coords := range visitedCoords {
@@ -139,12 +123,12 @@ func checkPath(path []Action, longestPaths [][]Action, longest int, allreadyPerf
 		//if longest is still bigger then the path found now we only append the path
 		if longest >= len(path) {
 			longestPaths = append(longestPaths, path)
-		//If it is bigger by a lot we can forget every path we found until now
+			//If it is bigger by a lot we can forget every path we found until now
 		} else if float64(len(path))*filterValue > float64(longest) {
 			longestPaths = make([][]Action, 0)
 			longestPaths = append(longestPaths, path)
 			longest = len(path)
-		//If none of the before is the case we have to filter all values that are in longest paths until now
+			//If none of the before is the case we have to filter all values that are in longest paths until now
 		} else {
 			longestPaths = filterPaths(longestPaths, len(path), filterValue)
 			longestPaths = append(longestPaths, path)
