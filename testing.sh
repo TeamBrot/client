@@ -3,11 +3,12 @@ client="combi"
 logdir="log/api/$client"
 
 cd client
-touch error.txt
 mkdir -p "$logdir"
 go build .
 
+
 while [ ! -f ../stop ]
 do
-    ./client -client "$client" -log "$logdir" 2>> error.txt
+    now=$(date +%s)
+    ./client -client "$client" -log "$logdir" >> "$logdir/$now-output.txt" 2>> "$logdir/$now-error.txt"
 done
