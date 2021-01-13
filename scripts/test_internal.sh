@@ -1,15 +1,15 @@
 #!/bin/bash
 #Defines the base Error directory for logging purposes
 #Hier bitte euren Namen eingeben!!
-name="richard"
+name=""
 baseerror="error"
-baselog="log/intense-testing/"
+baselog="log/combi-probability/"
 baseoutput="output"
 
 #When starting a combi Client it takes one of those values as combis
 probabilities=("2.0")
 activations=("0.001")
-clients=("minimax")
+clients=("probability")
 numPlayers=("2")
 lengths=("10" "15" "25" "35" "40" "50" "70")
 offsets=("4")
