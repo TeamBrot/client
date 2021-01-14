@@ -27,7 +27,9 @@ var httpClient http.Client = http.Client{Timeout: timeAPIRequestTimeout}
 //gets the current server Time via the specified API
 func getTime(url string) (ServerTime, error) {
 	var timeFromServer ServerTime
+	time1 := time.Now()
 	r, err := httpClient.Get(url)
+	log.Println("time api took", time.Now().Sub(time1))
 	if err != nil {
 		return timeFromServer, err
 	}
