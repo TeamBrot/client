@@ -2,7 +2,7 @@
 import os
 import sys
 import json
-from .visualize import place
+from visualize import place
 from collections import defaultdict
 import argparse
 
