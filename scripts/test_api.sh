@@ -11,4 +11,5 @@ while [ ! -f ../stop ]
 do
     now=$(date +%s)
     ./client -client "$client" -log "$logdir" >> "$logdir/$now-output.txt" 2>> "$logdir/$now-error.txt"
+    sleep 5
 done
