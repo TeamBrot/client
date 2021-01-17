@@ -319,6 +319,5 @@ func (c ProbabilityClient) GetAction(status *Status, calculationTime time.Durati
 			action = Action(i)
 		}
 	}
-	log.Println("chose as best action", action)
 	return action
 }
