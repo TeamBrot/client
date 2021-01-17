@@ -44,14 +44,29 @@ The following clients are available:
 - probability
 - combi
 
+### Bash-Script
+
+Run `./test_internal.sh` to start mutltiple games. This can be useful to test different parameters or to run statistical analytics.
+
+Just change the script for your purposes.
+
 ## Playing on the official server
 
 To play on the official server, the environment variables `URL`, `TIME_URL` and `KEY` have to be set to the appropriate values:
 
 `URL="wss://msoll.de/spe_ed" TIME_URL="https://msoll.de/spe_ed_time" KEY="<key>" ./client`
 
+### Bash-Script
+
+You can also run `./test_api.sh` to play multiple games without having to restart the client manually.
+
+The default client is the `combi` client. You can change that by setting the variable `client` directly in the script.
+
 ## Docker
 
 To build the docker image, run `docker build . -t spe_ed`.
 
 To run the client container, run `docker run -e URL="wss://msoll.de/spe_ed" -e TIME_URL="https://msoll.de/spe_ed_time" -e KEY="<key>" spe_ed`
+
+
+
