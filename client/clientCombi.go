@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"math"
 	"sort"
@@ -276,13 +275,13 @@ func (c CombiClient) GetAction(status *Status, calculationTime time.Duration) Ac
 	allProbabilityTables := <-probabilityTablesChan
 	log.Println("could calculate probability tables for", len(allProbabilityTables), "turns")
 
-	//log.Println(allProbabilityTables[len(allProbabilityTables)-1])
-	if len(allProbabilityTables) > 0 {
-		log.Println("Last calculated probability Table")
-		for y, row := range allProbabilityTables[len(allProbabilityTables)-1] {
-			fmt.Printf("%2d, %1.1e\n", y, row)
-		}
-	}
+	// Uncomment this block if you want to debug the probabilityTables
+	//if len(allProbabilityTables) > 0 {
+	//log.Println("Last calculated probability Table")
+	//for y, row := range allProbabilityTables[len(allProbabilityTables)-1] {
+	//fmt.Printf("%2d, %1.1e\n", y, row)
+	//}
+	//}
 
 	//Log Timing
 	log.Println("time until calculations are finished and evaluation can start: ", time.Since(start))
@@ -301,8 +300,5 @@ func (c CombiClient) GetAction(status *Status, calculationTime time.Duration) Ac
 	probabilityTableOfLastTurn = allProbabilityTables[len(allProbabilityTables)-1]
 
 	//Log Timing
-	totalProcessingTime := time.Since(start)
-	log.Println("total processing took", totalProcessingTime)
-	log.Println("chose best action", bestAction)
 	return bestAction
 }
