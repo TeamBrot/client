@@ -14,12 +14,12 @@ type Client interface {
 
 // RunClient runs a spe_ed client using a specified configuration
 func RunClient(config Config) {
-	if !info {
-		log.SetOutput(ioutil.Discard)
-	}
 	errorLogger := NewErrorLogger()
 	clientLogger := NewClientLogger(config.ClientName)
 	fileLogger, err := NewFileLogger(config)
+	if !info {
+		log.SetOutput(ioutil.Discard)
+	}
 	if err != nil {
 		errorLogger.Println("could not create file logger:", err)
 	}
@@ -62,12 +62,15 @@ func RunClient(config Config) {
 		if err != nil {
 			errorLogger.Fatalln("error receiving time from server", err)
 		}
+		clientLogger.Println("the scheduled calculation time is", calculationTime)
 		start := time.Now()
 		action := config.Client.GetAction(status, calculationTime)
+		clientLogger.Println("using", action, "as best action")
 		processingTime := time.Since(start)
 		if processingTime > calculationTime {
 			errorLogger.Println("the calculation took longer then it should have. the client might miss the deadline!")
 		}
+		clientLogger.Println("the calculation took", processingTime)
 		err = conn.WriteAction(action)
 		if err != nil {
 			errorLogger.Fatalln("error sending action:", err)

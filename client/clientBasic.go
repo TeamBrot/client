@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"time"
 )
 
@@ -20,6 +19,5 @@ func (c BasicClient) GetAction(status *Status, calculationTime time.Duration) Ac
 			action = a
 		}
 	}
-	log.Println("using", action)
 	return action
 }

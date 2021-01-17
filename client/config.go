@@ -7,7 +7,7 @@ import (
 )
 
 //Activates more informative logging
-const info = true
+const info = false
 const defaultGameURL = "ws://localhost:8080/spe_ed"
 const defaultTimeURL = "http://localhost:8080/spe_ed_time"
 const defaultLogFile = "logging.txt"
