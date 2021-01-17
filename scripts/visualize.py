@@ -5,6 +5,7 @@ import tempfile
 import os
 from PIL import Image, ImageDraw, ImageFont
 import ffmpeg
+from common import place
 
 SCALING = 16
 COLORS = ["#dddddd", "#ff0000", "#00ff00", "#0000ff",
@@ -64,24 +65,6 @@ def board_image(status, colors):
                             SCALING-1, (i+1)*SCALING-1], fill=colors[x])
     return im
 
-
-def place(data):
-    last_status = data["game"][-1]
-    players_end = list(map(lambda player: int(player[0]), filter(
-        lambda player: player[1]["active"], last_status["players"].items())))
-    you = last_status["you"]
-    # We are active in the last status, so we won
-    if you in players_end:
-        assert(not last_status["running"])
-        assert(len(players_end) == 1)
-        return 1
-    # We are not active in the last status
-    if len(list(players_end)) == 0:
-        # We and our enemies dies simultaneously
-        assert(not last_status["running"])
-        print("no active players in last run, both lost")
-        return 2
-    return len(players_end) + 1
 
 
 def make_video(json_filename):

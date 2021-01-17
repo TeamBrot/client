@@ -5,11 +5,11 @@ import (
 	"time"
 )
 
-// SmartClient always moves at speed one and chooses right or left if there is an obstacle
-type SmartClient struct{}
+// BasicClient always moves at speed one and chooses right or left if there is an obstacle
+type BasicClient struct{}
 
-// GetAction Implementation for SmartClient
-func (c SmartClient) GetAction(status *Status, calculationTime time.Duration) Action {
+// GetAction Implementation for BasicClient
+func (c BasicClient) GetAction(status *Status, calculationTime time.Duration) Action {
 	player := status.Players[status.You]
 	action := ChangeNothing
 	for _, a := range player.PossibleActions(status.Cells, status.Turn, nil, false) {

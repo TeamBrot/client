@@ -2,7 +2,7 @@
 import os
 import sys
 import json
-from visualize import place
+from common import place
 from collections import defaultdict
 import argparse
 
@@ -43,7 +43,7 @@ CLIENTS =[
     "minimax",
     "rollouts",
     "probability",
-    "smart"
+    "basic"
 ]
 
 def has_errors(game_path):

@@ -49,8 +49,8 @@ func getClient(config Config) (Client, error) {
 	case "minimax":
 		client = MinimaxClient{}
 		break
-	case "smart":
-		client = SmartClient{}
+	case "basic":
+		client = BasicClient{}
 		break
 	case "combi":
 		client = CombiClient{config.MinimaxActivationValue, config.MyStartProbability, config.FilterValue}
