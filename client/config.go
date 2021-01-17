@@ -11,7 +11,7 @@ const info = true
 const defaultGameURL = "ws://localhost:8080/spe_ed"
 const defaultTimeURL = "http://localhost:8080/spe_ed_time"
 const defaultLogFile = "logging.txt"
-const defaultGuiHostname = "0.0.0.0"
+const defaultGuiHostname = "localhost"
 const defaultGuiPort = 8081
 const defaultLogDirectory = "log"
 
