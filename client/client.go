@@ -56,8 +56,8 @@ func RunClient(config Config) {
 		clientLogger.Println("turn", status.Turn)
 		clientLogger.Println("deadline", jsonStatus.Deadline)
 		me := status.Players[status.You]
-		clientLogger.Println("Position ", me.Y, "y", me.X, "x")
-		clientLogger.Println("Speed", me.Speed)
+		clientLogger.Println("position", me.Y, "y", me.X, "x")
+		clientLogger.Println("speed", me.Speed)
 		calculationTime, err := computeCalculationTime(jsonStatus.Deadline, config, errorLogger)
 		if err != nil {
 			errorLogger.Fatalln("error receiving time from server", err)
