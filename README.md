@@ -38,7 +38,7 @@ This runs the `combi` client. Other clients can be run with `./client -client <c
 
 The following clients are available:
 
-- smart
+- basic
 - minimax
 - rollouts
 - probability
