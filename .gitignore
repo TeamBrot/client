@@ -15,7 +15,7 @@ client/log/
 *.lof
 *.out
 *.toc
-*.ipynb-checkpoints*
+.ipynb_checkpoints
 
 stop
 __pycache__
