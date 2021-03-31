@@ -7,7 +7,7 @@ from PIL import Image, ImageDraw, ImageFont
 import ffmpeg
 from common import place
 
-SCALING = 16
+SCALING = 64
 COLORS = ["#dddddd", "#ff0000", "#00ff00", "#0000ff",
           "#00ffff", "#ffff00", "#ff00ff", "#000000"]
 PLAYER_COLOR_INDEX = 1
@@ -28,8 +28,7 @@ def image_filename(tmpdir, json_filename, index):
     return os.path.join(tmpdir, json_basename(json_filename) + "-" + str(index).zfill(4) + ".png")
 
 
-def start_image(data, colors):
-    font = ImageFont.truetype("arial.ttf", size=30)
+def start_image(data, colors, font):
     width = data["game"][0]["width"]
     height = data["game"][0]["height"]
     client_name = data["config"]["clientName"]
@@ -46,29 +45,34 @@ def start_image(data, colors):
         "place: " + str(place(data)) + "\n\n"
         "our color:"
     )
-    im = Image.new("RGB", (width * SCALING, height * SCALING))
+    im = Image.new("RGB", (width * SCALING, height * SCALING + 100))
     draw = ImageDraw.Draw(im)
     draw.text((10, 10), text, font=font)
-    draw.rectangle([150, 330, 150+2*SCALING, 330+2*SCALING],
+    draw.rectangle([150, 330, 150+2*16, 330+2*16],
                    colors[data["game"][0]["you"]])
     return im
 
+def draw_square(draw, i, j, color):
+    draw.rectangle([j*SCALING, i*SCALING+40, (j+1)*SCALING-1, (i+1)*SCALING-1+40], fill=color)
 
-def board_image(status, colors):
+def create_image(width, height):
+    return Image.new("RGB", (width * SCALING, height * SCALING + 40))
+
+def board_image(status, colors, font, turn):
     width = status["width"]
     height = status["height"]
-    im = Image.new("RGB", (width * SCALING, height * SCALING))
+    im = create_image(width, height)
     draw = ImageDraw.Draw(im)
+    draw.text((0, 0), "Turn {}".format(turn), font=font)
     for i, y in enumerate(status["cells"]):
         for j, x in enumerate(y):
-            draw.rectangle([j*SCALING, i*SCALING, (j+1) *
-                            SCALING-1, (i+1)*SCALING-1], fill=colors[x])
+            draw_square(draw, i, j, colors[x])
     return im
-
 
 
 def make_video(json_filename):
     # basename = json_basename(json_filename)
+    font = ImageFont.truetype("arial.ttf", size=30)
     with open(json_filename) as f:
         data = json.load(f)
     player_id = data["game"][0]["you"]
@@ -77,12 +81,12 @@ def make_video(json_filename):
     index = 0
     with tempfile.TemporaryDirectory() as tmpdir:
         index = 0
-        im = start_image(data, colors)
+        im = start_image(data, colors, font)
         for _ in range(NUM_START_FRAMES):
             im.save(image_filename(tmpdir, json_filename, index))
             index += 1
-        for status in data["game"]:
-            im = board_image(status, colors)
+        for turn, status in enumerate(data["game"]):
+            im = board_image(status, colors, font, turn+1)
             im.save(image_filename(tmpdir, json_filename, index))
             index += 1
         for _ in range(NUM_FINAL_FRAMES):
@@ -92,7 +96,7 @@ def make_video(json_filename):
         (
             ffmpeg
             .input(os.path.join(tmpdir, "*.png"), pattern_type='glob', framerate=FPS)
-            .output(video_filename(json_filename))
+            .output(video_filename(json_filename), vcodec='libx264')
             .global_args('-loglevel', 'error')
             .run()
         )
