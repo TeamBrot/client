@@ -66,7 +66,13 @@ def board_image(status, colors, font, turn):
     draw.text((0, 0), "Turn {}".format(turn), font=font)
     for i, y in enumerate(status["cells"]):
         for j, x in enumerate(y):
-            draw_square(draw, i, j, colors[x])
+            draw.rectangle([j*size+x_offset, i*size+y_offset, (j+1) *
+                            size + x_offset - 1, (i + 1) * size + y_offset - 1], fill=colors[x], outline="black", width=1)
+    for n in status["players"]:
+        player = status["players"][n]
+        if player["active"]:
+            draw.rectangle([player["x"]*size +
+                            x_offset, player["y"]*size+y_offset, (player["x"]+1)*size+x_offset-1, (player["y"]+1)*size+y_offset-1], fill=HEADCOLORS[int(n)-1])
     return im
 
 
