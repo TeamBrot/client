@@ -1,3 +1,3 @@
 [submodule "server"]
 	path = server
-	url = git@github.com:TeamBrot/client.git
+	url = git@github.com:TeamBrot/server.git
