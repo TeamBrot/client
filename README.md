@@ -2,7 +2,7 @@
 
 ![Build](https://github.com/TeamBrot/client/actions/workflows/go.yml/badge.svg)
 
-![](brot-icup.jpg)
+![](brot-icup.png)
 
 This repository contains our client for `spe_ed`, the game of the [InformatiCup 2021](https://github.com/InformatiCup/InformatiCup2021).
 
