@@ -2,6 +2,8 @@
 
 <img align="center" src="brot.jpg" width="400px">
 
+![Build](https://github.com/TeamBrot/client/actions/workflows/go.yml/badge.svg)
+
 This repository contains a client for `spe_ed`, the game of the [InformatiCup 2021](https://github.com/InformatiCup/InformatiCup2021).
 
 ## Installation
