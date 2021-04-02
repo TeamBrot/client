@@ -1,3 +1,6 @@
 [submodule "server"]
 	path = server
 	url = git@github.com:TeamBrot/server.git
+[submodule "paper"]
+	path = paper
+	url = git@github.com:TeamBrot/paper.git
