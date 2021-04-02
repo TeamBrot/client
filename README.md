@@ -8,9 +8,9 @@ This repository contains our client for `spe_ed`, the game of the [InformatiCup 
 
 ## Overview
 In this README you find all the information you need to use our software. Navigate around with the table of contents. For more detailed information read the wiki or follow the links in the README. If you think something important is missing, feel free to open an ![issue](https://github.com/TeamBrot/client/issues).
-- ![Manual Installation](#installation)
-- ![Docker Installation](#docker)
-- ![Extensions](#extensions)
+- [Manual Installation](#installation)
+- [Docker Installation](#docker)
+- [Extensions](#extensions)
 
 ## Installation
 
@@ -42,7 +42,7 @@ If you got your own `spe_ed` server you can skip this step. To run the client yo
 
 You can start the client by first going into the `client` directory and then running `./client`. If you get a connection established message you've succesfully setup our software 🥳
 
-Now it tries to connect to our development server. If you wish to connect to an other server, set the `URL` environment variable accordingly. You find information about that ![here](#connecting-to-other-servers)
+Now it tries to connect to our development server. If you wish to connect to an other server, set the `URL` environment variable accordingly. You find information about that [here](#connecting-to-other-servers)
 
 This runs the `combi` client. Other clients can be run with `./client -client <client>`.
 
