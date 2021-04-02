@@ -1,4 +1,4 @@
-module gitlab.hpi.de/spe_ed-brot
+module github.com/TeamBrot/client
 
 go 1.16
 
