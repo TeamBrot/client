@@ -7,12 +7,14 @@
 This repository contains our client for `spe_ed`, the game of the [InformatiCup 2021](https://github.com/InformatiCup/InformatiCup2021).
 
 ## Overview
-In this README you find all the information you need to use our software. Navigate around with the table of contents. For more detailed information read the wiki or follow the links in the README. If you think something important is missing, feel free to open an ![issue](https://github.com/TeamBrot/client/issues).
+In this README you find all the information you need to use our software. Navigate around with the table of contents. For more detailed information read the wiki or follow the links in the README. If you think some important information or feature is missing, feel free to open an ![issue](https://github.com/TeamBrot/client/issues). If you'd like to give us feedback directly feel free to mail us.
 - [Manual Installation](#installation)
 - [Docker Installation](#docker)
 - [Extensions](#extensions)
 
 ## Installation
+
+After completing this, you set up a `spe_ed` development server and you can run our client locally.
 
 ### 0. Prerequisites
 
@@ -24,9 +26,9 @@ After installing go, you can run `go get github.com/gorilla/websocket` to instal
 
 ### 1. Cloning the repository
 
-run `git clone https://github.com/TeamBrot/client.git` to clone the repository. 
+Run `git clone https://github.com/TeamBrot/client.git` to clone the repository. 
 
-run `cd client` to jump right into it.
+Run `cd client` to jump right into it.
 
 ### 2. Build
 
@@ -40,9 +42,9 @@ If you got your own `spe_ed` server you can skip this step. To run the client yo
 
 ### 4. Running the Client
 
-You can start the client by first going into the `client` directory and then running `./client`. If you get a connection established message you've succesfully setup our software 🥳
+You can start the client by first going into the `client` directory and then running `./client`. Now it tries to connect to our development server. If you get a connection established message you've succesfully setup our software 🥳
 
-Now it tries to connect to our development server. If you wish to connect to an other server, set the `URL` environment variable accordingly. You find information about that [here](#connecting-to-other-servers)
+If you wish to connect to an other server, set the `URL` environment variable accordingly. You find information about that [here](#connecting-to-other-servers)
 
 This runs the `combi` client. Other clients can be run with `./client -client <client>`.
 
@@ -54,13 +56,15 @@ The following clients are available:
 - `probability`
 - `combi`
 
-## Connecting to other servers
+### 5. Connecting to other servers
 
 To play on on other servers, the environment variables `URL`, `TIME_URL` and `KEY` have to be set to the appropriate values. 
 
 For the official API of the competition, these are the values.
 
 `URL="wss://msoll.de/spe_ed" TIME_URL="https://msoll.de/spe_ed_time" KEY="<key>"`
+
+If you connect the client to an other server, you can watch it play by opening ![http://localhost:8081/](http://localhost:8081)
 
 ## Docker
 
@@ -69,6 +73,8 @@ To build the docker image, run `docker build . -t spe_ed`.
 To run the client container, run `docker run -e URL="wss://msoll.de/spe_ed" -e TIME_URL="https://msoll.de/spe_ed_time" -e KEY="<key>" spe_ed`
 
 ## Extensions
+
+We built several extensions for our `spe_ed` client. For example several scripts, that run games or can visualize game. Detailed information on how to use them you can find in this section.
 
 ### Testing against other clients
 
