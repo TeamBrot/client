@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import sys
+import math
 import json
 import tempfile
 import os
@@ -40,8 +41,7 @@ def image_filename(tmpdir, json_filename, index):
     return os.path.join(tmpdir, json_basename(json_filename) + "-" + str(index).zfill(4) + ".png")
 
 
-def start_image(data, colors, width=WIDTH, height=HEIGHT):
-    font = ImageFont.truetype("arial.ttf", size=30)
+def start_image(data, colors, font, width=WIDTH, height=HEIGHT):
     board_width = data["game"][0]["width"]
     board_height = data["game"][0]["height"]
     client_name = data["config"]["clientName"]
@@ -72,19 +72,22 @@ def draw_square(draw, i, j, color):
 def create_image(width, height):
     return Image.new("RGB", (width * SCALING, height * SCALING + 40))
 
-def board_image(status, colors, headcolors, width=WIDTH, height=HEIGHT, outline=OUTLINE):
+def board_image(status, colors, headcolors, font, turn=None, width=WIDTH, height=HEIGHT, outline=OUTLINE):
     board_width = status["width"]
     board_height = status["height"]
-    size = math.floor(height / board_height)
 
+    if turn is not None:
+        height -= 30
+    size = math.floor(height / board_height)
     if size * board_width > width:
         size = math.floor(width / board_width)
-
     x_offset = (width-size*board_width)/2
     y_offset = (height-size*board_height)/2
+    if turn is not None:
+        y_offset += 30
+
     im = Image.new("RGB", (width, height), "white")
     draw = ImageDraw.Draw(im)
-    draw.text((0, 0), "Turn {}".format(turn), font=font)
     for i, y in enumerate(status["cells"]):
         for j, x in enumerate(y):
             draw.rectangle([j*size+x_offset, i*size+y_offset, (j+1)*size+x_offset-1, (i+1)*size+y_offset-1], fill=colors[x], outline="black", width=outline)
@@ -92,10 +95,13 @@ def board_image(status, colors, headcolors, width=WIDTH, height=HEIGHT, outline=
         player = status["players"][n]
         if player["active"]:
             draw.rectangle([player["x"]*size+x_offset, player["y"]*size+y_offset, (player["x"]+1)*size+x_offset-1, (player["y"]+1)*size+y_offset-1], fill=headcolors[int(n)], outline='black', width=outline)
+
+    if turn is not None:
+        draw.text((0, 0), "Turn {}".format(turn), font=font, fill='black')
     return im
 
 
-def make_video(json_filename, width=WIDTH, height=HEIGHT, fps=FPS, fpb=FPB, start_frames=FPS*START_SEC, end_frames=FPS*END_SEC, outline=OUTLINE):
+def make_video(json_filename, show_turn=False, width=WIDTH, height=HEIGHT, fps=FPS, fpb=FPB, start_frames=FPS*START_SEC, end_frames=FPS*END_SEC, outline=OUTLINE):
     with open(json_filename) as f:
         data = json.load(f)
     player_id = data["game"][0]["you"]
@@ -106,15 +112,17 @@ def make_video(json_filename, width=WIDTH, height=HEIGHT, fps=FPS, fpb=FPB, star
     headcolors = [headcolor for headcolor in HEADCOLORS]
     headcolors[PLAYER_COLOR_INDEX], headcolors[player_id] = headcolors[player_id], headcolors[PLAYER_COLOR_INDEX]
 
+    font = ImageFont.truetype("arial.ttf", size=30)
+
     index = 0
     with tempfile.TemporaryDirectory() as tmpdir:
         index = 0
-        im = start_image(data, colors, width=width, height=height)
+        im = start_image(data, colors, font, width=width, height=height)
         for _ in range(start_frames):
             im.save(image_filename(tmpdir, json_filename, index))
             index += 1
-        for status in data["game"]:
-            im = board_image(status, colors, headcolors, width=width, height=height, outline=outline)
+        for turn, status in enumerate(data["game"]):
+            im = board_image(status, colors, headcolors, font, turn=turn+1 if show_turn else None, width=width, height=height, outline=outline)
             for _ in range(fpb):
                 im.save(image_filename(tmpdir, json_filename, index))
                 index += 1
@@ -141,6 +149,7 @@ if __name__ == '__main__':
     parser.add_argument('--width', type=int, default=WIDTH, help='video width in pixels')
     parser.add_argument('--height', type=int, default=HEIGHT, help='video height in pixels')
     parser.add_argument('--outline', type=int, default=OUTLINE, help='outline width in pixels')
+    parser.add_argument('--turn', action='store_true', help='show turn counter')
     parser.add_argument('--force', '-f', action='store_true', help='overwrite existing video file')
     args = parser.parse_args()
 
@@ -148,7 +157,7 @@ if __name__ == '__main__':
         output_filename = video_filename(json_filename)
         if args.force or not os.path.exists(output_filename):
             print("processing " + json_filename + "...")
-            make_video(json_filename, width=args.width, height=args.height, fps=args.fps, fpb=args.fpb, start_frames=args.fps*args.start, end_frames=args.fps*args.end, outline=args.outline)
+            make_video(json_filename, show_turn=args.turn, width=args.width, height=args.height, fps=args.fps, fpb=args.fpb, start_frames=args.fps*args.start, end_frames=args.fps*args.end, outline=args.outline)
             print("wrote to", output_filename)
         else:
             print("skipping", json_filename, "because output",
