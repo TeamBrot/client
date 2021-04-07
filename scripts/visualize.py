@@ -10,9 +10,9 @@ import ffmpeg
 from common import place
 
 COLORS = ["#ffffff", "#f6a800",  "#4c5b5c", "#98ce00",
-          "#a44a3f", "#ff751b", "#ff00ff", "#ededed"]
+          "#a44a3f", "#ff751b", "#ff00ff", "#000000"]
 HEADCOLORS = ["#ffffff", "#bb8000", "#313b3c", "#6d9300",
-              "#79372f", "#df5800", "#c400c4", "ededed"]
+              "#79372f", "#df5800", "#c400c4", "#000000"]
 PLAYER_COLOR_INDEX = 1
 
 # Video dimensions
