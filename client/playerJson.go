@@ -2,13 +2,13 @@ package main
 
 // JSONPlayer contains information on a specific player as returned by the server.
 type JSONPlayer struct {
-	X               int `json:"x"`
-	Y               int `json:"y"`
+	X               int       `json:"x"`
+	Y               int       `json:"y"`
 	Direction       Direction `json:"-"`
-	StringDirection string `json:"direction"`
-	Speed           int    `json:"speed"`
-	Active          bool   `json:"active"`
-	Name            string `json:"name"`
+	StringDirection string    `json:"direction"`
+	Speed           int       `json:"speed"`
+	Active          bool      `json:"active"`
+	Name            string    `json:"name"`
 }
 
 // ConvertToPlayer converts a JSONPlayer to a Player
@@ -26,4 +26,3 @@ func (jsonPlayer *JSONPlayer) Copy() *JSONPlayer {
 	player := *jsonPlayer
 	return &player
 }
-

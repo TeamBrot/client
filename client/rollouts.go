@@ -2,8 +2,6 @@ package main
 
 import (
 	"log"
-	"encoding/json"
-	"io/ioutil"
 	"math/rand"
 	"time"
 )
@@ -22,10 +20,6 @@ const cutOff = 100
 
 //search for the longest paths a player could reach. Simulates random action for all Players and allways processes as last player
 func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time, cachedPaths [][]Action, filterValue float64) [][]Action {
-	var firstActionLength [5]map[int]int
-	for action := range Actions {
-		firstActionLength[action] = make(map[int]int)
-	}
 	var longestPaths [][]Action
 	var longest int
 	if cachedPaths != nil {
@@ -39,14 +33,6 @@ func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time, cac
 	for performedRollouts := 0; performedRollouts < maxNumberofRollouts; performedRollouts++ {
 		select {
 		case <-stopSimulateRollouts:
-			data, err := json.Marshal(firstActionLength)
-			if err != nil {
-				log.Println(err)
-			}
-			err = ioutil.WriteFile("rollout_data.json", data, 0644)
-			if err != nil {
-				log.Println(err)
-			}
 			log.Println("could perfom", performedRollouts, "rollouts")
 			log.Println("The longest path was", longest, "Actions long")
 			return longestPaths
@@ -72,12 +58,6 @@ func simulateRollouts(status *Status, stopSimulateRollouts <-chan time.Time, cac
 				rolloutStatus.Turn++
 				path = append(path, randomAction)
 			}
-			num, prs := firstActionLength[path[0]][len(path)]
-			if !prs {
-				num = 0
-			}
-			firstActionLength[path[0]][len(path)] = num + 1
-
 			longestPaths, longest = checkPath(path, longestPaths, longest, performedRollouts, filterValue)
 			if len(longestPaths) > maxNumberOfPaths {
 				longestPaths = filterPaths(longestPaths, longest, 0.9)

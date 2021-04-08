@@ -4,4 +4,3 @@ package main
 type Coords struct {
 	Y, X uint16
 }
-

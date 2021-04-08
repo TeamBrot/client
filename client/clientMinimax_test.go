@@ -1,8 +1,8 @@
 package main
 
 import (
-	"testing"
 	"reflect"
+	"testing"
 )
 
 func TestParallelMove(t *testing.T) {
@@ -14,13 +14,13 @@ func TestParallelMove(t *testing.T) {
 	player2 := Player{X: 3, Y: 0, Direction: Left, Speed: 1}
 	status := Status{Width: 5, Height: 2, Players: map[uint8]*Player{1: &player, 2: &player2}, Cells: cells, You: 1}
 	actions := MinimaxBestActions(1, []uint8{2}, &status, nil)
-	for _,action := range actions {
+	for _, action := range actions {
 		if action == ChangeNothing {
 			t.Error("change_nothing should not be a valid action")
 		}
 	}
 	foundTurnRight := false
-	for _,action := range actions {
+	for _, action := range actions {
 		if action == TurnRight {
 			foundTurnRight = true
 			break
@@ -82,4 +82,3 @@ func TestBestActionsFromScoreMap(t *testing.T) {
 		t.Error("best actions not equal", bestActions2, bestActionsScoreMap2)
 	}
 }
-
