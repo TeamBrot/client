@@ -23,7 +23,7 @@ If you are considering adding a client, please create a new `.go` file containin
 
 ## Style
 
-Please use govet and gofmt to check your code style.
+Please use govet and gofmt to check your code style. Please run `go test` to check that all tests still pass.
 
 ## Code of conduct
 
