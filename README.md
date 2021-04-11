@@ -1,8 +1,11 @@
 # Brot-Client
 
 ![Build](https://github.com/TeamBrot/client/actions/workflows/go.yml/badge.svg)
+![LOC](https://img.shields.io/tokei/lines/github/TeamBrot/client)
+![Go Version](https://img.shields.io/github/go-mod/go-version/TeamBrot/client)
+![License](https://img.shields.io/github/license/TeamBrot/client)
 
-![](brot-icup.png)
+[![](brot-icup.png)](https://teambrot.github.io/)
 
 This repository contains our client for `spe_ed`, the game of the [InformatiCup 2021](https://github.com/InformatiCup/InformatiCup2021).
 
