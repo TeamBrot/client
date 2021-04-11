@@ -25,8 +25,9 @@ FPB = 1
 # Start and end lengths
 START_SEC = 2
 END_SEC = 1
-# Outline width
+# Outline width and color
 OUTLINE = 1
+OUTLINE_COLOR = 'black'
 
 
 def json_basename(json_filename):
@@ -72,7 +73,7 @@ def draw_square(draw, i, j, color):
 def create_image(width, height):
     return Image.new("RGB", (width * SCALING, height * SCALING + 40))
 
-def board_image(status, colors, headcolors, font, turn=None, width=WIDTH, height=HEIGHT, outline=OUTLINE):
+def board_image(status, colors, headcolors, font, turn=None, width=WIDTH, height=HEIGHT, outline=OUTLINE, outline_color=OUTLINE_COLOR):
     board_width = status["width"]
     board_height = status["height"]
 
@@ -90,18 +91,18 @@ def board_image(status, colors, headcolors, font, turn=None, width=WIDTH, height
     draw = ImageDraw.Draw(im)
     for i, y in enumerate(status["cells"]):
         for j, x in enumerate(y):
-            draw.rectangle([j*size+x_offset, i*size+y_offset, (j+1)*size+x_offset-1, (i+1)*size+y_offset-1], fill=colors[x], outline="black", width=outline)
+            draw.rectangle([j*size+x_offset, i*size+y_offset, (j+1)*size+x_offset-1, (i+1)*size+y_offset-1], fill=colors[x], outline=outline_color, width=outline)
     for n in status["players"]:
         player = status["players"][n]
         if player["active"]:
-            draw.rectangle([player["x"]*size+x_offset, player["y"]*size+y_offset, (player["x"]+1)*size+x_offset-1, (player["y"]+1)*size+y_offset-1], fill=headcolors[int(n)], outline='black', width=outline)
+            draw.rectangle([player["x"]*size+x_offset, player["y"]*size+y_offset, (player["x"]+1)*size+x_offset-1, (player["y"]+1)*size+y_offset-1], fill=headcolors[int(n)], outline=outline_color, width=outline)
 
     if turn is not None:
         draw.text((0, 0), "Turn {}".format(turn), font=font, fill='black')
     return im
 
 
-def make_video(json_filename, show_turn=False, width=WIDTH, height=HEIGHT, fps=FPS, fpb=FPB, start_frames=FPS*START_SEC, end_frames=FPS*END_SEC, outline=OUTLINE):
+def make_video(json_filename, show_turn=False, width=WIDTH, height=HEIGHT, fps=FPS, fpb=FPB, start_frames=FPS*START_SEC, end_frames=FPS*END_SEC, outline=OUTLINE, outline_color=OUTLINE_COLOR):
     with open(json_filename) as f:
         data = json.load(f)
     player_id = data["game"][0]["you"]
@@ -122,7 +123,7 @@ def make_video(json_filename, show_turn=False, width=WIDTH, height=HEIGHT, fps=F
             im.save(image_filename(tmpdir, json_filename, index))
             index += 1
         for turn, status in enumerate(data["game"]):
-            im = board_image(status, colors, headcolors, font, turn=turn+1 if show_turn else None, width=width, height=height, outline=outline)
+            im = board_image(status, colors, headcolors, font, turn=turn+1 if show_turn else None, width=width, height=height, outline=outline, outline_color=outline_color)
             for _ in range(fpb):
                 im.save(image_filename(tmpdir, json_filename, index))
                 index += 1
@@ -149,6 +150,7 @@ if __name__ == '__main__':
     parser.add_argument('--width', type=int, default=WIDTH, help='video width in pixels')
     parser.add_argument('--height', type=int, default=HEIGHT, help='video height in pixels')
     parser.add_argument('--outline', type=int, default=OUTLINE, help='outline width in pixels')
+    parser.add_argument('--outline-color', default=OUTLINE_COLOR, help='outline color')
     parser.add_argument('--turn', action='store_true', help='show turn counter')
     parser.add_argument('--force', '-f', action='store_true', help='overwrite existing video file')
     args = parser.parse_args()
@@ -157,7 +159,7 @@ if __name__ == '__main__':
         output_filename = video_filename(json_filename)
         if args.force or not os.path.exists(output_filename):
             print("processing " + json_filename + "...")
-            make_video(json_filename, show_turn=args.turn, width=args.width, height=args.height, fps=args.fps, fpb=args.fpb, start_frames=args.fps*args.start, end_frames=args.fps*args.end, outline=args.outline)
+            make_video(json_filename, show_turn=args.turn, width=args.width, height=args.height, fps=args.fps, fpb=args.fpb, start_frames=args.fps*args.start, end_frames=args.fps*args.end, outline=args.outline, outline_color=args.outline_color)
             print("wrote to", output_filename)
         else:
             print("skipping", json_filename, "because output",
