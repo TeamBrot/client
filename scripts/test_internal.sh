@@ -1,15 +1,21 @@
 #!/bin/bash
 #Defines the base Error directory for logging purposes
-#Hier bitte euren Namen eingeben!!
+#Please enter your name here!
 name=""
+#Set the directory for log files
+baselog="log/testing/"
+#Set the directory for error messages
 baseerror="error"
-baselog="log/combi-probability/"
+#Set the directory to save the command line output
 baseoutput="output"
 
 #When starting a combi Client it takes one of those values as combis
 probabilities=("2.0")
 activations=("0.001")
-clients=("probability")
+#Choose one or multiple clients as opponents
+clients=("probability", "rollouts")
+
+#Choose values for the server
 numPlayers=("2")
 lengths=("10" "15" "25" "35" "40" "50" "70")
 offsets=("4")
