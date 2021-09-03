@@ -7,7 +7,7 @@
 
 [![](brot-icup.png)](https://teambrot.github.io/)
 
-This repository contains our client for `spe_ed`, the game of the [InformatiCup 2021](https://github.com/InformatiCup/InformatiCup2021).
+This repository contains our client for `spe_ed`, the game of the [InformatiCup 2021](https://github.com/InformatiCup/InformatiCup2021). Our team placed third and won the award for the best github repository 🥳. A video about our solution is available [here](https://www.youtube.com/watch?v=WYvSaGtD8E0) (German only)
 
 ## Overview
 In this README you find all the information you need to use our software. Navigate around with the table of contents. For more detailed information read the wiki or follow the links in the README. If you think some important information or feature is missing, feel free to open an [issue](https://github.com/TeamBrot/client/issues). If you'd like to give us feedback directly feel free to mail us.
